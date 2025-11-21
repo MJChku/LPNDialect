@@ -3,6 +3,8 @@
 
 #include "mlir/IR/Attributes.h"
 
+#include <optional>
+
 namespace mlir {
 namespace lpn {
 } // namespace lpn
