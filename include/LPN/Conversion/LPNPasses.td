@@ -21,19 +21,34 @@ def LPNNormalizeDelaysPass : Pass<"lpn-normalize-delays", "ModuleOp"> {
   let constructor = "mlir::lpn::createLPNNormalizeDelaysPass()";
 }
 
-def LPNFusePrivatePlacesPass : Pass<"lpn-fuse-private-places", "ModuleOp"> {
-  let summary = "Stub pass for collapsing transitions connected via private places";
-  let constructor = "mlir::lpn::createLPNFusePrivatePlacesPass()";
-}
-
 def LPNAbstractHiddenStatePass : Pass<"lpn-abstract-hidden-state", "ModuleOp"> {
   let summary = "Annotate control flow driven by hidden places";
   let constructor = "mlir::lpn::createLPNAbstractHiddenStatePass()";
 }
 
+def LPNStripHiddenValuesPass : Pass<"lpn-strip-hidden-values", "ModuleOp"> {
+  let summary = "Replace values that depend on hidden tokens with symbolic unknowns";
+  let constructor = "mlir::lpn::createLPNStripHiddenValuesPass()";
+}
+
 def LPNRetainObservablesPass : Pass<"lpn-retain-observables", "ModuleOp"> {
   let summary = "Collapse networks to the user-marked observable places";
   let constructor = "mlir::lpn::createLPNRetainObservablesPass()";
+}
+
+def LPNRetainHypergraphPass : Pass<"lpn-retain-hypergraph", "ModuleOp"> {
+  let summary = "EXPERIMENTAL hypergraph-based observable reduction";
+  let constructor = "mlir::lpn::createLPNRetainHypergraphPass()";
+}
+
+def LPNDataflowSimplifyPass : Pass<"lpn-dataflow-simplify", "ModuleOp"> {
+  let summary = "Fold structurally- or effect-equivalent control flow.";
+  let constructor = "mlir::lpn::createLPNDataflowSimplifyPass()";
+}
+
+def LPNResolveChoicePass : Pass<"lpn-resolve-choices", "ModuleOp"> {
+  let summary = "Resolve lpn.choice nodes by assuming hidden state never blocks.";
+  let constructor = "mlir::lpn::createLPNResolveChoicePass()";
 }
 
 #endif // LPN_PASSES

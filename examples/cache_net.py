@@ -51,13 +51,15 @@ def build_cache_example(addresses: Iterable[int]) -> str:
       is_valid = b.cmpi("ne", valid, b.const_i64(0))
 
       def serve_hit(bb):
-        resp = bb.token_set(req, "hit", one)
+        # resp = bb.token_set(req, "hit", one)
+        resp = req
         delay = bb.const_f64(L1_HIT_DELAY_NS)
         bb.emit(l1_resp, resp, delay=delay)
         bb.emit(l1_state, state)
 
       def serve_miss(bb):
-        miss_token = bb.token_set(req, "hit", bb.const_i64(0))
+        # miss_token = bb.token_set(req, "hit", bb.const_i64(0))
+        miss_token = req
         bb.emit(l2_req, miss_token)
         bb.emit(l1_state, state)
 
@@ -67,7 +69,8 @@ def build_cache_example(addresses: Iterable[int]) -> str:
       if idx + 1 < NUM_LINES:
         build_line_chain(b, line_value, req, state, idx + 1)
       else:
-        miss_token = b.token_set(req, "hit", b.const_i64(0))
+        # miss_token = b.token_set(req, "hit", b.const_i64(0))
+        miss_token = req
         b.emit(l2_req, miss_token)
         b.emit(l1_state, state)
 

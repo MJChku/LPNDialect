@@ -8,4 +8,6 @@
 #       -DCMAKE_BUILD_TYPE=RelWithDebInfo
 cmake --build build
 PYTHONPATH=. python3 examples/cache_net.py > /tmp/cache_net.mlir
-./build/tools/lpn-opt/lpn-opt --lpn-normalize-delays --lpn-abstract-hidden-state --lpn-retain-observables --canonicalize --cse /tmp/cache_net.mlir > /tmp/cache_after_pass.mlir
+./build/tools/lpn-opt/lpn-opt --lpn-normalize-delays --lpn-abstract-hidden-state  --lpn-strip-hidden-values \
+--lpn-retain-hypergraph --lpn-resolve-choices --lpn-dataflow-simplify  \
+ --canonicalize --cse /tmp/cache_net.mlir > /tmp/cache_after_pass.mlir

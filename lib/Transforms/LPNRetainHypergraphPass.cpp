@@ -20,6 +20,7 @@
 #include "llvm/Support/Casting.h"
 #include <memory>
 #include <iterator>
+#include <cassert>
 
 namespace mlir::lpn {
 namespace {
@@ -28,84 +29,50 @@ namespace {
 // Pass overview
 //===----------------------------------------------------------------------===//
 //
-// The retain-observable pass collapses an LPN network down to only the user
-// marked observable places.  Instead of relying on structural heuristics (for
-// example, "single producer/single consumer" places), the new implementation
-// materializes full SSA slices for the token that flows between observables:
+// The hypergraph retain pass collapses an arbitrary LPN network down to the
+// user-marked observable places without making structural assumptions such as
+// “each place has at most one producer and consumer”.  Instead, it treats the
+// network as a hypergraph whose vertices are observable places and whose
+// hyperedges capture the exact set of observable tokens consumed together:
 //
 //   1. For every `lpn.take` result we enumerate all reachable `lpn.emit`
-//      operations by walking the SSA use-def chain.  Each take/emit pair
-//      becomes an EdgeTemplate that records the source place, the emit target
-//      (possibly guarded by token metadata), and the SSA values necessary to
-//      rebuild the token/delay/handle expressions later.
+//      operations by walking the SSA use-def chain.  The SSA slice from the
+//      take to each emit is summarized as an EdgeTemplate that records the
+//      canonical driver observable, the multiset of observable takes used,
+//      the cloned token/delay expressions, and metadata (guards, edit log,
+//      control context, and expression fingerprints).
 //
-//   2. The EdgeTemplates form a graph keyed by place symbols.  We DFS through
-//      this graph to enumerate every path that starts at an observable place
-//      and ends at a different observable place.  Paths may cross many
-//      intermediate places/transitions; cycles are avoided via a visited set.
+//   2. We cluster identical EdgeTemplates per driver place so structurally
+//      equivalent hyperedges are stored only once.  Equivalence requires the
+//      same driver, observable source set, guard predicates, edit signatures,
+//      SSA fingerprints, and nesting of control operations.
 //
-//   3. For each observable root with at least one outgoing path we synthesize a
-//      new transition.  The transition takes from the root place once, then
-//      replays every path by cloning the SSA slices recorded in the templates.
-//      Guards become `scf.if` predicates, token edits are faithfully replayed,
-//      and per-edge delays are accumulated so the observable-to-observable arc
-//      models the same scheduling latency as the original network.
+//   3. The hyperedges induce a directed graph between observables.  We walk
+//      this graph via DFS to enumerate every observable-to-observable path.
+//      Paths that revisit an observable terminate, ensuring cycles do not
+//      explode the search space.
 //
-// The key data structures are intentionally simple:
+//   4. For each observable root with outgoing paths we synthesize a retained
+//      transition.  The transition takes from the root once, then replays each
+//      path by rematerializing the recorded slices.  Additional observables
+//      required by a hyperedge are taken exactly once per synthesized firing;
+//      guards become `scf.if`, arbitrary control constructs (e.g., nested ifs)
+//      are cloned, and per-edge delays are accumulated.
 //
-//   * TokenGuard models a single equality predicate derived from token log
-//     metadata.  For example, when a switch indexes into a place_list using the
-//     expression `index_cast(token.get \"dst\" - 4)`, each potential egress
-//     slot contributes a guard `dst == 4 + slot`.  These guards become the
-//     runtime conditions inside synthesized `scf.if` operations.
+// Because hyperedges track multi-source consumption explicitly, the pass can
+// retain nets where transitions require multiple observable tokens at once,
+// where emissions are routed via data-dependent control flow, and where
+// different latent paths share large sub-slices.  The resulting retained net
+// is minimal with respect to the chosen observables yet faithful to both the
+// token edits and the causal relationships encoded in the original MLIR.
 //
-//   * TargetInfo couples a destination place symbol with zero or more guards.
-//     This plays the role of the old "ResolvedPlace": it describes a concrete
-//     observable/non-observable place that can appear on the path graph while
-//     still remembering the predicates that routed the token there.
-//
-//   * EdgeTemplate is an SSA stencil for a single transition edge.  It stores
-//     the SSA value produced by the `lpn.take`, the Value that flowed into the
-//     matched `lpn.emit`, the place handle SSA value, and the computed delay.
-//     When we later clone the template we simply remap the original take result
-//     to the token currently flowing through the synthesized transition.
-//
-//   * EdgePath is an ordered list of EdgeTemplates that connects two
-//     observables.  Emitting the path means running through each template in
-//     order, cloning the necessary SSA graph, summing all per-edge delays, and
-//     finally emitting into the destination observable place.
-//
-// This slice-based approach makes the pass agnostic to how many tokens a
-// transition consumes or how complex the control-flow/arithmetics between
-// takes and emits may be.  As long as the SSA dependencies consist of pure
-// ops (arith, token.{get,set,clone}, place utilities, etc.) the pass can clone
-// the necessary computation verbatim.  Transitions that require additional
-// `lpn.take` operations to produce an observable emit are rejected, because the
-// collapsed model would need those tokens as well; this limitation mirrors the
-// semantic requirement that observable behavior depends only on observable
-// tokens.
-//
-// Example (simplified from the network benchmark):
-//
-//   ```
-//   %ctrl = lpn.take %tor_ctrl
-//   %pkt  = lpn.take %ingress_7
-//   %dst  = token.get %pkt, \"dst\"
-//   %rel  = arith.subi %dst, %const
-//   %idx  = arith.index_cast %rel : i64 to index
-//   %list = lpn.place_list {places = [@egress_0, @egress_1]}
-//   %tgt  = lpn.place_list.get %list, %idx
-//   token.set %pkt, \"hops\", 1
-//   lpn.emit %tgt, %pkt, %delay
-//   ```
-//
-// The pass produces two EdgeTemplates (one for each egress slot).  Both store
-// the SSA handles for `%pkt`, `%tgt`, and `%delay`, but the TargetInfo differs:
-// slot 0 carries a guard `dst == const + 0`, while slot 1 carries
-// `dst == const + 1`.  During synthesis the guard becomes an `scf.if` that
-// wraps the cloned SSA slice, guaranteeing that only the correct observable
-// endpoint fires for any particular token.
-//
+//   * Before enumerating observable paths we cluster identical hyperedges per
+//     driver place.  Hyperedges with the same driver, observable source set,
+//     control contexts, token edits, guard predicates, and delay/token SSA slices
+//     collapse to a single template.  This ensures the retained network does not
+//     duplicate transitions just because several paths in the original net were
+//     structurally identical.
+
 //===----------------------------------------------------------------------===//
 
 /// Utilities to simplify redundant lpn.choice ladders.
@@ -185,6 +152,14 @@ static void simplifyChoiceLadders(NetOp net) {
   }
 }
 
+static bool blockInRegion(Block *block, Region &region) {
+  for (Region *current = block ? block->getParent() : nullptr; current;
+       current = current->getParentRegion())
+    if (current == &region)
+      return true;
+  return false;
+}
+
 /// Single equality predicate derived from token metadata.
 struct TokenGuard {
   StringAttr field;
@@ -200,6 +175,7 @@ struct TargetInfo {
 struct TokenEditSignature {
   StringAttr field;
   llvm::hash_code valueHash;
+  SmallVector<unsigned, 4> sourceRefs;
 };
 
 struct ControlContext {
@@ -207,15 +183,23 @@ struct ControlContext {
   bool isThen;
 };
 
+struct ObservableSource {
+  StringAttr place;
+  Value takeValue;
+};
+
 /// SSA stencil for a single take/emit pair.
 struct EdgeTemplate {
-  StringAttr source;
+  StringAttr driver;
+  Value driverTake;
   TargetInfo target;
-  Value takeValue;
+  SmallVector<ObservableSource> sources;
   Value tokenValue;
   Value delayValue;
   SmallVector<ControlContext> contexts;
   SmallVector<TokenEditSignature> editSummary;
+  llvm::hash_code tokenHash;
+  llvm::hash_code delayHash;
 };
 
 /// Observable-to-observable chain of edges.
@@ -227,24 +211,56 @@ struct PathCursor {
   size_t contextIndex;
 };
 
+static bool guardsEqual(ArrayRef<TokenGuard> lhs, ArrayRef<TokenGuard> rhs) {
+  if (lhs.size() != rhs.size())
+    return false;
+  for (auto [a, b] : llvm::zip(lhs, rhs))
+    if (a.field != b.field || a.equalsValue != b.equalsValue)
+      return false;
+  return true;
+}
+
+static bool editsEqual(ArrayRef<TokenEditSignature> lhs,
+                       ArrayRef<TokenEditSignature> rhs) {
+  if (lhs.size() != rhs.size())
+    return false;
+  for (auto [a, b] : llvm::zip(lhs, rhs))
+    if (a.field != b.field || a.valueHash != b.valueHash)
+      return false;
+  return true;
+}
+
+static bool contextsEqual(ArrayRef<ControlContext> lhs,
+                          ArrayRef<ControlContext> rhs) {
+  if (lhs.size() != rhs.size())
+    return false;
+  for (auto [a, b] : llvm::zip(lhs, rhs))
+    if (a.op != b.op || a.isThen != b.isThen)
+      return false;
+  return true;
+}
+
 static bool equivalentTemplate(const EdgeTemplate *lhs,
                                const EdgeTemplate *rhs) {
   if (lhs == rhs)
     return true;
+  if (lhs->driver != rhs->driver)
+    return false;
+  if (lhs->sources.size() != rhs->sources.size())
+    return false;
+  for (auto [a, b] : llvm::zip(lhs->sources, rhs->sources))
+    if (a.place != b.place)
+      return false;
   if (lhs->target.symbol != rhs->target.symbol)
     return false;
-  if (lhs->target.guards.size() != rhs->target.guards.size())
+  if (!guardsEqual(lhs->target.guards, rhs->target.guards))
     return false;
-  for (auto [a, b] : llvm::zip(lhs->target.guards, rhs->target.guards)) {
-    if (a.field != b.field || a.equalsValue != b.equalsValue)
-      return false;
-  }
-  if (lhs->editSummary.size() != rhs->editSummary.size())
+  if (!editsEqual(lhs->editSummary, rhs->editSummary))
     return false;
-  for (auto [a, b] : llvm::zip(lhs->editSummary, rhs->editSummary)) {
-    if (a.field != b.field || a.valueHash != b.valueHash)
-      return false;
-  }
+  if (!contextsEqual(lhs->contexts, rhs->contexts))
+    return false;
+  if (lhs->tokenHash != rhs->tokenHash || lhs->delayHash != rhs->delayHash)
+    return false;
   return true;
 }
 
@@ -270,6 +286,24 @@ static void dedupPaths(
         }
       if (!duplicate)
         unique.push_back(path);
+    }
+    entry.second.swap(unique);
+  }
+}
+
+static void clusterHyperedges(
+    DenseMap<StringAttr, SmallVector<const EdgeTemplate *>> &adjacency) {
+  for (auto &entry : adjacency) {
+    SmallVector<const EdgeTemplate *> unique;
+    for (const EdgeTemplate *templ : entry.second) {
+      bool duplicate = false;
+      for (const EdgeTemplate *seen : unique)
+        if (equivalentTemplate(templ, seen)) {
+          duplicate = true;
+          break;
+        }
+      if (!duplicate)
+        unique.push_back(templ);
     }
     entry.second.swap(unique);
   }
@@ -350,26 +384,52 @@ static llvm::hash_code hashValueExpr(Value value,
   return h;
 }
 
+static llvm::hash_code hashOptionalValue(Value value,
+                                         DenseMap<Value, llvm::hash_code> &cache) {
+  if (!value)
+    return llvm::hash_value(static_cast<void *>(nullptr));
+  return hashValueExpr(value, cache);
+}
+
 // token edits supported only clone and set ops
 // get ops didn't change the token, so they are ignored
 static LogicalResult summarizeTokenEdits(
     Value current, Value source, SmallVectorImpl<TokenEditSignature> &edits,
-    DenseMap<Value, llvm::hash_code> &hashCache) {
+    DenseMap<Value, llvm::hash_code> &hashCache,
+    const SmallVector<ObservableSource> &sources) {
   if (current == source)
     return success();
   Operation *def = current.getDefiningOp();
   if (!def)
     return failure();
   if (auto set = dyn_cast<TokenSetOp>(def)) {
-    if (failed(summarizeTokenEdits(set.getToken(), source, edits, hashCache)))
+    if (failed(summarizeTokenEdits(set.getToken(), source, edits, hashCache,
+                                   sources)))
       return failure();
-    edits.push_back(TokenEditSignature{
-        set.getFieldAttr(), hashValueExpr(set.getValue(), hashCache)});
+    TokenEditSignature sig;
+    sig.field = set.getFieldAttr();
+    sig.valueHash = hashValueExpr(set.getValue(), hashCache);
+    auto recordRefs = [&](auto &&self, Value v) -> void {
+      if (!v)
+        return;
+      if (auto get = v.getDefiningOp<TokenGetOp>()) {
+        for (auto [idx, src] : llvm::enumerate(sources))
+          if (src.takeValue == get.getToken())
+            sig.sourceRefs.push_back(idx);
+      }
+      if (Operation *producer = v.getDefiningOp())
+        for (Value operand : producer->getOperands())
+          self(self, operand);
+    };
+    recordRefs(recordRefs, set.getValue());
+    edits.push_back(std::move(sig));
     return success();
   }
   if (auto clone = dyn_cast<TokenCloneOp>(def))
-    return summarizeTokenEdits(clone.getToken(), source, edits, hashCache);
-  return def->emitError("token flow includes unsupported op while summarizing");
+    return summarizeTokenEdits(clone.getToken(), source, edits, hashCache,
+                               sources);
+  return def->emitError(
+      "token flow includes unsupported op while summarizing");
 }
 
 static Value stripIndexCasts(Value value) {
@@ -514,13 +574,10 @@ static Value cloneValueInto(Value value, IRMapping &mapping,
   if (!def)
     return {};
   if (auto take = dyn_cast<TakeOp>(def)) {
-    for (Value operand : take->getOperands())
-      if (!cloneValueInto(operand, mapping, builder))
-        return {};
-    Operation *clone = builder.clone(*take, mapping);
-    Value result = clone->getResult(0);
-    mapping.map(value, result);
-    return result;
+    if (Value mapped = mapping.lookupOrNull(take.getResult()))
+      return mapped;
+    take.emitError("unmapped lpn.take while cloning hypergraph slice");
+    return {};
   }
 
   for (Value operand : def->getOperands())
@@ -557,17 +614,54 @@ static Value ensureDelay(Value delay, ImplicitLocOpBuilder &builder) {
   return builder.create<arith::ConstantOp>(builder.getF64FloatAttr(0.0));
 }
 
+using TokenEnv = DenseMap<StringAttr, SmallVector<Value>>;
+using TakeEnv = DenseMap<Value, Value>;
+
+static void mapTemplateSources(const EdgeTemplate *templ, IRMapping &mapping,
+                               const TakeEnv &takes) {
+  for (const ObservableSource &src : templ->sources)
+    if (Value mapped = takes.lookup(src.takeValue))
+      mapping.map(src.takeValue, mapped);
+}
+
+static LogicalResult ensureTemplateSources(const EdgeTemplate *templ,
+                                           Value driverToken, TokenEnv &tokens,
+                                           TakeEnv &takes,
+                                           ImplicitLocOpBuilder &builder) {
+  auto placeType = PlaceType::get(builder.getContext());
+  auto tokenType = TokenType::get(builder.getContext());
+  for (const ObservableSource &src : templ->sources) {
+    if (takes.contains(src.takeValue))
+      continue;
+    if (src.takeValue == templ->driverTake) {
+      takes[src.takeValue] = driverToken;
+      continue;
+    }
+    SmallVector<Value> &queue = tokens[src.place];
+    Value token;
+    if (!queue.empty()) {
+      token = queue.pop_back_val();
+    } else {
+      Value ref = builder.create<PlaceRefOp>(placeType,
+                                             FlatSymbolRefAttr::get(src.place));
+      token = builder.create<TakeOp>(tokenType, ref);
+    }
+    takes[src.takeValue] = token;
+  }
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // Pass driver
 //===----------------------------------------------------------------------===//
 
-struct LPNRetainObservablesPass
-    : PassWrapper<LPNRetainObservablesPass, OperationPass<ModuleOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(LPNRetainObservablesPass)
+struct LPNRetainHypergraphPass
+    : PassWrapper<LPNRetainHypergraphPass, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(LPNRetainHypergraphPass)
 
-  StringRef getArgument() const final { return "lpn-retain-observables"; }
+  StringRef getArgument() const final { return "lpn-retain-hypergraph"; }
   StringRef getDescription() const final {
-    return "Collapse the network to only the user-marked observable places.";
+    return "EXPERIMENTAL: hypergraph-based observable reduction.";
   }
 
   void getDependentDialects(DialectRegistry &registry) const final {
@@ -596,13 +690,24 @@ struct LPNRetainObservablesPass
     SmallVector<std::unique_ptr<EdgeTemplate>> templates;
     DenseMap<StringAttr, SmallVector<const EdgeTemplate *>> adjacency;
     DenseMap<Value, StringAttr> takePlaces;
+    DenseSet<Value> hiddenTakeResults;
     for (TransitionOp trans : net.getOps<TransitionOp>()) {
-      for (TakeOp take :
-           llvm::make_early_inc_range(trans.getBody().getOps<TakeOp>())) {
-        StringAttr source;
-        if (failed(resolvePlaceSymbol(take.getPlace(), source)))
+      SmallVector<TakeOp, 8> takes;
+      for (TakeOp take : trans.getBody().getOps<TakeOp>())
+        takes.push_back(take);
+      for (TakeOp take : takes) {
+        StringAttr place;
+        if (failed(resolvePlaceSymbol(take.getPlace(), place)))
           continue;
-        takePlaces[take.getResult()] = source;
+        if (observableNames.contains(place))
+          takePlaces[take.getResult()] = place;
+        else
+          hiddenTakeResults.insert(take.getResult());
+      }
+      for (TakeOp take : takes) {
+        StringAttr source = takePlaces.lookup(take.getResult());
+        if (!source)
+          continue;
         SmallVector<std::pair<EmitOp, Value>> flows;
         SmallPtrSet<Value, 8> visited;
         if (failed(collectTokenFlows(take.getResult(), flows, visited)))
@@ -614,11 +719,15 @@ struct LPNRetainObservablesPass
           SmallVector<ControlContext> contexts;
           Operation *parent = emit.getOperation()->getParentOp();
 
-          /// stopped when???
           while (parent && parent != trans) {
             if (auto ifOp = dyn_cast<scf::IfOp>(parent)) {
-              bool inThen =
-                  emit->getBlock()->getParent() == &ifOp.getThenRegion();
+              Region &thenRegion = ifOp.getThenRegion();
+              Region &elseRegion = ifOp.getElseRegion();
+              Block *emitBlock = emit->getBlock();
+              bool inThen = blockInRegion(emitBlock, thenRegion);
+              bool inElse = blockInRegion(emitBlock, elseRegion);
+              assert((inThen || inElse) &&
+                     "emit block must belong to either then or else region");
               contexts.push_back({ifOp.getOperation(), inThen});
             }
             parent = parent->getParentOp();
@@ -634,36 +743,56 @@ struct LPNRetainObservablesPass
             if (auto ifOp = dyn_cast<scf::IfOp>(ctx.op))
               collectTakeDependencies(ifOp.getCondition(), requiredTakes);
 
-          bool usesHiddenTake = false;
+          SmallVector<ObservableSource> sources;
           for (Value dep : requiredTakes) {
             auto it = takePlaces.find(dep);
             if (it == takePlaces.end())
               continue;
-            if (!observableNames.contains(it->second)) {
-              usesHiddenTake = true;
-              break;
-            }
+            sources.push_back(ObservableSource{it->second, dep});
           }
-          if (usesHiddenTake)
+          if (sources.empty())
+            continue;
+          llvm::sort(sources, [](const ObservableSource &a,
+                                 const ObservableSource &b) {
+            if (a.place != b.place)
+              return a.place.getValue() < b.place.getValue();
+            return a.takeValue.getAsOpaquePointer() <
+                   b.takeValue.getAsOpaquePointer();
+          });
+          StringAttr driver = sources.front().place;
+          if (driver != source)
             continue;
 
-          // assumes all emits have the same edit???
           for (TargetInfo &target : targets) {
+            SmallVector<ObservableSource> sourcesCopy = sources;
             SmallVector<TokenEditSignature> editSummary;
             DenseMap<Value, llvm::hash_code> hashCache;
             if (failed(summarizeTokenEdits(tokenVal, take.getResult(),
-                                           editSummary, hashCache)))
+                                           editSummary, hashCache, sources)))
               continue;
+            llvm::hash_code tokenHash = hashOptionalValue(tokenVal, hashCache);
+            llvm::hash_code delayHash =
+                hashOptionalValue(emit.getDelay(), hashCache);
             auto templ = std::make_unique<EdgeTemplate>(
-                EdgeTemplate{source, target, take.getResult(), tokenVal,
-                             emit.getDelay(), contexts, editSummary});
+                EdgeTemplate{driver,
+                             take.getResult(),
+                             target,
+                             std::move(sourcesCopy),
+                             tokenVal,
+                             emit.getDelay(),
+                             contexts,
+                             editSummary,
+                             tokenHash,
+                             delayHash});
             const EdgeTemplate *ptr = templ.get();
-            adjacency[source].push_back(ptr);
+            adjacency[driver].push_back(ptr);
             templates.push_back(std::move(templ));
           }
         }
       }
     }
+
+    clusterHyperedges(adjacency);
 
     if (adjacency.empty())
       return success();
@@ -719,7 +848,11 @@ struct LPNRetainObservablesPass
       SmallVector<PathCursor, 8> cursors;
       for (const EdgePath &path : entry.second)
         cursors.push_back(PathCursor{&path, 0, 0});
-      if (failed(emitCursorSet(cursors, seed, Value(), builder)))
+      TokenEnv tokens;
+      tokens[entry.first] = SmallVector<Value>{seed};
+      TakeEnv takes;
+      if (failed(emitCursorSet(cursors, seed, Value(), std::move(tokens),
+                               std::move(takes), builder)))
         return failure();
       builder.create<ScheduleReturnOp>();
     }
@@ -769,7 +902,8 @@ struct LPNRetainObservablesPass
   };
 
   LogicalResult emitCursorSet(ArrayRef<PathCursor> cursors, Value token,
-                              Value accumulatedDelay,
+                              Value accumulatedDelay, TokenEnv tokens,
+                              TakeEnv takes,
                               ImplicitLocOpBuilder &builder) const {
     if (cursors.empty())
       return success();
@@ -798,18 +932,12 @@ struct LPNRetainObservablesPass
 
     for (auto &entry : contextGroups) {
       Operation *ctxOp = entry.first;
-      if (entry.second.thenCursors.empty() ||
-          entry.second.elseCursors.empty()) {
-        ArrayRef<PathCursor> active =
-            entry.second.thenCursors.empty() ? entry.second.elseCursors
-                                             : entry.second.thenCursors;
-        if (!active.empty())
-          if (failed(emitCursorSet(active, token, accumulatedDelay, builder)))
-            return failure();
-        continue;
-      }
       if (ctxOp->hasAttr("lpn.hidden_choice")) {
-        if (failed(emitChoice(entry.second, token, accumulatedDelay, builder)))
+        TokenEnv choiceTokens = tokens;
+        TakeEnv choiceTakes = takes;
+        if (failed(emitChoice(entry.second, token, accumulatedDelay,
+                              std::move(choiceTokens), std::move(choiceTakes),
+                              builder)))
           return failure();
         continue;
       }
@@ -818,31 +946,48 @@ struct LPNRetainObservablesPass
         return builder.getInsertionBlock()->getParentOp()->emitError(
             "unsupported control context");
       const EdgeTemplate *repr = entry.second.representative;
+      TokenEnv condTokens = tokens;
+      TakeEnv condTakes = takes;
+      if (failed(
+              ensureTemplateSources(repr, token, condTokens, condTakes, builder)))
+        return failure();
       IRMapping mapping;
-      mapping.map(repr->takeValue, token);
+      mapTemplateSources(repr, mapping, condTakes);
       Value cond = cloneValueInto(ifOp.getCondition(), mapping, builder);
       if (!cond)
         return failure();
+      bool hasThen = !entry.second.thenCursors.empty();
       bool hasElse = !entry.second.elseCursors.empty();
+      bool needElseRegion = hasElse || !hasThen;
       scf::IfOp clonedIf =
-          builder.create<scf::IfOp>(TypeRange(), cond, hasElse);
+          builder.create<scf::IfOp>(TypeRange(), cond, needElseRegion);
       auto &thenBlock = clonedIf.getThenRegion().front();
       thenBlock.clear();
       ImplicitLocOpBuilder thenBuilder(builder.getLoc(), builder.getContext());
       thenBuilder.setInsertionPointToStart(&thenBlock);
-      if (failed(emitCursorSet(entry.second.thenCursors, token,
-                               accumulatedDelay, thenBuilder)))
-        return failure();
+      if (hasThen) {
+        TokenEnv thenTokens = condTokens;
+        TakeEnv thenTakes = condTakes;
+        if (failed(emitCursorSet(entry.second.thenCursors, token,
+                                 accumulatedDelay, std::move(thenTokens),
+                                 std::move(thenTakes), thenBuilder)))
+          return failure();
+      }
       thenBuilder.create<scf::YieldOp>();
-      if (hasElse) {
+      if (needElseRegion) {
         auto &elseBlock = clonedIf.getElseRegion().front();
         elseBlock.clear();
         ImplicitLocOpBuilder elseBuilder(builder.getLoc(),
                                          builder.getContext());
         elseBuilder.setInsertionPointToStart(&elseBlock);
-        if (failed(emitCursorSet(entry.second.elseCursors, token,
-                                 accumulatedDelay, elseBuilder)))
-          return failure();
+        if (hasElse) {
+          TokenEnv elseTokens = condTokens;
+          TakeEnv elseTakes = condTakes;
+          if (failed(emitCursorSet(entry.second.elseCursors, token,
+                                   accumulatedDelay, std::move(elseTokens),
+                                   std::move(elseTakes), elseBuilder)))
+            return failure();
+        }
         elseBuilder.create<scf::YieldOp>();
       }
       builder.setInsertionPointAfter(clonedIf);
@@ -873,20 +1018,26 @@ struct LPNRetainObservablesPass
       dedupReady.push_back(cursor);
     }
 
-    return emitLeafChoices(dedupReady, token, accumulatedDelay, builder);
+    return emitLeafChoices(dedupReady, token, accumulatedDelay,
+                           std::move(tokens), std::move(takes), builder);
   }
 
   LogicalResult emitLeaf(const PathCursor &cursor, Value token,
-                         Value accumulatedDelay,
+                         Value accumulatedDelay, TokenEnv tokens,
+                         TakeEnv takes,
                          ImplicitLocOpBuilder &builder) const {
     const EdgeTemplate *templ = getTemplate(cursor);
     if (!templ)
       return success();
 
     auto emitBody = [&](ImplicitLocOpBuilder &inner, Value currentToken,
-                        Value currentDelay) -> LogicalResult {
+                        Value currentDelay, TokenEnv innerTokens,
+                        TakeEnv innerTakes) -> LogicalResult {
+      if (failed(ensureTemplateSources(templ, currentToken, innerTokens,
+                                       innerTakes, inner)))
+        return failure();
       IRMapping mapping;
-      mapping.map(templ->takeValue, currentToken);
+      mapTemplateSources(templ, mapping, innerTakes);
       Value newToken = cloneValueInto(templ->tokenValue, mapping, inner);
       if (!newToken)
         return failure();
@@ -896,6 +1047,7 @@ struct LPNRetainObservablesPass
       Value totalDelay = ensureDelay(currentDelay, inner);
       totalDelay =
           inner.create<arith::AddFOp>(totalDelay, stepDelay).getResult();
+      innerTokens[templ->target.symbol].push_back(newToken);
       bool last = (cursor.edgeIndex + 1 == cursor.path->size());
       if (last) {
         auto placeType = PlaceType::get(inner.getContext());
@@ -906,11 +1058,13 @@ struct LPNRetainObservablesPass
       }
       PathCursor next{cursor.path, cursor.edgeIndex + 1, 0};
       SmallVector<PathCursor, 1> nextSet{next};
-      return emitCursorSet(nextSet, newToken, totalDelay, inner);
+      return emitCursorSet(nextSet, newToken, totalDelay, std::move(innerTokens),
+                           std::move(innerTakes), inner);
     };
 
     if (templ->target.guards.empty())
-      return emitBody(builder, token, accumulatedDelay);
+      return emitBody(builder, token, accumulatedDelay, std::move(tokens),
+                      std::move(takes));
 
     Value cond = buildGuardCondition(templ->target.guards, token, builder);
     if (!cond)
@@ -922,7 +1076,8 @@ struct LPNRetainObservablesPass
     guardBlock.clear();
     ImplicitLocOpBuilder inner(builder.getLoc(), builder.getContext());
     inner.setInsertionPointToStart(&guardBlock);
-    if (failed(emitBody(inner, token, accumulatedDelay)))
+    if (failed(emitBody(inner, token, accumulatedDelay, std::move(tokens),
+                        std::move(takes))))
       return failure();
     inner.create<scf::YieldOp>();
     builder.setInsertionPointAfter(guardIf);
@@ -930,40 +1085,52 @@ struct LPNRetainObservablesPass
   }
 
   LogicalResult emitLeafChoices(ArrayRef<PathCursor> cursors, Value token,
-                                Value accumulatedDelay,
+                                Value accumulatedDelay, TokenEnv tokens,
+                                TakeEnv takes,
                                 ImplicitLocOpBuilder &builder) const {
     if (cursors.empty())
       return success();
     if (cursors.size() == 1)
-      return emitLeaf(cursors.front(), token, accumulatedDelay, builder);
+      return emitLeaf(cursors.front(), token, accumulatedDelay,
+                      std::move(tokens), std::move(takes), builder);
     auto choice = builder.create<ChoiceOp>();
-    auto populate = [&](Region &region,
-                        ArrayRef<PathCursor> subset) -> LogicalResult {
+    auto populate = [&](Region &region, ArrayRef<PathCursor> subset,
+                        TokenEnv branchTokens,
+                        TakeEnv branchTakes) -> LogicalResult {
       region.getBlocks().clear();
       Block &block = region.emplaceBlock();
       ImplicitLocOpBuilder branchBuilder(builder.getLoc(),
                                          builder.getContext());
       branchBuilder.setInsertionPointToStart(&block);
-      if (failed(
-              emitLeafChoices(subset, token, accumulatedDelay, branchBuilder)))
+      if (failed(emitLeafChoices(subset, token, accumulatedDelay,
+                                 std::move(branchTokens),
+                                 std::move(branchTakes), branchBuilder)))
         return failure();
       branchBuilder.create<ChoiceYieldOp>();
       return success();
     };
-    if (failed(populate(choice.getThenRegion(), cursors.take_front(1))))
+    TokenEnv thenTokens = tokens;
+    TakeEnv thenTakes = takes;
+    if (failed(populate(choice.getThenRegion(), cursors.take_front(1),
+                        std::move(thenTokens), std::move(thenTakes))))
       return failure();
-    if (failed(populate(choice.getElseRegion(), cursors.drop_front())))
+    TokenEnv elseTokens = tokens;
+    TakeEnv elseTakes = takes;
+    if (failed(populate(choice.getElseRegion(), cursors.drop_front(),
+                        std::move(elseTokens), std::move(elseTakes))))
       return failure();
     builder.setInsertionPointAfter(choice);
     return success();
   }
 
   LogicalResult emitChoice(const ContextGroup &group, Value token,
-                           Value accumulatedDelay,
+                           Value accumulatedDelay, TokenEnv tokens,
+                           TakeEnv takes,
                            ImplicitLocOpBuilder &builder) const {
     auto choice = builder.create<ChoiceOp>();
-    auto populate = [&](Region &region,
-                        ArrayRef<PathCursor> cursors) -> LogicalResult {
+    auto populate = [&](Region &region, ArrayRef<PathCursor> cursors,
+                        TokenEnv branchTokens,
+                        TakeEnv branchTakes) -> LogicalResult {
       region.getBlocks().clear();
       Block &block = region.emplaceBlock();
       ImplicitLocOpBuilder branchBuilder(builder.getLoc(),
@@ -971,15 +1138,23 @@ struct LPNRetainObservablesPass
       branchBuilder.setInsertionPointToStart(&block);
       if (!cursors.empty())
         if (failed(
-                emitCursorSet(cursors, token, accumulatedDelay, branchBuilder)))
+                emitCursorSet(cursors, token, accumulatedDelay,
+                              std::move(branchTokens), std::move(branchTakes),
+                              branchBuilder)))
           return failure();
       branchBuilder.create<ChoiceYieldOp>();
       return success();
     };
 
-    if (failed(populate(choice.getThenRegion(), group.thenCursors)))
+    TokenEnv thenTokens = tokens;
+    TakeEnv thenTakes = takes;
+    if (failed(populate(choice.getThenRegion(), group.thenCursors,
+                        std::move(thenTokens), std::move(thenTakes))))
       return failure();
-    if (failed(populate(choice.getElseRegion(), group.elseCursors)))
+    TokenEnv elseTokens = tokens;
+    TakeEnv elseTakes = takes;
+    if (failed(populate(choice.getElseRegion(), group.elseCursors,
+                        std::move(elseTokens), std::move(elseTakes))))
       return failure();
     builder.setInsertionPointAfter(choice);
     return success();
@@ -988,8 +1163,8 @@ struct LPNRetainObservablesPass
 
 } // namespace
 
-std::unique_ptr<Pass> createLPNRetainObservablesPass() {
-  return std::make_unique<LPNRetainObservablesPass>();
+std::unique_ptr<Pass> createLPNRetainHypergraphPass() {
+  return std::make_unique<LPNRetainHypergraphPass>();
 }
 
 } // namespace mlir::lpn
