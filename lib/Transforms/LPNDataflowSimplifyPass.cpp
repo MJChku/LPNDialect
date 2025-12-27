@@ -9,6 +9,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Hashing.h"
@@ -17,6 +18,13 @@
 
 namespace mlir::lpn {
 namespace {
+
+static bool regionIsTrivial(Region &region) {
+  if (region.empty())
+    return true;
+  Block &block = region.front();
+  return block.without_terminator().empty();
+}
 
 static bool valuesEquivalent(Value lhs, Value rhs, IRMapping &mapping) {
   if (lhs == rhs)
@@ -216,6 +224,39 @@ struct LPNDataflowSimplifyPass
 
   void runOnOperation() override {
     ModuleOp module = getOperation();
+
+    SmallVector<scf::IfOp, 16> guards;
+    module.walk([&](scf::IfOp ifOp) { guards.push_back(ifOp); });
+    for (scf::IfOp ifOp : guards) {
+      if (ifOp->getParentOp() == nullptr || ifOp->use_empty() == false)
+        continue;
+      if (ifOp.getNumResults() != 0)
+        continue;
+      bool thenTrivial = regionIsTrivial(ifOp.getThenRegion());
+      bool elseTrivial = regionIsTrivial(ifOp.getElseRegion());
+      if (thenTrivial && elseTrivial) {
+        ifOp.erase();
+        continue;
+      }
+      if (thenTrivial == elseTrivial)
+        continue;
+      Region &keep = thenTrivial ? ifOp.getElseRegion() : ifOp.getThenRegion();
+      if (keep.empty())
+        continue;
+      Block &block = keep.front();
+      if (!block.getArguments().empty())
+        continue;
+      auto ops = block.without_terminator();
+      if (ops.empty()) {
+        ifOp.erase();
+        continue;
+      }
+      auto &parentOps = ifOp->getBlock()->getOperations();
+      parentOps.splice(Block::iterator(ifOp), block.getOperations(),
+                       ops.begin(), ops.end());
+      ifOp.erase();
+    }
+
     SmallVector<scf::IfOp, 8> foldCandidates;
     module.walk([&](scf::IfOp ifOp) {
       if (ifOp.getNumResults() != 0)
@@ -226,6 +267,29 @@ struct LPNDataflowSimplifyPass
     });
     for (scf::IfOp ifOp : foldCandidates)
       inlineBranchAndErase(ifOp, ifOp.getThenRegion());
+
+    SmallVector<Block *, 16> blocks;
+    module.walk([&](Block *block) { blocks.push_back(block); });
+    for (Block *block : blocks) {
+      DenseMap<Value, llvm::hash_code> hashCache;
+      SmallVector<EmitSignature, 4> seen;
+      for (Operation &op :
+           llvm::make_early_inc_range(block->getOperations())) {
+        if (auto emit = dyn_cast<EmitOp>(&op)) {
+          EmitSignature sig{hashValueExpr(emit.getPlace(), hashCache),
+                            hashValueExpr(emit.getToken(), hashCache),
+                            hashValueExpr(emit.getDelay(), hashCache)};
+          bool duplicate = llvm::any_of(seen, [&](const EmitSignature &other) {
+            return sig == other;
+          });
+          if (duplicate) {
+            emit.erase();
+            continue;
+          }
+          seen.push_back(sig);
+        }
+      }
+    }
   }
 };
 
