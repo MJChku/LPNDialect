@@ -29,9 +29,9 @@ def build_cache_example(addresses: Iterable[int]) -> str:
       seq, addr = seq_addr
       line = (addr // LINE_BYTES) % NUM_LINES
       token = token_create()
-      token = token_set(token, "addr", addr)
-      token = token_set(token, "line", line)
-      token = token_set(token, "seq", seq)
+      token = token.set("addr", addr)
+      token = token.set("line", line)
+      token = token.set("seq", seq)
       emit(l1_req, token)
 
   @net.jit("init_state")
@@ -39,15 +39,15 @@ def build_cache_example(addresses: Iterable[int]) -> str:
     take(state_seed)
     state = token_create()
     for idx in range(NUM_LINES):
-      state = token_set(state, f"line{idx}", 0)
+      state = state.set(f"line{idx}", 0)
     emit(l1_state, state)
 
   @net.jit("l1_controller")
   def l1_controller():
     req = take(l1_req)
     state = take(l1_state)
-    line_idx = token_get(req, "line")
-    line_valid = token_get(state, ("line", line_idx))
+    line_idx = req.get("line")
+    line_valid = state.get(f"line{line_idx}")
     has_line = line_valid != 0
 
     if has_line:
@@ -66,8 +66,8 @@ def build_cache_example(addresses: Iterable[int]) -> str:
   def l1_fill():
     resp = take(l2_resp)
     state = take(l1_state)
-    line_idx = token_get(resp, "line")
-    updated = token_set(state, ("line", line_idx), 1)
+    line_idx = resp.get("line")
+    updated = state.set(f"line{line_idx}", 1)
     emit(l1_resp, resp, delay=L1_HIT_DELAY_NS)
     emit(l1_state, updated)
 

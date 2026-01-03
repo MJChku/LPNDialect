@@ -85,7 +85,9 @@ class NetDevice:
         token = seed.set("src", self.server_id)
         token = token.set("dst", dst)
         token = token.set("size", size)
-        token = token.set("id", workload_idx * 1_000 + seq)
+        seq_i64 = index_cast(seq, src_type="index", dst_type="i64")
+        token_id = seq_i64 + workload_idx * 1_000
+        token = token.set("id", token_id)
         emit(self.out_buf, token)
 
 
@@ -134,11 +136,11 @@ class NetToRSwitch:
       dst = packet.get("dst")
       relative = dst - self.server_start
       idx = index_cast(relative, src_type="i64")
-      egress_list = place_list(self._egress)
-      target = place_list_get(egress_list, idx)
+      egress_handles = array(self._egress)
+      target = egress_handles[idx]
       packet = packet.set("hops", 1)
       delay = self.delay_ns
-      emit_handle(target, packet, delay=delay)
+      emit(target, packet, delay=delay)
       emit(self.ctrl, ctrl, delay=delay)
 
 

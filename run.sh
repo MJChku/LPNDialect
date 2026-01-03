@@ -7,8 +7,8 @@
 #       -DMLIR_DIR=/home/jiacma/lpn_mlir/.deps/llvm-project-main/install/lib/cmake/mlir \
 #       -DCMAKE_BUILD_TYPE=RelWithDebInfo
 cmake --build build
-PYTHONPATH=. python3 examples/cache_net.py > /tmp/cache_net.mlir
 
+PYTHONPATH=. python3 examples/cache_net.py > /tmp/cache_net.mlir
 ./build/tools/lpn-opt/lpn-opt --mlir-print-ir-after-all --lpn-synthesize-guards \
   --lpn-normalize-delays \
   --lpn-retain-hypergraph --lpn-strip-hidden-values \
@@ -25,3 +25,9 @@ PYTHONPATH=. python3 examples/split_merge_net.py > /tmp/split_merge.mlir
   --lpn-retain-hypergraph --lpn-strip-hidden-values \
   --lpn-resolve-choices --canonicalize --cse \
   --lpn-dataflow-simplify /tmp/hyper_demo.mlir > /tmp/hyper_demo_after.mlir
+
+PYTHONPATH=. python3 examples/network_net.py > /tmp/network_net.mlir
+./build/tools/lpn-opt/lpn-opt --lpn-synthesize-guards --lpn-normalize-delays \
+  --lpn-retain-hypergraph --lpn-strip-hidden-values \
+  --lpn-resolve-choices --canonicalize --cse \
+  --lpn-dataflow-simplify /tmp/network_net.mlir > /tmp/network_net_after.mlir

@@ -1,10 +1,54 @@
 from __future__ import annotations
 
 import ast
+import hashlib
 import inspect
+import operator
+import re
+import sys
 import textwrap
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union
+
+
+_AST_OP_MAP = {
+    ast.Add: operator.add,
+    ast.Sub: operator.sub,
+    ast.Mult: operator.mul,
+    ast.Div: operator.truediv,
+    ast.FloorDiv: operator.floordiv,
+    ast.Mod: operator.mod,
+    ast.Pow: operator.pow,
+    ast.LShift: operator.lshift,
+    ast.RShift: operator.rshift,
+    ast.BitOr: operator.or_,
+    ast.BitXor: operator.xor,
+    ast.BitAnd: operator.and_,
+    ast.MatMult: operator.matmul,
+}
+
+
+_FNV_OFFSET_BASIS = 0xCBF29CE484222325
+_FNV_PRIME = 0x100000001B3
+
+
+def _to_signed_i64(value: int) -> int:
+  mask = (1 << 64) - 1
+  value &= mask
+  if value >= (1 << 63):
+    value -= (1 << 64)
+  return value
+
+
+_FNV_OFFSET_BASIS_I64 = _to_signed_i64(_FNV_OFFSET_BASIS)
+
+
+def _hash_literal_segment_to_i64(text: str) -> int:
+  if not text:
+    return 0
+  digest = hashlib.sha256(text.encode("utf-8")).digest()
+  raw = int.from_bytes(digest[:8], byteorder="little", signed=False)
+  return _to_signed_i64(raw)
 
 
 class Statement:
@@ -156,10 +200,82 @@ class TransitionScriptExecutor:
     if isinstance(stmt, ast.For) and self._is_range_loop(stmt):
       self._exec_range_loop(stmt)
       return
+    if isinstance(stmt, ast.Assign) and self._try_exec_assign(stmt):
+      return
+    if isinstance(stmt, ast.AugAssign) and self._try_exec_aug_assign(stmt):
+      return
+
     mod = ast.Module(body=[stmt], type_ignores=[])
     ast.fix_missing_locations(mod)
     code = compile(mod, self.filename, "exec")
     exec(code, self.globals, self.locals)
+
+  def _try_exec_assign(self, stmt: ast.Assign) -> bool:
+    if len(stmt.targets) != 1:
+      return False
+    target = stmt.targets[0]
+    if not isinstance(target, ast.Subscript):
+      return False
+    if not isinstance(target.value, ast.Name):
+      return False
+
+    var_name = target.value.id
+    if var_name not in self.locals:
+      return False
+
+    obj = self.locals[var_name]
+    if not isinstance(obj, Value):
+      return False
+
+    idx_node = target.slice
+    if sys.version_info < (3, 9) and isinstance(idx_node, ast.Index):
+      idx_node = idx_node.value
+
+    try:
+      index = self._eval_expr(idx_node)
+      value = self._eval_expr(stmt.value)
+    except Exception:
+      return False
+
+    new_obj = obj.set(index, value)
+    self.locals[var_name] = new_obj
+    return True
+
+  def _try_exec_aug_assign(self, stmt: ast.AugAssign) -> bool:
+    target = stmt.target
+    if not isinstance(target, ast.Subscript):
+      return False
+    if not isinstance(target.value, ast.Name):
+      return False
+
+    var_name = target.value.id
+    if var_name not in self.locals:
+      return False
+
+    obj = self.locals[var_name]
+    if not isinstance(obj, Value):
+      return False
+
+    idx_node = target.slice
+    if sys.version_info < (3, 9) and isinstance(idx_node, ast.Index):
+      idx_node = idx_node.value
+
+    op_type = type(stmt.op)
+    op_func = _AST_OP_MAP.get(op_type)
+    if not op_func:
+      return False
+
+    try:
+      index = self._eval_expr(idx_node)
+      operand = self._eval_expr(stmt.value)
+    except Exception:
+      return False
+
+    current_val = obj[index]
+    new_val = op_func(current_val, operand)
+    new_obj = obj.set(index, new_val)
+    self.locals[var_name] = new_obj
+    return True
 
   def _eval_expr(self, expr: ast.expr) -> Any:
     node = ast.Expression(expr)
@@ -263,11 +379,20 @@ class Value:
       return self.builder.addf(self, other)
     return self.builder.addi(self, other, typ=self.typ)
 
+  def __radd__(self, other: Union["Value", int, float]) -> "Value":
+    return self.__add__(other)
+
   def __sub__(self, other: Union["Value", int, float]) -> "Value":
     self._require_numeric()
     if self.typ == "f64":
       return self.builder.subf(self, other)
     return self.builder.subi(self, other, typ=self.typ)
+
+  def __rsub__(self, other: Union["Value", int, float]) -> "Value":
+    self._require_numeric()
+    if self.typ == "f64":
+      return self.builder.subf(other, self)
+    return self.builder.subi(other, self, typ=self.typ)
 
   def __truediv__(self, other: Union["Value", int, float]) -> "Value":
     if self.typ != "f64":
@@ -296,6 +421,25 @@ class Value:
   def __ge__(self, other: Union["Value", int]) -> "Value":
     return self._cmp_int("sge", other)
 
+  def __getitem__(self, index: Union["Value", int]) -> "Value":
+    return self.builder.array_get(self, index)
+
+  def __setitem__(self, index: Union["Value", int], value: Union["Value", int, float]) -> None:
+    raise TypeError("LPN arrays are immutable SSA values; use 'new_arr = arr.set(index, value)' instead of 'arr[index] = value'.")
+
+  def set(self, index: Union["Value", int], value: Union["Value", int, float]) -> "Value":
+    return self.builder.array_set(self, index, value)
+
+  def len(self) -> "Value":
+    return self.builder.array_len(self)
+
+  def __format__(self, format_spec: str) -> str:
+    if format_spec not in ("", "s"):
+      raise ValueError(
+          f"LPN SSA values only support empty format specifiers, got '{format_spec}'"
+      )
+    return self.builder._register_format_placeholder(self)
+
   def eq(self, other: Union["Value", int, float]) -> "Value":
     return self.__eq__(other)
 
@@ -311,13 +455,11 @@ class TokenValue:
   def __str__(self) -> str:
     return self.name
 
-  def get(self, key: Union[str, "KeyValue",
-                            Tuple[Union[str, "KeyValue"], Union[Value, int]]]) -> Value:
+  def get(self, key: Union[str, "KeyValue", Value, int]) -> Value:
     return self.builder.token_get(self, key)
 
   def set(self,
-          key: Union[str, "KeyValue",
-                     Tuple[Union[str, "KeyValue"], Union[Value, int]]],
+          key: Union[str, "KeyValue", Value, int],
           value: Union[Value, int]) -> "TokenValue":
     return self.builder.token_set(self, key, value)
 
@@ -333,6 +475,9 @@ class KeyValue:
   def __str__(self) -> str:
     return self.name
 
+  def as_value(self) -> Value:
+    return self.builder._ssa_values[self.name]
+
 
 @dataclass(frozen=True)
 class PlaceHandle:
@@ -341,6 +486,7 @@ class PlaceHandle:
 
 class TransitionBuilder:
   _global_id = 0
+  _value_name_re = re.compile(r"%[A-Za-z0-9_$.]+")
 
   def __init__(self, name: str):
     self.name = name
@@ -348,31 +494,46 @@ class TransitionBuilder:
     self._value_id = 0
     self._place_handles: dict[str, Value] = {}
     self._literal_keys: dict[str, KeyValue] = {}
+    self._ssa_values: dict[str, Value] = {}
     self._local_prefix = TransitionBuilder._global_id
     TransitionBuilder._global_id += 1
+    self._literal_segment_hashes: Dict[str, int] = {}
+    self._literal_segment_values: Dict[str, Value] = {}
+    self._hash_offset_value: Optional[Value] = None
+    self._hash_prime_value: Optional[Value] = None
 
   def _next_value(self) -> str:
     name = f"%t{self._local_prefix}_{self._value_id}"
     self._value_id += 1
     return name
 
+  def _register_format_placeholder(self, value: Value) -> str:
+    return value.name
+
   def _append(self, text: str) -> None:
     self._ops.append(RawStatement(text))
 
   def _wrap_value(self, name: str, typ: str) -> Value:
-    return Value(self, name, typ)
+    value = Value(self, name, typ)
+    self._ssa_values[name] = value
+    return value
 
   def _wrap_token(self, name: str) -> TokenValue:
     return TokenValue(self, name)
 
   def _wrap_key(self, name: str) -> KeyValue:
+    self._wrap_value(name, "!lpn.key")
     return KeyValue(self, name)
 
   def _coerce_value(self, value: Union[Value, int, float], typ: str) -> Value:
     if isinstance(value, Value):
-      if value.typ != typ:
-        raise TypeError(f"expected value of type {typ}, but got {value.typ}")
-      return value
+      if value.typ == typ:
+        return value
+      if value.typ == "index" and typ == "i64":
+        return self.index_cast(value, src_type="index", dst_type="i64")
+      if value.typ == "i64" and typ == "index":
+        return self.index_cast(value, src_type="i64", dst_type="index")
+      raise TypeError(f"expected value of type {typ}, but got {value.typ}")
     if typ == "i64":
       return self.const_i64(int(value))
     if typ == "f64":
@@ -381,6 +542,19 @@ class TransitionBuilder:
       if isinstance(value, int):
         return self.const_index(value)
     raise TypeError(f"cannot coerce value of type {type(value)} to {typ}")
+
+  def _as_value(self, value: Union[Value, PlaceHandle, int, float]) -> Value:
+    if isinstance(value, Value):
+      return value
+    if isinstance(value, KeyValue):
+      return value.as_value()
+    if isinstance(value, PlaceHandle):
+      return self._ensure_place_handle(value)
+    if isinstance(value, float):
+      return self.const_f64(value)
+    if isinstance(value, int):
+      return self.const_i64(value)
+    raise TypeError(f"unsupported element type {type(value)}")
 
   def _resolve_place_operand(self,
                              place: Union[PlaceHandle, Value]) -> Value:
@@ -400,6 +574,69 @@ class TransitionBuilder:
       self._place_handles[place.name] = handle
     return handle
 
+  def _array_element_type(self, array_type: str) -> str:
+    prefix = "!lpn.array<"
+    if array_type.startswith(prefix) and array_type.endswith(">"):
+      return array_type[len(prefix):-1]
+    raise TypeError("expected an !lpn.array value")
+
+  def _coerce_array_element(self,
+                            element: Union[Value, KeyValue, PlaceHandle, int, float],
+                            expected_type: Optional[str] = None) -> Value:
+    if isinstance(element, (Value, KeyValue, PlaceHandle)):
+      value = self._as_value(element)
+    elif isinstance(element, float):
+      target = expected_type if expected_type == "f64" else "f64"
+      value = self._coerce_value(element, target)
+    elif isinstance(element, int):
+      target = expected_type if expected_type in ("i64", "index") else "i64"
+      if target == "index":
+        value = self.const_index(element)
+      else:
+        value = self.const_i64(element)
+    else:
+      value = self._as_value(element)
+    if expected_type is not None and value.typ != expected_type:
+      raise TypeError(
+          f"array elements must all have type {expected_type}, saw {value.typ}")
+    return value
+
+  def array(self,
+            *elements: Union[Value, PlaceHandle, int, float,
+                             Sequence[Union[Value, PlaceHandle, int, float]]]
+            ) -> Value:
+    if len(elements) == 1 and isinstance(elements[0], (list, tuple)):
+      elements = tuple(elements[0])
+    if not elements:
+      raise ValueError("array requires at least one element")
+    coerced: List[Value] = []
+    element_type: Optional[str] = None
+    for element in elements:
+      value = self._coerce_array_element(element, element_type)
+      if element_type is None:
+        element_type = value.typ
+      coerced.append(value)
+    assert element_type is not None
+    name = self._next_value()
+    operand_names = ", ".join(value.name for value in coerced)
+    array_type = f"!lpn.array<{element_type}>"
+    operand_types = ", ".join(value.typ for value in coerced)
+    self._append(f"{name} = lpn.array {operand_names} : {operand_types} -> {array_type}")
+    return self._wrap_value(name, array_type)
+
+  def array_get(self,
+                array_value: Value,
+                index: Union[Value, int]) -> Value:
+    if (not isinstance(array_value, Value)
+        or not array_value.typ.startswith("!lpn.array<")):
+      raise TypeError("array_get expects an !lpn.array value")
+    idx = self._coerce_value(index, "index")
+    element_type = self._array_element_type(array_value.typ)
+    name = self._next_value()
+    self._append(
+        f"{name} = lpn.array.get {array_value.name}, {idx.name} : ({array_value.typ}, index) -> {element_type}")
+    return self._wrap_value(name, element_type)
+
   def key_literal(self, name: str) -> KeyValue:
     existing = self._literal_keys.get(name)
     if existing is not None:
@@ -411,28 +648,104 @@ class TransitionBuilder:
     self._literal_keys[name] = key
     return key
 
-  def key_index(self, base: KeyValue, index: Union[Value, int]) -> KeyValue:
-    idx_value = self._coerce_value(index, "i64")
+  def key_reg(self, identifier: Union[Value, int]) -> KeyValue:
+    key_id = identifier
+    if not isinstance(key_id, Value) or key_id.typ != "i64":
+      key_id = self._coerce_value(key_id, "i64")
     name = self._next_value()
     self._append(
-        f"{name} = lpn.key.index {base.name}, {idx_value.name} : !lpn.key, i64 -> !lpn.key")
+        f"{name} = lpn.key.reg {key_id.name} : i64 -> !lpn.key")
     return self._wrap_key(name)
 
+  def _hash_prime_const(self) -> Value:
+    if self._hash_prime_value is None:
+      self._hash_prime_value = self.const_i64(_FNV_PRIME)
+    return self._hash_prime_value
+
+  def _hash_offset_const(self) -> Value:
+    if self._hash_offset_value is None:
+      self._hash_offset_value = self.const_i64(_FNV_OFFSET_BASIS_I64)
+    return self._hash_offset_value
+
+  def _get_literal_segment_value(self, literal: str) -> Optional[Value]:
+    if not literal:
+      return None
+    existing = self._literal_segment_values.get(literal)
+    if existing is not None:
+      return existing
+    hashed = self._literal_segment_hashes.get(literal)
+    if hashed is None:
+      hashed = _hash_literal_segment_to_i64(literal)
+      self._literal_segment_hashes[literal] = hashed
+    value = self.const_i64(hashed)
+    self._literal_segment_values[literal] = value
+    return value
+
+  def _mix_hash_chunk(self,
+                      seed: Value,
+                      chunk: Value) -> Value:
+    mixed = self.xori(seed, chunk)
+    return self.muli(mixed, self._hash_prime_const())
+
+  def _materialize_dynamic_key(self,
+                               segments: Sequence[Union[str, Value, int]]
+                               ) -> KeyValue:
+    current = self._hash_offset_const()
+    for segment in segments:
+      if isinstance(segment, str):
+        literal_value = self._get_literal_segment_value(segment)
+        if literal_value is None:
+          continue
+        current = self._mix_hash_chunk(current, literal_value)
+        continue
+      segment_value = self._coerce_value(segment, "i64")
+      current = self._mix_hash_chunk(current, segment_value)
+    return self.key_reg(current)
+
   def _ensure_key(self,
-                  key: Union[str, KeyValue,
-                             Tuple[Union[str, KeyValue], Union[Value, int]]]
-                  ) -> KeyValue:
+                  key: Union[str, KeyValue, Value, int]) -> KeyValue:
     if isinstance(key, KeyValue):
       return key
-    if isinstance(key, tuple):
-      if len(key) != 2:
-        raise ValueError("key tuple must be (base, index)")
-      base, index = key
-      base_key = self._ensure_key(base)
-      return self.key_index(base_key, index)
+    if isinstance(key, Value):
+      if key.typ == "!lpn.key":
+        return KeyValue(self, key.name)
+      return self.key_reg(key)
+    if isinstance(key, int):
+      return self.key_reg(key)
     if isinstance(key, str):
+      dynamic_segments = self._match_dynamic_key_literal(key)
+      if dynamic_segments is not None:
+        return self._materialize_dynamic_key(dynamic_segments)
       return self.key_literal(key)
-    raise TypeError("expected a key literal string, KeyValue, or (base, index) tuple")
+    raise TypeError("expected a key literal string, KeyValue, Value, or int")
+
+  def _match_dynamic_key_literal(
+      self, literal: str) -> Optional[List[Union[str, Value]]]:
+    """Detect literal strings that embed SSA value names via f-strings."""
+    matches = list(TransitionBuilder._value_name_re.finditer(literal))
+    if not matches:
+      return None
+    segments: List[Union[str, Value]] = []
+    cursor = 0
+    for match in matches:
+      start, end = match.span()
+      if start > cursor:
+        prefix = literal[cursor:start]
+        if prefix:
+          segments.append(prefix)
+      value_name = match.group(0)
+      value = self._ssa_values.get(value_name)
+      if value is None:
+        return None
+      segments.append(value)
+      cursor = end
+    if cursor < len(literal):
+      suffix = literal[cursor:]
+      if suffix:
+        segments.append(suffix)
+    if not any(isinstance(segment, Value) for segment in segments):
+      return None
+    return segments
 
   def const_f64(self, value: float) -> Value:
     literal = f"{float(value):.6f}"
@@ -479,6 +792,28 @@ class TransitionBuilder:
     rhs_val = self._coerce_value(rhs, typ)
     name = self._next_value()
     self._append(f"{name} = arith.subi {lhs_val}, {rhs_val} : {typ}")
+    return self._wrap_value(name, typ)
+
+  def muli(self,
+           lhs: Union[Value, int],
+           rhs: Union[Value, int],
+           *,
+           typ: str = "i64") -> Value:
+    lhs_val = self._coerce_value(lhs, typ)
+    rhs_val = self._coerce_value(rhs, typ)
+    name = self._next_value()
+    self._append(f"{name} = arith.muli {lhs_val}, {rhs_val} : {typ}")
+    return self._wrap_value(name, typ)
+
+  def xori(self,
+           lhs: Union[Value, int],
+           rhs: Union[Value, int],
+           *,
+           typ: str = "i64") -> Value:
+    lhs_val = self._coerce_value(lhs, typ)
+    rhs_val = self._coerce_value(rhs, typ)
+    name = self._next_value()
+    self._append(f"{name} = arith.xori {lhs_val}, {rhs_val} : {typ}")
     return self._wrap_value(name, typ)
 
   def addf(self,
@@ -660,8 +995,7 @@ class TransitionBuilder:
 
   def token_get(self,
                 token: TokenValue,
-                key: Union[str, KeyValue,
-                           Tuple[Union[str, KeyValue], Union[Value, int]]]
+                key: Union[str, KeyValue, Value, int]
                 ) -> Value:
     key_value = self._ensure_key(key)
     name = self._next_value()
@@ -671,8 +1005,7 @@ class TransitionBuilder:
 
   def token_set(self,
                 token: TokenValue,
-                key: Union[str, KeyValue,
-                           Tuple[Union[str, KeyValue], Union[Value, int]]],
+                key: Union[str, KeyValue, Value, int],
                 value_ssa: Union[Value, int]) -> TokenValue:
     key_value = self._ensure_key(key)
     value = self._coerce_value(value_ssa, "i64")
@@ -697,25 +1030,33 @@ class TransitionBuilder:
         f"{name} = \"lpn.token.create\"() {{log_prefix = {attr}}} : () -> !lpn.token")
     return self._wrap_token(name)
 
-  def place_list(self, places: Sequence[PlaceHandle]) -> Value:
-    if not places:
-      raise ValueError("place_list requires at least one place")
-    refs = ", ".join(f"@{place.name}" for place in places)
-    name = self._next_value()
-    self._append(
-        f"{name} = lpn.place_list {{places = [{refs}]}} : !lpn.place_list")
-    return self._wrap_value(name, "!lpn.place_list")
+  def reg(self, key: Union[str, KeyValue, Value, int]) -> KeyValue:
+    """Creates a key handle from literal strings, register ids, or dynamic expressions."""
+    return self._ensure_key(key)
 
-  def place_list_get(self,
-                     place_list: Value,
-                     index: Union[Value, int]) -> Value:
-    if place_list.typ != "!lpn.place_list":
-      raise TypeError("place_list_get expects a !lpn.place_list value")
-    idx_value = self._coerce_value(index, "index")
+  def array_set(self,
+                array_value: Value,
+                index: Union[Value, int],
+                value: Union[Value, int, float]) -> Value:
+    if (not isinstance(array_value, Value)
+        or not array_value.typ.startswith("!lpn.array<")):
+      raise TypeError("array_set expects an !lpn.array value")
+    idx = self._coerce_value(index, "index")
+    element_type = self._array_element_type(array_value.typ)
+    val = self._coerce_array_element(value, element_type)
     name = self._next_value()
     self._append(
-        f"{name} = lpn.place_list.get {place_list}, {idx_value} : (!lpn.place_list, index) -> !lpn.place")
-    return self._wrap_value(name, "!lpn.place")
+        f"{name} = lpn.array.set {array_value.name}, {idx.name}, {val.name} : ({array_value.typ}, index, {element_type}) -> {array_value.typ}")
+    return self._wrap_value(name, array_value.typ)
+
+  def array_len(self, array_value: Value) -> Value:
+    if (not isinstance(array_value, Value)
+        or not array_value.typ.startswith("!lpn.array<")):
+      raise TypeError("array_len expects an !lpn.array value")
+    name = self._next_value()
+    self._append(
+        f"{name} = lpn.array.len {array_value.name} : {array_value.typ} -> index")
+    return self._wrap_value(name, "index")
 
   def materialize_place(self, place: PlaceHandle) -> None:
     self._ensure_place_handle(place)

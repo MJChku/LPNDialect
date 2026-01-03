@@ -6,5 +6,7 @@
 using namespace mlir;
 using namespace mlir::lpn;
 
+Type ArrayType::getElementType() const { return getImpl()->elementType; }
+
 #define GET_TYPEDEF_CLASSES
 #include "LPN/Dialect/LPNTypes.cpp.inc"

@@ -21,9 +21,10 @@ def KeyType : TypeDef<LPN_Dialect, "Key"> {
 
   let description = [{
     Keys identify entries inside the append-only token log.  Literal keys are
-    constructed via `lpn.key.literal` and can be refined at runtime by
-    appending indices (via `lpn.key.index`).  Keeping keys explicit in the IR
-    makes downstream analyses resilient to dynamic metadata schemas.
+    constructed via `lpn.key.literal` while fully dynamic handles can be
+    materialized from runtime register identifiers with `lpn.key.reg`.  Keeping
+    keys explicit in the IR makes downstream analyses resilient to dynamic
+    metadata schemas.
   }];
 
   let mnemonic = "key";
@@ -40,16 +41,25 @@ def PlaceHandleType : TypeDef<LPN_Dialect, "Place"> {
   let mnemonic = "place";
 }
 
-def PlaceListType : TypeDef<LPN_Dialect, "PlaceList"> {
-  let summary = "Opaque list of place handles";
+def ArrayType : TypeDef<LPN_Dialect, "Array"> {
+  let summary = "Homogeneous SSA array";
 
   let description = [{
-    Represents a compile-time list of place references that can be indexed at
-    runtime (e.g., a switch egress array). Values of this type are created via
-    `lpn.place_list`.
+    Represents a compile-time array of SSA values that all share the same
+    element type. Arrays can hold place handles, scalar values, or any other
+    dialect-level type, and are primarily used to model runtime lookups such as
+    switch egress tables.
   }];
 
-  let mnemonic = "place_list";
+  let parameters = (ins TypeParameter<"::mlir::Type",
+                                     "Type stored by each array slot">:$elementType);
+  let genStorageClass = 0;
+  let storageClass = "ArrayTypeStorage";
+  let storageNamespace = "::mlir::lpn::detail";
+
+  let assemblyFormat = "`<` $elementType `>`";
+
+  let mnemonic = "array";
 }
 
 #endif // LPN_TYPES_TD

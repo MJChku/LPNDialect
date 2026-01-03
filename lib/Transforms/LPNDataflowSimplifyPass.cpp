@@ -1,5 +1,6 @@
 #include "LPN/Conversion/LPNPasses.h"
 #include "LPN/Dialect/LPNOps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -238,9 +239,15 @@ struct LPNDataflowSimplifyPass
         ifOp.erase();
         continue;
       }
-      if (thenTrivial == elseTrivial)
+      auto constCond =
+          ifOp.getCondition().getDefiningOp<arith::ConstantOp>();
+      if (!constCond)
         continue;
-      Region &keep = thenTrivial ? ifOp.getElseRegion() : ifOp.getThenRegion();
+      auto condAttr = dyn_cast<IntegerAttr>(constCond.getValue());
+      if (!condAttr)
+        continue;
+      bool condTrue = !condAttr.getValue().isZero();
+      Region &keep = condTrue ? ifOp.getThenRegion() : ifOp.getElseRegion();
       if (keep.empty())
         continue;
       Block &block = keep.front();

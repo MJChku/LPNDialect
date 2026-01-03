@@ -30,9 +30,10 @@ module {
 
     lpn.transition @list_user {
       ^bb0:
-        %list = lpn.place_list {places = [@list_buf]} : !lpn.place_list
+        %p = lpn.place_ref @list_buf : !lpn.place
+        %list = lpn.array %p : !lpn.array<!lpn.place>
         %zero = arith.constant 0 : index
-        %handle = lpn.place_list.get %list, %zero : (!lpn.place_list, index) -> !lpn.place
+        %handle = lpn.array.get %list, %zero : (!lpn.array<!lpn.place>, index) -> !lpn.place
         %tok = lpn.token.create() : () -> !lpn.token
         %delay = arith.constant 0.0 : f64
         lpn.emit %handle, %tok, %delay : !lpn.place, !lpn.token, f64

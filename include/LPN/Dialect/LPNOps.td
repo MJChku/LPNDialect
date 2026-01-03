@@ -107,35 +107,83 @@ def PlaceRefOp : LPN_Op<"place_ref", [Pure]> {
     "$place attr-dict `:` type($handle)";
 }
 
-def PlaceListOp : LPN_Op<"place_list", [Pure]> {
-  let summary = "Create a list of place handles";
+def ArrayOp : LPN_Op<"array", [Pure]> {
+  let summary = "Create a homogeneous SSA array";
+
+  let description = [{
+    Packs a variadic list of SSA values into a single `!lpn.array<elem>`
+    container.  Every operand must have the same type, which becomes the array
+    element type.
+  }];
 
   let arguments = (ins
-    FlatSymbolRefArrayAttr:$places
+    Variadic<AnyType>:$elements
   );
 
   let results = (outs
-    PlaceListType:$list
+    ArrayType:$array
   );
 
   let assemblyFormat =
-    "attr-dict `:` type($list)";
+    "$elements attr-dict `:` type($elements) `->` type($array)";
 }
 
-def PlaceListGetOp : LPN_Op<"place_list.get", [Pure]> {
-  let summary = "Read a handle from a place list";
+def ArrayGetOp : LPN_Op<"array.get", [Pure]> {
+  let summary = "Read an element from an SSA array";
+
+  let description = [{
+    Load the element referenced by `index` from the given array.  The result
+    type must match the array's element type.
+  }];
 
   let arguments = (ins
-    PlaceListType:$list,
+    ArrayType:$array,
     Index:$index
   );
 
   let results = (outs
-    PlaceHandleType:$handle
+    AnyType:$element
   );
 
   let assemblyFormat =
-    "$list `,` $index attr-dict `:` `(` type($list) `,` type($index) `)` `->` type($handle)";
+    "$array `,` $index attr-dict `:` `(` type($array) `,` type($index) `)` `->` type($element)";
+}
+
+def ArraySetOp : LPN_Op<"array.set", [Pure]> {
+  let summary = "Update an element in an SSA array";
+
+  let description = [{
+    Return a new array identical to `array` except that the element at `index`
+    is replaced by `value`.
+  }];
+
+  let arguments = (ins
+    ArrayType:$array,
+    Index:$index,
+    AnyType:$value
+  );
+
+  let results = (outs
+    ArrayType:$result
+  );
+
+  let assemblyFormat =
+    "$array `,` $index `,` $value attr-dict `:` `(` type($array) `,` type($index) `,` type($value) `)` `->` type($result)";
+}
+
+def ArrayLenOp : LPN_Op<"array.len", [Pure]> {
+  let summary = "Get the length of an SSA array";
+
+  let arguments = (ins
+    ArrayType:$array
+  );
+
+  let results = (outs
+    Index:$length
+  );
+
+  let assemblyFormat =
+    "$array attr-dict `:` type($array) `->` type($length)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -239,7 +287,7 @@ def KeyLiteralOp : LPN_Op<"key.literal", [Pure]> {
 
   let description = [{
     Produces a key handle that references the literal `value`.  Dynamic keys can
-    be created by chaining `lpn.key.index` ops.
+    be materialized from runtime register identifiers via `lpn.key.reg`.
   }];
 
   let arguments = (ins StrAttr:$value);
@@ -248,20 +296,21 @@ def KeyLiteralOp : LPN_Op<"key.literal", [Pure]> {
   let assemblyFormat = "$value attr-dict `:` type($key)";
 }
 
-def KeyIndexOp : LPN_Op<"key.index", [Pure]> {
-  let summary = "Append a decimal index to an existing key";
+def KeyRegOp : LPN_Op<"key.reg", [Pure]> {
+  let summary = "Wrap a runtime key register identifier as a metadata key";
 
   let description = [{
-    Creates a new key handle by concatenating the decimal form of `index` to the
-    textual representation of `base`.  This mirrors the old
-    `token.{get,set}_indexed` helpers while keeping keys explicit in SSA.
+    Accepts an `i64` identifier (for example, the output of a hash/registry
+    lookup) and produces a `!lpn.key` handle that can be consumed by
+    `lpn.token.{get,set}`.  This enables fully dynamic metadata schemas without
+    enumerating every key literal in the IR.
   }];
 
-  let arguments = (ins KeyType:$base, I64:$index);
+  let arguments = (ins I64:$id);
   let results = (outs KeyType:$key);
 
   let assemblyFormat =
-    "$base `,` $index attr-dict `:` type($base) `,` type($index) `->` type($key)";
+    "$id attr-dict `:` type($id) `->` type($key)";
 }
 
 def TokenSetOp : LPN_Op<"token.set", [Pure]> {

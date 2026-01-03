@@ -498,33 +498,35 @@ static LogicalResult resolveEmitTargets(Value placeValue,
     return success();
   }
 
-  if (auto get = placeValue.getDefiningOp<PlaceListGetOp>()) {
-    auto list = get.getList().getDefiningOp<PlaceListOp>();
+  if (auto get = placeValue.getDefiningOp<ArrayGetOp>()) {
+    auto list = get.getArray().getDefiningOp<ArrayOp>();
     if (!list)
       return failure();
-    auto placesAttr = list.getPlacesAttr();
+    auto elements = list.getElements();
 
     Value baseIndex = stripIndexCasts(get.getIndex());
     if (auto constIdx = getConstI64(baseIndex)) {
-      if (*constIdx < 0 || *constIdx >= static_cast<int64_t>(placesAttr.size()))
+      if (*constIdx < 0 || *constIdx >= static_cast<int64_t>(elements.size()))
         return failure();
-      auto sym = dyn_cast<FlatSymbolRefAttr>(placesAttr[*constIdx]);
-      if (!sym)
-        return failure();
-      targets.push_back(TargetInfo{sym.getAttr(), {}});
-      return success();
+      
+      Value element = elements[*constIdx];
+      if (auto ref = element.getDefiningOp<PlaceRefOp>()) {
+        targets.push_back(TargetInfo{ref.getPlaceAttr().getAttr(), {}});
+        return success();
+      }
+      return failure();
     }
 
-    for (auto [slot, attr] : llvm::enumerate(placesAttr)) {
-      auto sym = dyn_cast<FlatSymbolRefAttr>(attr);
-      if (!sym)
-        return failure();
-      TargetInfo info;
-      info.symbol = sym.getAttr();
-      if (auto guard = matchListIndexGuard(get.getIndex(), slot))
-        if (guard->key)
-          info.guards.push_back(*guard);
-      targets.push_back(std::move(info));
+    for (auto [slot, val] : llvm::enumerate(elements)) {
+      if (auto ref = val.getDefiningOp<PlaceRefOp>()) {
+        auto sym = ref.getPlaceAttr();
+        TargetInfo info;
+        info.symbol = sym.getAttr();
+        if (auto guard = matchListIndexGuard(get.getIndex(), slot))
+          if (guard->key)
+            info.guards.push_back(*guard);
+        targets.push_back(std::move(info));
+      }
     }
     return success();
   }
