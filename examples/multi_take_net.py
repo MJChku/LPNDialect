@@ -13,7 +13,7 @@ def build_multi_take_example() -> str:
   merged = net.place("merged", observable=True)
   pump = net.place("pump", initial_tokens=1)
 
-  @net.jit("seed_left")
+  @net.transition
   def seed_left():
     ctrl = take(pump)
     token = token_create()
@@ -21,7 +21,7 @@ def build_multi_take_example() -> str:
     emit(left, token)
     emit(pump, ctrl)
 
-  @net.jit("seed_right")
+  @net.transition
   def seed_right():
     ctrl = take(pump)
     token = token_create()
@@ -29,7 +29,7 @@ def build_multi_take_example() -> str:
     emit(right, token)
     emit(pump, ctrl)
 
-  @net.jit("merge_tokens")
+  @net.transition
   def merge_tokens():
     token_left = take(left)
     token_right = take(right)

@@ -7,7 +7,7 @@ def build_example() -> str:
   p_out = net.place("P_out")
   ctrl = net.place("P_ctrl", initial_tokens=1)
 
-  @net.jit("start")
+  @net.transition
   def start():
     ticket = take(ctrl)
     token = take(p_in)

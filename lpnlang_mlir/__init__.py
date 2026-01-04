@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import heapq
 import inspect
+import itertools
 import operator
 import re
 import sys
 import textwrap
+from collections import deque
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Sequence, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 
 _AST_OP_MAP = {
@@ -49,6 +52,32 @@ def _hash_literal_segment_to_i64(text: str) -> int:
   digest = hashlib.sha256(text.encode("utf-8")).digest()
   raw = int.from_bytes(digest[:8], byteorder="little", signed=False)
   return _to_signed_i64(raw)
+
+
+_MISSING = object()
+
+
+class _GlobalNameInjector:
+  def __init__(self, target: Dict[str, Any], mapping: Dict[str, Any]):
+    self._target = target
+    self._mapping = mapping
+    self._previous: Dict[str, Any] = {}
+
+  def __enter__(self) -> None:
+    for name, value in self._mapping.items():
+      if self._target.get(name) is value:
+        continue
+      previous = self._target.get(name, _MISSING)
+      self._previous[name] = previous
+      self._target[name] = value
+
+  def __exit__(self, exc_type, exc, tb) -> None:
+    for name, previous in self._previous.items():
+      if previous is _MISSING:
+        self._target.pop(name, None)
+      else:
+        self._target[name] = previous
+    self._previous.clear()
 
 
 class Statement:
@@ -179,19 +208,37 @@ class TransitionScriptExecutor:
     self.locals.setdefault("builder", builder)
     closure_vars = inspect.getclosurevars(self.fn)
     self.locals.update(closure_vars.nonlocals)
-    for attr in dir(builder):
-      if attr.startswith("_"):
-        continue
-      value = getattr(builder, attr)
-      if callable(value) and attr not in self.locals:
-        self.locals[attr] = value
+    builder_globals = self._collect_builder_globals(builder)
+    for name, value in builder_globals.items():
+      if name != "builder" and name not in self.locals:
+        self.locals[name] = value
     self.globals: Dict[str, Any] = dict(self.fn.__globals__)
     self.globals.setdefault("__builtins__", __builtins__)
-    self._exec_block(self.func_def.body)
+    self.globals.update(builder_globals)
+
+    module_globals = self.fn.__globals__
+    injector = _GlobalNameInjector(module_globals, builder_globals)
+    injector.__enter__()
+    try:
+      self._exec_block(self.func_def.body)
+    finally:
+      injector.__exit__(None, None, None)
 
   def _exec_block(self, statements: List[ast.stmt]) -> None:
     for stmt in statements:
       self._exec_stmt(stmt)
+
+  def _collect_builder_globals(
+      self, builder: "TransitionBuilder") -> Dict[str, Any]:
+    mapping: Dict[str, Any] = {}
+    for attr in dir(builder):
+      if attr.startswith("_"):
+        continue
+      value = getattr(builder, attr)
+      if callable(value):
+        mapping[attr] = value
+    mapping.setdefault("builder", builder)
+    return mapping
 
   def _exec_stmt(self, stmt: ast.stmt) -> None:
     if isinstance(stmt, ast.If):
@@ -488,8 +535,9 @@ class TransitionBuilder:
   _global_id = 0
   _value_name_re = re.compile(r"%[A-Za-z0-9_$.]+")
 
-  def __init__(self, name: str):
+  def __init__(self, name: str, owner: Optional["NetBuilder"] = None):
     self.name = name
+    self._owner = owner
     self._ops: List[Statement] = []
     self._value_id = 0
     self._place_handles: dict[str, Value] = {}
@@ -499,8 +547,6 @@ class TransitionBuilder:
     TransitionBuilder._global_id += 1
     self._literal_segment_hashes: Dict[str, int] = {}
     self._literal_segment_values: Dict[str, Value] = {}
-    self._hash_offset_value: Optional[Value] = None
-    self._hash_prime_value: Optional[Value] = None
 
   def _next_value(self) -> str:
     name = f"%t{self._local_prefix}_{self._value_id}"
@@ -524,6 +570,11 @@ class TransitionBuilder:
   def _wrap_key(self, name: str) -> KeyValue:
     self._wrap_value(name, "!lpn.key")
     return KeyValue(self, name)
+
+  def _register_argument(self, name: str, typ: str) -> Value:
+    value = Value(self, name, typ)
+    self._ssa_values[name] = value
+    return value
 
   def _coerce_value(self, value: Union[Value, int, float], typ: str) -> Value:
     if isinstance(value, Value):
@@ -657,16 +708,6 @@ class TransitionBuilder:
         f"{name} = lpn.key.reg {key_id.name} : i64 -> !lpn.key")
     return self._wrap_key(name)
 
-  def _hash_prime_const(self) -> Value:
-    if self._hash_prime_value is None:
-      self._hash_prime_value = self.const_i64(_FNV_PRIME)
-    return self._hash_prime_value
-
-  def _hash_offset_const(self) -> Value:
-    if self._hash_offset_value is None:
-      self._hash_offset_value = self.const_i64(_FNV_OFFSET_BASIS_I64)
-    return self._hash_offset_value
-
   def _get_literal_segment_value(self, literal: str) -> Optional[Value]:
     if not literal:
       return None
@@ -681,26 +722,38 @@ class TransitionBuilder:
     self._literal_segment_values[literal] = value
     return value
 
-  def _mix_hash_chunk(self,
-                      seed: Value,
-                      chunk: Value) -> Value:
-    mixed = self.xori(seed, chunk)
-    return self.muli(mixed, self._hash_prime_const())
-
   def _materialize_dynamic_key(self,
                                segments: Sequence[Union[str, Value, int]]
                                ) -> KeyValue:
-    current = self._hash_offset_const()
+    segment_values: List[Value] = []
     for segment in segments:
       if isinstance(segment, str):
         literal_value = self._get_literal_segment_value(segment)
         if literal_value is None:
           continue
-        current = self._mix_hash_chunk(current, literal_value)
-        continue
-      segment_value = self._coerce_value(segment, "i64")
-      current = self._mix_hash_chunk(current, segment_value)
-    return self.key_reg(current)
+        segment_values.append(literal_value)
+      else:
+        segment_values.append(self._coerce_value(segment, "i64"))
+    if not segment_values:
+      raise ValueError("dynamic key requires at least one runtime segment")
+    array_value = self.array(segment_values)
+    helper_name = self._ensure_dynamic_key_helper()
+    if helper_name is None:
+      current = self.const_i64(_FNV_OFFSET_BASIS_I64)
+      prime_value = self.const_i64(_FNV_PRIME)
+      for value in segment_values:
+        mixed = self.xori(current, value)
+        current = self.muli(mixed, prime_value)
+      return self.key_reg(current)
+    name = self._next_value()
+    self._append(
+        f"{name} = func.call @{helper_name}({array_value.name}) : ({array_value.typ}) -> !lpn.key")
+    return self._wrap_key(name)
+
+  def _ensure_dynamic_key_helper(self) -> Optional[str]:
+    if self._owner is None:
+      return None
+    return self._owner.ensure_dynamic_key_helper()
 
   def _ensure_key(self,
                   key: Union[str, KeyValue, Value, int]) -> KeyValue:
@@ -1085,13 +1138,85 @@ class TransitionBuilder:
     return ops
 
 
+@dataclass
+class TransitionDef:
+  name: str
+  builder: TransitionBuilder
+  fn: Callable[..., Any]
+  script: bool
+  jit: bool
+
+
+@dataclass
+class FunctionDef:
+  name: str
+  builder: "FuncBuilder"
+  visibility: str
+
+
+class FuncBuilder(TransitionBuilder):
+  def __init__(self,
+               name: str,
+               owner: Optional["NetBuilder"],
+               arg_types: Sequence[str],
+               result_types: Sequence[str],
+               arg_names: Optional[Sequence[str]] = None):
+    super().__init__(name, owner=owner)
+    self._result_types = list(result_types)
+    self._arguments: List[Value] = []
+    for idx, typ in enumerate(arg_types):
+      if arg_names and idx < len(arg_names):
+        arg_name = arg_names[idx]
+      else:
+        arg_name = f"%arg{idx}"
+      self._arguments.append(self._register_argument(arg_name, typ))
+    self._func_return_emitted = False
+
+  @property
+  def arguments(self) -> List[Value]:
+    return self._arguments
+
+  @property
+  def result_types(self) -> List[str]:
+    return self._result_types
+
+  def func_return(self, *values: Value) -> None:
+    if not values:
+      if self._result_types:
+        raise ValueError("func.return requires values for non-void functions")
+      self._append("func.return")
+      self._func_return_emitted = True
+      return
+    if len(values) != len(self._result_types):
+      raise ValueError(
+          f"func.return expected {len(self._result_types)} values, got {len(values)}")
+    operand_names = ", ".join(value.name for value in values)
+    operand_types = ", ".join(value.typ for value in values)
+    self._append(f"func.return {operand_names} : {operand_types}")
+    self._func_return_emitted = True
+
+  def render(self) -> List[str]:
+    ops = []
+    if self._ops:
+      for op in self._ops:
+        ops.append(op.render("        "))
+    if not self._func_return_emitted:
+      if self._result_types:
+        raise ValueError(
+            f"function '{self.name}' is missing a func.return statement")
+      ops.append("        func.return")
+    return ops
+
+
 class NetBuilder:
   """Tiny DSL for emitting the new MLIR dialect."""
 
   def __init__(self, name: str = "net"):
     self.name = name
     self._places: List[tuple[PlaceHandle, Optional[int], Optional[int], bool]] = []
-    self._transitions: List[TransitionBuilder] = []
+    self._transitions: List[TransitionDef] = []
+    self._helper_functions: Dict[str, List[str]] = {}
+    self._functions: List["FunctionDef"] = []
 
   def place(self,
             name: str,
@@ -1103,33 +1228,174 @@ class NetBuilder:
     self._places.append((handle, capacity, initial_tokens, observable))
     return handle
 
-  def transition(self,
-                 name: str,
-                 *,
-                 script: bool = False,
-                 jit: bool = False
-                 ) -> Callable[[Callable[[TransitionBuilder], None]], Callable[[TransitionBuilder], None]]:
-    if jit:
-      script = True
-
+  def _make_transition(self,
+                       name: str,
+                       *,
+                       script: bool,
+                       jit: bool
+                       ) -> Callable[[Callable[[TransitionBuilder], None]], Callable[[TransitionBuilder], None]]:
     def decorator(fn: Callable[[TransitionBuilder], None]):
-      builder = TransitionBuilder(name)
+      builder = TransitionBuilder(name, owner=self)
       if script:
         executor = TransitionScriptExecutor(
             fn, require_builder_arg=not jit)
         executor(builder)
       else:
         fn(builder)
-      self._transitions.append(builder)
+      definition = TransitionDef(name=name,
+                                 builder=builder,
+                                 fn=fn,
+                                 script=script,
+                                 jit=jit)
+      self._transitions.append(definition)
       return fn
     return decorator
 
-  def jit(self, name: str):
-    """Convenience decorator mirroring Triton-style @jit syntax."""
-    return self.transition(name, script=True, jit=True)
+  def transition(self, name: Optional[Union[str, Callable]] = None):
+    """Decorator for defining scheduler transitions."""
+    if callable(name):
+      fn = name  # type: ignore[assignment]
+      actual = fn.__name__
+      return self._make_transition(actual, script=True, jit=True)(fn)
+
+    def _decorator(fn: Callable[[TransitionBuilder], None]):
+      actual = name if isinstance(name, str) else fn.__name__
+      return self._make_transition(actual, script=True, jit=True)(fn)
+
+    return _decorator
+
+  def jit(self, name: Optional[Union[str, Callable]] = None):
+    """Backward-compatible alias for transition()."""
+    return self.transition(name)
+
+  def func(self,
+           name: Optional[Union[str, Callable]] = None,
+           *,
+           args: Sequence[Union[str, Tuple[str, str]]] = (),
+           results: Sequence[str] = (),
+           private: bool = True):
+    """Define a helper MLIR `func.func` using the DSL."""
+
+    def normalize_args(
+        specs: Sequence[Union[str, Tuple[str, str]]]
+    ) -> Tuple[List[str], List[str]]:
+      labels: List[str] = []
+      types: List[str] = []
+      used: Dict[str, int] = {}
+      for idx, spec in enumerate(specs):
+        if isinstance(spec, tuple):
+          label, typ = spec
+        else:
+          label, typ = (f"arg{idx}", spec)
+        sanitized = re.sub(r"[^0-9A-Za-z_]", "_", label)
+        if not sanitized:
+          sanitized = f"arg{idx}"
+        if sanitized[0].isdigit():
+          sanitized = f"_{sanitized}"
+        base = sanitized
+        suffix = used.get(base, 0)
+        candidate = sanitized
+        while candidate in used:
+          suffix += 1
+          candidate = f"{base}_{suffix}"
+        used[candidate] = 1
+        labels.append(candidate)
+        types.append(typ)
+      return labels, types
+
+    def build(actual_name: str,
+              fn: Callable[[TransitionBuilder], None]) -> Callable[[TransitionBuilder], None]:
+      arg_labels, arg_types = normalize_args(args)
+      ssa_names = [f"%{label}" for label in arg_labels]
+      builder = FuncBuilder(actual_name,
+                            owner=self,
+                            arg_types=arg_types,
+                            result_types=list(results),
+                            arg_names=ssa_names)
+      executor = TransitionScriptExecutor(fn, require_builder_arg=False)
+      executor(builder, *builder.arguments)
+      visibility = "private" if private else "public"
+      self._functions.append(FunctionDef(actual_name, builder, visibility))
+      return fn
+
+    if callable(name):
+      fn = name  # type: ignore[assignment]
+      actual = fn.__name__
+      return build(actual, fn)
+
+    def _decorator(fn: Callable[[TransitionBuilder], None]):
+      actual = name if isinstance(name, str) else fn.__name__
+      return build(actual, fn)
+
+    return _decorator
+
+  def python_simulator(self) -> "PythonSimulator":
+    """Create a lightweight interpreter that can run transitions in Python."""
+    return PythonSimulator(self)
+
+  def ensure_dynamic_key_helper(self) -> str:
+    symbol = "__lpn_hash_key"
+    if symbol in self._helper_functions:
+      return symbol
+    for func in self._functions:
+      if func.name == symbol:
+        return symbol
+    if symbol not in self._helper_functions:
+      self._helper_functions[symbol] = self._render_dynamic_key_helper(symbol)
+    return symbol
+
+  def _render_dynamic_key_helper(self, name: str) -> List[str]:
+    offset = _FNV_OFFSET_BASIS_I64
+    prime = _FNV_PRIME
+    return [
+        f"func.func private @{name}(%segments: !lpn.array<i64>) -> !lpn.key {{",
+        "  %c0 = arith.constant 0 : index",
+        "  %c1 = arith.constant 1 : index",
+        "  %len = lpn.array.len %segments : !lpn.array<i64> -> index",
+        f"  %offset = arith.constant {offset} : i64",
+        f"  %prime = arith.constant {prime} : i64",
+        "  %result = scf.for %iv = %c0 to %len step %c1 iter_args(%acc = %offset) -> (i64) {",
+        "    %chunk = lpn.array.get %segments, %iv : (!lpn.array<i64>, index) -> i64",
+        "    %xor = arith.xori %acc, %chunk : i64",
+        "    %mul = arith.muli %xor, %prime : i64",
+        "    scf.yield %mul : i64",
+        "  }",
+        "  %key = lpn.key.reg %result : i64 -> !lpn.key",
+        "  return %key : !lpn.key",
+        "}",
+    ]
 
   def build(self) -> str:
-    lines = ["module {", "  lpn.net {"]
+    lines = ["module {"]
+
+    if self._helper_functions:
+      for name in sorted(self._helper_functions.keys()):
+        helper_lines = self._helper_functions[name]
+        for line in helper_lines:
+          lines.append(f"  {line}")
+      lines.append("")
+
+    if self._functions:
+      for func in self._functions:
+        visibility_kw = f"{func.visibility} " if func.visibility else ""
+        arg_sig = ", ".join(
+            f"{arg.name}: {arg.typ}" for arg in func.builder.arguments)
+        result_types = func.builder.result_types
+        result_clause = ""
+        if result_types:
+          joined = ", ".join(result_types)
+          result_clause = f" -> ({joined})"
+        lines.append(
+            f"  func.func {visibility_kw}@{func.name}({arg_sig}){result_clause} {{")
+        block_sig = arg_sig
+        block_header = f"    ^bb0({block_sig}):" if block_sig else "    ^bb0:"
+        lines.append(block_header)
+        for op in func.builder.render():
+          lines.append(op)
+        lines.append("  }")
+        lines.append("")
+
+    lines.append("  lpn.net {")
 
     for place, capacity, initial, observable in self._places:
       attrs = []
@@ -1144,7 +1410,8 @@ class NetBuilder:
         attr_text = " {" + ", ".join(attrs) + "}"
       lines.append(f"    lpn.place @{place.name}{attr_text}")
 
-    for transition in self._transitions:
+    for definition in self._transitions:
+      transition = definition.builder
       lines.append(f"    lpn.transition @{transition.name} {{")
       lines.append("      ^bb0:")
       lines.extend(transition.render())
@@ -1158,3 +1425,487 @@ class NetBuilder:
   def emit_to_file(self, path: str) -> None:
     with open(path, "w", encoding="utf-8") as handle:
       handle.write(self.build())
+
+
+@dataclass(frozen=True)
+class RuntimeKey:
+  identifier: Any
+
+  def __str__(self) -> str:
+    return str(self.identifier)
+
+
+def _normalize_runtime_key(key: Union[str, RuntimeKey, int]) -> Any:
+  if isinstance(key, RuntimeKey):
+    return key.identifier
+  if isinstance(key, (str, int)):
+    return key
+  raise TypeError(f"unsupported runtime key type {type(key)}")
+
+
+class RuntimeToken:
+  def __init__(self, fields: Optional[Dict[Any, int]] = None):
+    self._fields: Dict[Any, int] = dict(fields or {})
+
+  def __repr__(self) -> str:
+    return f"RuntimeToken({self._fields})"
+
+  def get(self, key: Union[str, RuntimeKey, int]) -> int:
+    return self._fields.get(_normalize_runtime_key(key), 0)
+
+  def set(self, key: Union[str, RuntimeKey, int], value: Union[int, float]) -> "RuntimeToken":
+    updated = dict(self._fields)
+    updated[_normalize_runtime_key(key)] = int(value)
+    return RuntimeToken(updated)
+
+  def clone(self) -> "RuntimeToken":
+    return RuntimeToken(self._fields)
+
+  def to_dict(self) -> Dict[Any, int]:
+    return dict(self._fields)
+
+
+class _TransitionBlocked(RuntimeError):
+  def __init__(self, place: str):
+    super().__init__(f"place '{place}' is empty")
+    self.place = place
+
+
+class _RuntimePlace:
+  def __init__(self,
+               name: str,
+               *,
+               capacity: Optional[int] = None,
+               initial_tokens: int = 0):
+    self.name = name
+    self.capacity = capacity
+    self.tokens: deque[RuntimeToken] = deque(
+        RuntimeToken() for _ in range(initial_tokens))
+    self._scheduled: List[tuple[float, int, RuntimeToken]] = []
+    self._sequence = itertools.count()
+
+  def __len__(self) -> int:
+    return len(self.tokens)
+
+  def pushleft(self, token: RuntimeToken) -> None:
+    self.tokens.appendleft(token)
+
+  def push(self, token: RuntimeToken) -> None:
+    self.tokens.append(token)
+
+  def pop(self) -> RuntimeToken:
+    if not self.tokens:
+      raise _TransitionBlocked(self.name)
+    return self.tokens.popleft()
+
+  def schedule(self, token: RuntimeToken, ready_time: float) -> None:
+    event = (ready_time, next(self._sequence), token)
+    heapq.heappush(self._scheduled, event)
+
+  def commit_ready(self, upto_time: float) -> bool:
+    changed = False
+    while self._scheduled and self._scheduled[0][0] <= upto_time:
+      _, _, token = heapq.heappop(self._scheduled)
+      self.tokens.append(token)
+      changed = True
+    return changed
+
+  def earliest_ready(self) -> Optional[float]:
+    if not self._scheduled:
+      return None
+    return self._scheduled[0][0]
+
+  def scheduled_len(self) -> int:
+    return len(self._scheduled)
+
+
+class _TransitionContext:
+  def __init__(self):
+    self.taken: List[tuple[_RuntimePlace, RuntimeToken]] = []
+    self.emits: List[tuple[_RuntimePlace, RuntimeToken, float]] = []
+
+
+class PythonRuntimeAPI:
+  """Implements the DSL surface for the Python simulator."""
+
+  def __init__(self, simulator: "PythonSimulator"):
+    self._sim = simulator
+
+  def _as_int(self, value: Union[int, float]) -> int:
+    return int(value)
+
+  def take(self, place: PlaceHandle) -> RuntimeToken:
+    return self._sim._transaction_take(place)
+
+  def take_handle(self, handle: PlaceHandle) -> RuntimeToken:
+    return self.take(handle)
+
+  def emit(self,
+           place: PlaceHandle,
+           token: RuntimeToken,
+           delay: Optional[Union[int, float]] = None) -> None:
+    self._sim._transaction_emit(place, token, delay)
+
+  def emit_handle(self,
+                  handle: PlaceHandle,
+                  token: RuntimeToken,
+                  delay: Optional[Union[int, float]] = None) -> None:
+    self.emit(handle, token, delay)
+
+  def count(self, place: PlaceHandle) -> int:
+    return self._sim._count(place)
+
+  def array(self,
+            *elements: Union[Value, PlaceHandle, int, float,
+                             Sequence[Union[Value, PlaceHandle, int, float]]]
+            ) -> tuple[Any, ...]:
+    if len(elements) == 1 and isinstance(elements[0], (list, tuple)):
+      elements = tuple(elements[0])
+    return tuple(elements)
+
+  def array_get(self,
+                array_value: Sequence[Any],
+                index: Union[int, Value]) -> Any:
+    if isinstance(index, Value):
+      raise TypeError("runtime arrays expect concrete indices")
+    return array_value[index]
+
+  def array_len(self, array_value: Sequence[Any]) -> int:
+    return len(array_value)
+
+  def token_create(self,
+                   properties: Optional[Dict[str, int]] = None) -> RuntimeToken:
+    props = dict(properties or {})
+    return RuntimeToken(props)
+
+  def token_clone(self, token: RuntimeToken) -> RuntimeToken:
+    return token.clone()
+
+  def token_get(self,
+                token: RuntimeToken,
+                key: Union[str, RuntimeKey, int]) -> int:
+    return token.get(key)
+
+  def token_set(self,
+                token: RuntimeToken,
+                key: Union[str, RuntimeKey, int],
+                value: Union[int, float]) -> RuntimeToken:
+    return token.set(key, value)
+
+  def key_literal(self, name: str) -> RuntimeKey:
+    return RuntimeKey(name)
+
+  def key_reg(self, identifier: Union[int, float]) -> RuntimeKey:
+    return RuntimeKey(("reg", int(identifier)))
+
+  def reg(self, key: Union[str, RuntimeKey, int]) -> RuntimeKey:
+    if isinstance(key, RuntimeKey):
+      return key
+    if isinstance(key, str):
+      return RuntimeKey(key)
+    return RuntimeKey(("reg", int(key)))
+
+  def const_i64(self, value: int) -> int:
+    return int(value)
+
+  def i64(self, value: int) -> int:
+    return self.const_i64(value)
+
+  def const_index(self, value: int) -> int:
+    return int(value)
+
+  def index(self, value: int) -> int:
+    return self.const_index(value)
+
+  def const_f64(self, value: float) -> float:
+    return float(value)
+
+  def f64(self, value: float) -> float:
+    return self.const_f64(value)
+
+  def addi(self, lhs: Union[int, float], rhs: Union[int, float], *,
+           typ: str = "i64") -> Union[int, float]:
+    return lhs + rhs
+
+  def subi(self, lhs: Union[int, float], rhs: Union[int, float], *,
+           typ: str = "i64") -> Union[int, float]:
+    return lhs - rhs
+
+  def muli(self, lhs: Union[int, float], rhs: Union[int, float], *,
+           typ: str = "i64") -> Union[int, float]:
+    return lhs * rhs
+
+  def xori(self, lhs: int, rhs: int, *, typ: str = "i64") -> int:
+    return int(lhs) ^ int(rhs)
+
+  def addf(self, lhs: float, rhs: float, *, typ: str = "f64") -> float:
+    return float(lhs) + float(rhs)
+
+  def subf(self, lhs: float, rhs: float, *, typ: str = "f64") -> float:
+    return float(lhs) - float(rhs)
+
+  def divf(self, lhs: float, rhs: float, *, typ: str = "f64") -> float:
+    return float(lhs) / float(rhs)
+
+  def divi(self,
+           lhs: Union[int, float],
+           rhs: Union[int, float],
+           *,
+           typ: str = "i64",
+           signed: bool = True) -> int:
+    return int(lhs) // int(rhs)
+
+  def sitofp(self,
+             value: Union[int, float],
+             *,
+             src_type: str = "i64",
+             dst_type: str = "f64") -> float:
+    return float(value)
+
+  def index_cast(self,
+                 value: Union[int, float],
+                 *,
+                 src_type: str = "index",
+                 dst_type: str = "i64") -> int:
+    return int(value)
+
+  def for_range(self,
+                lower: Union[int, float],
+                upper: Union[int, float],
+                *,
+                step: Union[int, float] = 1,
+                body: Callable[['PythonRuntimeAPI', int], None]) -> None:
+    lb = int(lower)
+    ub = int(upper)
+    st = int(step)
+    for idx in range(lb, ub, st):
+      body(self, idx)
+
+  def if_op(self,
+            cond: Union[bool, int],
+            true_fn: Callable[['PythonRuntimeAPI'], None],
+            false_fn: Optional[Callable[['PythonRuntimeAPI'], None]] = None) -> None:
+    if bool(cond):
+      true_fn(self)
+    elif false_fn:
+      false_fn(self)
+
+  def exported_symbols(self) -> Dict[str, Any]:
+    mapping: Dict[str, Any] = {}
+    for attr in dir(self):
+      if attr.startswith("_"):
+        continue
+      value = getattr(self, attr)
+      if callable(value):
+        mapping[attr] = value
+    mapping["builder"] = self
+    return mapping
+
+
+class PythonSimulator:
+  """Event-driven interpreter that replays transitions directly in Python."""
+
+  def __init__(self, net: NetBuilder):
+    self._place_specs = list(net._places)
+    self._transitions = list(net._transitions)
+    self._transition_map = {definition.name: definition
+                            for definition in self._transitions}
+    self._current_time: float = 0.0
+    self._active_transaction: Optional[_TransitionContext] = None
+    self.reset()
+
+  @property
+  def current_time(self) -> float:
+    return self._current_time
+
+  def reset(self) -> None:
+    self._places: Dict[str, _RuntimePlace] = {}
+    for handle, capacity, initial, _observable in self._place_specs:
+      initial_count = int(initial or 0)
+      self._places[handle.name] = _RuntimePlace(handle.name,
+                                                capacity=capacity,
+                                                initial_tokens=initial_count)
+    self._current_time = 0.0
+    self._active_transaction = None
+    self._commit_ready_tokens(self._current_time)
+
+  def _runtime_place(self, place: Union[PlaceHandle, str]) -> _RuntimePlace:
+    key = place.name if isinstance(place, PlaceHandle) else place
+    runtime_place = self._places.get(key)
+    if runtime_place is None:
+      raise KeyError(f"unknown place '{key}'")
+    return runtime_place
+
+  def _begin_transaction(self) -> _TransitionContext:
+    if self._active_transaction is not None:
+      raise RuntimeError("nested transitions are not supported")
+    self._active_transaction = _TransitionContext()
+    return self._active_transaction
+
+  def _require_transaction(self) -> _TransitionContext:
+    if self._active_transaction is None:
+      raise RuntimeError("transition context is not active")
+    return self._active_transaction
+
+  def _transaction_take(self, place: PlaceHandle) -> RuntimeToken:
+    ctx = self._require_transaction()
+    runtime_place = self._runtime_place(place)
+    token = runtime_place.pop()
+    ctx.taken.append((runtime_place, token))
+    return token
+
+  def _transaction_emit(self,
+                        place: PlaceHandle,
+                        token: RuntimeToken,
+                        delay: Optional[Union[int, float]]) -> None:
+    ctx = self._require_transaction()
+    runtime_place = self._runtime_place(place)
+    delay_value = 0.0 if delay is None else float(delay)
+    if delay_value < 0:
+      delay_value = 0.0
+    ready_time = self._current_time + delay_value
+    ctx.emits.append((runtime_place, token, ready_time))
+
+  def _commit_transaction(self) -> None:
+    ctx = self._require_transaction()
+    for runtime_place, token, ready_time in ctx.emits:
+      runtime_place.schedule(token, ready_time)
+    self._active_transaction = None
+    self._commit_ready_tokens(self._current_time)
+
+  def _rollback_transaction(self) -> None:
+    ctx = self._require_transaction()
+    for runtime_place, token in reversed(ctx.taken):
+      runtime_place.pushleft(token)
+    self._active_transaction = None
+
+  def _take(self, place: PlaceHandle) -> RuntimeToken:
+    runtime_place = self._runtime_place(place)
+    token = runtime_place.pop()
+    return token
+
+  def _emit(self,
+            place: PlaceHandle,
+            token: RuntimeToken,
+            delay: Optional[Union[int, float]] = None) -> None:
+    runtime_place = self._runtime_place(place)
+    delay_value = 0.0 if delay is None else float(delay)
+    if delay_value < 0:
+      delay_value = 0.0
+    ready_time = self._current_time + delay_value
+    runtime_place.schedule(token, ready_time)
+    self._commit_ready_tokens(self._current_time)
+
+  def _count(self, place: PlaceHandle) -> int:
+    self._commit_ready_tokens(self._current_time)
+    runtime_place = self._runtime_place(place)
+    return len(runtime_place)
+
+  def _commit_ready_tokens(self, upto_time: float) -> bool:
+    changed = False
+    for runtime_place in self._places.values():
+      changed |= runtime_place.commit_ready(upto_time)
+    return changed
+
+  def _earliest_scheduled_time(self) -> Optional[float]:
+    earliest: Optional[float] = None
+    for runtime_place in self._places.values():
+      candidate = runtime_place.earliest_ready()
+      if candidate is None:
+        continue
+      if earliest is None or candidate < earliest:
+        earliest = candidate
+    return earliest
+
+  def _has_pending_scheduled_tokens(self) -> bool:
+    return any(place.scheduled_len() > 0 for place in self._places.values())
+
+  def place_contents(self,
+                     place: Union[str, PlaceHandle]) -> List[RuntimeToken]:
+    self._commit_ready_tokens(self._current_time)
+    runtime_place = self._runtime_place(place)
+    return list(runtime_place.tokens)
+
+  def place_dicts(self,
+                  place: Union[str, PlaceHandle]) -> List[Dict[Any, int]]:
+    return [token.to_dict() for token in self.place_contents(place)]
+
+  def fire(self,
+           transition_name: str,
+           *args: Any,
+           repeats: int = 1,
+           **kwargs: Any) -> None:
+    definition = self._transition_map.get(transition_name)
+    if not definition:
+      raise KeyError(f"transition '{transition_name}' not found")
+    for _ in range(repeats):
+      fired = self._invoke(definition,
+                           *args,
+                           allow_block=False,
+                           **kwargs)
+      if not fired:
+        raise RuntimeError(f"transition '{transition_name}' blocked")
+
+  def run(self,
+          *,
+          max_time: float = 1_000_000.0,
+          debug: bool = False,
+          reset: bool = True) -> float:
+    if reset:
+      self.reset()
+    else:
+      self._commit_ready_tokens(self._current_time)
+    while self._current_time <= max_time:
+      progress = self._run_all_transitions(debug=debug)
+      if progress:
+        continue
+      next_time = self._earliest_scheduled_time()
+      if next_time is None or next_time > max_time:
+        break
+      self._current_time = next_time
+      self._commit_ready_tokens(self._current_time)
+    return self._current_time
+
+  def _run_all_transitions(self, *, debug: bool = False) -> bool:
+    any_progress = False
+    for definition in self._transitions:
+      while self._invoke(definition, allow_block=True):
+        any_progress = True
+        if debug:
+          print(f"[t={self._current_time:.3f}] fired {definition.name}")
+    return any_progress
+
+  def _invoke(self,
+              definition: TransitionDef,
+              *args: Any,
+              allow_block: bool,
+              **kwargs: Any) -> bool:
+    api = PythonRuntimeAPI(self)
+    self._begin_transaction()
+    blocked_reason: Optional[_TransitionBlocked] = None
+    injector: Optional[_GlobalNameInjector] = None
+    try:
+      if definition.jit:
+        injector = _GlobalNameInjector(
+            definition.fn.__globals__, api.exported_symbols())
+        injector.__enter__()
+        definition.fn(*args, **kwargs)
+      else:
+        definition.fn(api, *args, **kwargs)
+    except _TransitionBlocked as exc:
+      blocked_reason = exc
+    except Exception:
+      self._rollback_transaction()
+      raise
+    else:
+      self._commit_transaction()
+      return True
+    finally:
+      if injector:
+        injector.__exit__(None, None, None)
+    self._rollback_transaction()
+    if allow_block:
+      return False
+    place = blocked_reason.place if blocked_reason else "<unknown>"
+    raise RuntimeError(
+        f"transition '{definition.name}' blocked on place '{place}'")

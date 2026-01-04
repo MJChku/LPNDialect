@@ -22,7 +22,7 @@ def build_cache_example(addresses: Iterable[int]) -> str:
   state_seed = net.place("state_seed", initial_tokens=1)
   issue_ctrl = net.place("issue_ctrl", initial_tokens=1)
 
-  @net.jit("cpu_issue")
+  @net.transition
   def cpu_issue(trace=list(addresses)):
     take(issue_ctrl)
     for seq_addr in enumerate(trace):
@@ -34,7 +34,7 @@ def build_cache_example(addresses: Iterable[int]) -> str:
       token = token.set("seq", seq)
       emit(l1_req, token)
 
-  @net.jit("init_state")
+  @net.transition
   def init_state():
     take(state_seed)
     state = token_create()
@@ -42,7 +42,7 @@ def build_cache_example(addresses: Iterable[int]) -> str:
       state = state.set(f"line{idx}", 0)
     emit(l1_state, state)
 
-  @net.jit("l1_controller")
+  @net.transition
   def l1_controller():
     req = take(l1_req)
     state = take(l1_state)
@@ -57,12 +57,12 @@ def build_cache_example(addresses: Iterable[int]) -> str:
       emit(l2_req, req)
       emit(l1_state, state)
 
-  @net.jit("l2_forward")
+  @net.transition
   def l2_forward():
     req = take(l2_req)
     emit(l2_resp, req, delay=L2_DELAY_NS)
 
-  @net.jit("l1_fill")
+  @net.transition
   def l1_fill():
     resp = take(l2_resp)
     state = take(l1_state)

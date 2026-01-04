@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 from typing import Iterable, List
 
 from lpnlang_mlir import NetBuilder, PlaceHandle
@@ -35,7 +36,7 @@ class NetUniDirLink:
       raise ValueError(f"{self.name} already wired")
     transition_name = f"{self.name}_transfer"
 
-    @self._net.jit(transition_name)
+    @self._net.transition(transition_name)
     def forward(src=src, dst=dst):
       ctrl_token = take(self.ctrl)
       payload = take(src)
@@ -73,7 +74,7 @@ class NetDevice:
     workload_idx = self._workload_idx
     self._workload_idx += 1
 
-    @self._net.jit(transition_name)
+    @self._net.transition(transition_name)
     def inject(latch=latch,
                dst=dst,
                size=size,
@@ -129,7 +130,7 @@ class NetToRSwitch:
   def _build_forwarding(self, slot: int, port_id: int) -> None:
     transition_name = f"{self.id}_forward_port_{port_id}"
 
-    @self._net.jit(transition_name)
+    @self._net.transition(transition_name)
     def forward(slot=slot):
       ctrl = take(self.ctrl)
       packet = take(self._ingress[slot])
@@ -144,8 +145,8 @@ class NetToRSwitch:
       emit(self.ctrl, ctrl, delay=delay)
 
 
-def build_network_example(num_devices: int = 2,
-                          messages_per_device: int = 1) -> str:
+def create_network_net(num_devices: int = 2,
+                       messages_per_device: int = 1) -> NetBuilder:
   net = NetBuilder("network")
   total_tokens = num_devices * messages_per_device
   seed_pool = net.place("token_seed", initial_tokens=total_tokens)
@@ -162,9 +163,60 @@ def build_network_example(num_devices: int = 2,
     device.inject_workload(dst=dst,
                            size=PAYLOAD_BYTES,
                            count=messages_per_device)
+  return net
 
-  return net.build()
+
+def build_network_example(num_devices: int = 2,
+                          messages_per_device: int = 1) -> str:
+  return create_network_net(num_devices, messages_per_device).build()
+
+
+def simulate_network(num_devices: int,
+                     messages_per_device: int,
+                     *,
+                     max_time: float,
+                     debug: bool = False) -> float:
+  net = create_network_net(num_devices, messages_per_device)
+  sim = net.python_simulator()
+  final_time = sim.run(max_time=max_time, debug=debug)
+  print(f"Simulation finished at t={final_time:.3f} ns")
+  observables = [handle for handle, _cap, _init, observable in net._places
+                 if observable]
+  if not observables:
+    observables = [handle for handle, *_rest in net._places]
+  for handle in observables:
+    tokens = sim.place_dicts(handle)
+    print(f"  place {handle.name}: {len(tokens)} token(s)")
+    for token in tokens:
+      print(f"    token {token}")
+  return final_time
 
 
 if __name__ == "__main__":
-  print(build_network_example())
+  parser = argparse.ArgumentParser(description=__doc__)
+  parser.add_argument("--devices",
+                      type=int,
+                      default=2,
+                      help="Number of devices in the fabric")
+  parser.add_argument("--messages",
+                      type=int,
+                      default=1,
+                      help="Messages per device")
+  parser.add_argument("--simulate",
+                      action="store_true",
+                      help="Run the Python simulator instead of emitting MLIR")
+  parser.add_argument("--max-time",
+                      type=float,
+                      default=10000000.0,
+                      help="Simulation time budget (ns)")
+  parser.add_argument("--debug",
+                      action="store_true",
+                      help="Print every transition firing while simulating")
+  args = parser.parse_args()
+  if args.simulate:
+    simulate_network(args.devices,
+                     args.messages,
+                     max_time=args.max_time,
+                     debug=args.debug)
+  else:
+    print(build_network_example(args.devices, args.messages))

@@ -14,7 +14,7 @@ def build_split_merge_example() -> str:
   intermediate = net.place("chunks")
   bookkeeping = net.place("bookkeeping")
 
-  @net.jit("split_packets")
+  @net.transition
   def split_packets():
     req = take(incoming)
     size = token_get(req, "size")
@@ -30,7 +30,7 @@ def build_split_merge_example() -> str:
       chunk = token_set(chunk, "chunk_idx", idx_i64)
       emit(intermediate, chunk)
 
-  @net.jit("merge_packets")
+  @net.transition
   def merge_packets():
     tracker = take(bookkeeping)
     chunk_count = token_get(tracker, "chunks")
