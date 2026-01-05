@@ -244,8 +244,16 @@ class TransitionScriptExecutor:
     if isinstance(stmt, ast.If):
       self._exec_if(stmt)
       return
-    if isinstance(stmt, ast.For) and self._is_range_loop(stmt):
-      self._exec_range_loop(stmt)
+    if isinstance(stmt, ast.For):
+      if self._is_range_loop(stmt):
+        self._exec_range_loop(stmt)
+        return
+      if self._try_unroll_loop(stmt):
+        return
+      raise TypeError(
+          "unsupported for-loop: transitions must use range(...) or an iterable known at build time")
+    if isinstance(stmt, ast.While):
+      self._exec_while(stmt)
       return
     if isinstance(stmt, ast.Assign) and self._try_exec_assign(stmt):
       return
@@ -256,6 +264,48 @@ class TransitionScriptExecutor:
     ast.fix_missing_locations(mod)
     code = compile(mod, self.filename, "exec")
     exec(code, self.globals, self.locals)
+
+  def _try_unroll_loop(self, node: ast.For) -> bool:
+    try:
+      iterable = self._eval_expr(node.iter)
+    except Exception:
+      return False
+    if isinstance(iterable, Value):
+      return False
+    try:
+      iterator = iter(iterable)
+    except TypeError:
+      return False
+
+    iteration = 0
+    saved_locals = self.locals
+    for item in iterator:
+      iteration += 1
+      if iteration > 10_000_000:
+        raise RuntimeError("loop unrolling exceeded 10M iterations")
+      loop_locals = dict(saved_locals)
+      target = node.target
+      if isinstance(target, ast.Name):
+        loop_locals[target.id] = item
+      elif isinstance(target, (ast.Tuple, ast.List)):
+        try:
+          values = list(item)
+        except TypeError:
+          return False
+        if len(values) != len(target.elts):
+          raise ValueError("loop tuple destructuring mismatch")
+        for elt, value in zip(target.elts, values):
+          if not isinstance(elt, ast.Name):
+            raise TypeError("only simple tuple targets are supported in jit loops")
+          loop_locals[elt.id] = value
+      else:
+        raise TypeError("unsupported loop target in jit transition")
+      self.locals = loop_locals
+      try:
+        self._exec_block(node.body)
+      finally:
+        self.locals = saved_locals
+    return True
 
   def _try_exec_assign(self, stmt: ast.Assign) -> bool:
     if len(stmt.targets) != 1:
@@ -353,6 +403,21 @@ class TransitionScriptExecutor:
     false_fn = else_fn if node.orelse else None
     self.builder.if_op(cond_value, then_fn, false_fn)
 
+  def _exec_while(self, node: ast.While) -> None:
+    if node.orelse:
+      raise TypeError("while-loops in jit transitions do not support 'else'")
+    iteration = 0
+    while True:
+      cond_value = self._eval_expr(node.test)
+      if isinstance(cond_value, Value):
+        raise TypeError("while-loop conditions must evaluate to Python scalars")
+      if not bool(cond_value):
+        break
+      iteration += 1
+      if iteration > 10_000_000:
+        raise RuntimeError("while-loop exceeded 10M iterations while building the net")
+      self._exec_block(node.body)
+
   def _is_range_loop(self, node: ast.For) -> bool:
     call = node.iter
     return isinstance(call, ast.Call) and isinstance(call.func, ast.Name) and call.func.id == "range"
@@ -446,6 +511,18 @@ class Value:
       raise TypeError("division only supported for f64 values")
     return self.builder.divf(self, other)
 
+  def __mod__(self, other: Union["Value", int]) -> "Value":
+    self._require_numeric()
+    if self.typ == "f64":
+      return self.builder.remf(self, other)
+    return self.builder.remi(self, other, typ=self.typ)
+
+  def __rmod__(self, other: Union["Value", int]) -> "Value":
+    self._require_numeric()
+    if self.typ == "f64":
+      return self.builder.remf(other, self)
+    return self.builder.remi(other, self, typ=self.typ)
+
   def __eq__(self, other: object) -> "Value":  # type: ignore[override]
     if isinstance(other, (Value, int)):
       return self._cmp_int("eq", other)
@@ -511,7 +588,7 @@ class TokenValue:
     return self.builder.token_set(self, key, value)
 
   def clone(self) -> "TokenValue":
-    return self.builder.token_clone(self)
+    return self.builder.clone(self)
 
 
 @dataclass(frozen=True)
@@ -1006,6 +1083,19 @@ class TransitionBuilder:
     self._append(f"{name} = {op} {lhs_val}, {rhs_val} : {typ}")
     return self._wrap_value(name, typ)
 
+  def remi(self,
+           lhs: Union[Value, int],
+           rhs: Union[Value, int],
+           *,
+           typ: str = "i64",
+           signed: bool = True) -> Value:
+    lhs_val = self._coerce_value(lhs, typ)
+    rhs_val = self._coerce_value(rhs, typ)
+    name = self._next_value()
+    op = "arith.remsi" if signed else "arith.remui"
+    self._append(f"{name} = {op} {lhs_val}, {rhs_val} : {typ}")
+    return self._wrap_value(name, typ)
+
   def take(self, place: Union[PlaceHandle, Value]) -> TokenValue:
     handle = self._resolve_place_operand(place)
     name = self._next_value()
@@ -1067,20 +1157,20 @@ class TransitionBuilder:
         f"{name} = lpn.token.set {token.name}, {key_value.name}, {value.name} : !lpn.token, !lpn.key, i64 -> !lpn.token")
     return self._wrap_token(name)
 
-  def token_clone(self, token: TokenValue) -> TokenValue:
+  def clone(self, token: TokenValue) -> TokenValue:
     name = self._next_value()
     self._append(
-        f"{name} = \"lpn.token.clone\"({token.name}) : (!lpn.token) -> !lpn.token")
+        f"{name} = \"lpn.clone\"({token.name}) : (!lpn.token) -> !lpn.token")
     return self._wrap_token(name)
 
-  def token_create(self, properties: Optional[Dict[str, int]] = None) -> TokenValue:
+  def create(self, properties: Optional[Dict[str, int]] = None) -> TokenValue:
     props_dict = properties or {}
     props = ", ".join(
         f"{key} = {value} : i64" for key, value in sorted(props_dict.items()))
     attr = f"{{{props}}}" if props else "{}"
     name = self._next_value()
     self._append(
-        f"{name} = \"lpn.token.create\"() {{log_prefix = {attr}}} : () -> !lpn.token")
+        f"{name} = \"lpn.create\"() {{log_prefix = {attr}}} : () -> !lpn.token")
     return self._wrap_token(name)
 
   def reg(self, key: Union[str, KeyValue, Value, int]) -> KeyValue:
@@ -1368,11 +1458,13 @@ class NetBuilder:
   def build(self) -> str:
     lines = ["module {"]
 
+    lines.append("  lpn.net {")
+
     if self._helper_functions:
       for name in sorted(self._helper_functions.keys()):
         helper_lines = self._helper_functions[name]
         for line in helper_lines:
-          lines.append(f"  {line}")
+          lines.append(f"    {line}")
       lines.append("")
 
     if self._functions:
@@ -1386,16 +1478,14 @@ class NetBuilder:
           joined = ", ".join(result_types)
           result_clause = f" -> ({joined})"
         lines.append(
-            f"  func.func {visibility_kw}@{func.name}({arg_sig}){result_clause} {{")
+            f"    func.func {visibility_kw}@{func.name}({arg_sig}){result_clause} {{")
         block_sig = arg_sig
-        block_header = f"    ^bb0({block_sig}):" if block_sig else "    ^bb0:"
+        block_header = f"      ^bb0({block_sig}):" if block_sig else "      ^bb0:"
         lines.append(block_header)
         for op in func.builder.render():
           lines.append(op)
-        lines.append("  }")
+        lines.append("    }")
         lines.append("")
-
-    lines.append("  lpn.net {")
 
     for place, capacity, initial, observable in self._places:
       attrs = []
@@ -1573,12 +1663,12 @@ class PythonRuntimeAPI:
   def array_len(self, array_value: Sequence[Any]) -> int:
     return len(array_value)
 
-  def token_create(self,
+  def create(self,
                    properties: Optional[Dict[str, int]] = None) -> RuntimeToken:
     props = dict(properties or {})
     return RuntimeToken(props)
 
-  def token_clone(self, token: RuntimeToken) -> RuntimeToken:
+  def clone(self, token: RuntimeToken) -> RuntimeToken:
     return token.clone()
 
   def token_get(self,

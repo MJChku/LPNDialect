@@ -16,7 +16,7 @@ def build_multi_take_example() -> str:
   @net.transition
   def seed_left():
     ctrl = take(pump)
-    token = token_create()
+    token = create()
     token = token_set(token, "payload", 7)
     emit(left, token)
     emit(pump, ctrl)
@@ -24,7 +24,7 @@ def build_multi_take_example() -> str:
   @net.transition
   def seed_right():
     ctrl = take(pump)
-    token = token_create()
+    token = create()
     token = token_set(token, "payload", 13)
     emit(right, token)
     emit(pump, ctrl)

@@ -237,7 +237,7 @@ def CountOp : LPN_Op<"count", [Pure]> {
 // Token utilities
 //===----------------------------------------------------------------------===//
 
-def TokenCreateOp : LPN_Op<"token.create", [Pure]> {
+def TokenCreateOp : LPN_Op<"create", [Pure]> {
   let summary = "Create a token with an optional literal property log";
 
   let description = [{
@@ -261,7 +261,7 @@ def TokenCreateOp : LPN_Op<"token.create", [Pure]> {
     "($deps^ `:` type($deps))? ($log_prefix^)? attr-dict `:` type($token)";
 }
 
-def TokenCloneOp : LPN_Op<"token.clone", [Pure]> {
+def TokenCloneOp : LPN_Op<"clone", [Pure]> {
   let summary = "Duplicate a token handle";
 
   let description = [{

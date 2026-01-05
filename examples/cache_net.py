@@ -25,10 +25,10 @@ def build_cache_example(addresses: Iterable[int]) -> str:
   @net.transition
   def cpu_issue(trace=list(addresses)):
     take(issue_ctrl)
-    for seq_addr in enumerate(trace):
-      seq, addr = seq_addr
-      line = (addr // LINE_BYTES) % NUM_LINES
-      token = token_create()
+    for seq, addr in enumerate(trace):
+      quotient = addr // LINE_BYTES
+      line = quotient % NUM_LINES
+      token = create()
       token = token.set("addr", addr)
       token = token.set("line", line)
       token = token.set("seq", seq)
@@ -37,7 +37,7 @@ def build_cache_example(addresses: Iterable[int]) -> str:
   @net.transition
   def init_state():
     take(state_seed)
-    state = token_create()
+    state = create()
     for idx in range(NUM_LINES):
       state = state.set(f"line{idx}", 0)
     emit(l1_state, state)
