@@ -1,3 +1,4 @@
+#include "LPN/Analysis/TokenFlowAnalysis.h"
 #include "LPN/Conversion/LPNPasses.h"
 #include "LPN/Dialect/LPNOps.h"
 #include "LPN/Dialect/LPNTypes.h"
@@ -5,8 +6,8 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/Visitors.h"
@@ -14,21 +15,17 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
-#include <memory>
-#include <iterator>
 #include <cassert>
+#include <iterator>
+#include <memory>
 
 namespace mlir::lpn {
 namespace {
-
-static constexpr StringLiteral kGuardIdAttr = "lpn.guard_id";
-static constexpr StringLiteral kGuardPathsAttr = "lpn.guard_paths";
 
 //===----------------------------------------------------------------------===//
 // Pass overview
@@ -73,10 +70,10 @@ static constexpr StringLiteral kGuardPathsAttr = "lpn.guard_paths";
 //
 //   * Before enumerating observable paths we cluster identical hyperedges per
 //     driver place.  Hyperedges with the same driver, observable source set,
-//     control contexts, token edits, guard predicates, and delay/token SSA slices
-//     collapse to a single template.  This ensures the retained network does not
-//     duplicate transitions just because several paths in the original net were
-//     structurally identical.
+//     control contexts, token edits, guard predicates, and delay/token SSA
+//     slices collapse to a single template.  This ensures the retained network
+//     does not duplicate transitions just because several paths in the original
+//     net were structurally identical.
 
 //===----------------------------------------------------------------------===//
 
@@ -157,61 +154,6 @@ static void simplifyChoiceLadders(NetOp net) {
   }
 }
 
-
-static bool blockInRegion(Block *block, Region &region) {
-  for (Region *current = block ? block->getParent() : nullptr; current;
-       current = current->getParentRegion())
-    if (current == &region)
-      return true;
-  return false;
-}
-
-/// Single equality predicate derived from token metadata.
-struct TokenGuard {
-  Value key;
-  llvm::hash_code keyHash = {};
-  int64_t equalsValue;
-};
-
-/// Destination place plus optional guards describing the routing condition.
-struct TargetInfo {
-  StringAttr symbol;
-  SmallVector<TokenGuard> guards;
-};
-
-struct TokenEditSignature {
-  llvm::hash_code keyHash = {};
-  llvm::hash_code valueHash = {};
-  SmallVector<unsigned, 4> sourceRefs;
-};
-
-enum class ContextKind { IfOp, ChoiceOp, ForOp };
-
-struct ControlContext {
-  Operation *op;
-  ContextKind kind;
-  bool isThen;
-};
-
-struct ObservableSource {
-  StringAttr place;
-  Value takeValue;
-};
-
-/// SSA stencil for a single take/emit pair.
-struct EdgeTemplate {
-  StringAttr driver;
-  Value driverTake;
-  TargetInfo target;
-  SmallVector<ObservableSource> sources;
-  Value tokenValue;
-  Value delayValue;
-  SmallVector<ControlContext> contexts;
-  SmallVector<TokenEditSignature> editSummary;
-  llvm::hash_code tokenHash;
-  llvm::hash_code delayHash;
-};
-
 /// Observable-to-observable chain of edges.
 using EdgePath = SmallVector<const EdgeTemplate *>;
 
@@ -220,348 +162,6 @@ struct PathCursor {
   size_t edgeIndex;
   size_t contextIndex;
 };
-
-
-static bool guardsEqual(ArrayRef<TokenGuard> lhs, ArrayRef<TokenGuard> rhs) {
-  if (lhs.size() != rhs.size())
-    return false;
-  for (auto [a, b] : llvm::zip(lhs, rhs)) {
-    if (a.equalsValue != b.equalsValue)
-      return false;
-    if ((a.key && !b.key) || (!a.key && b.key))
-      return false;
-    if (a.key && a.keyHash != b.keyHash)
-      return false;
-  }
-  return true;
-}
-
-static bool editsEqual(ArrayRef<TokenEditSignature> lhs,
-                       ArrayRef<TokenEditSignature> rhs) {
-  if (lhs.size() != rhs.size())
-    return false;
-  for (auto [a, b] : llvm::zip(lhs, rhs))
-    if (a.keyHash != b.keyHash || a.valueHash != b.valueHash)
-      return false;
-  return true;
-}
-
-static bool contextsEqual(ArrayRef<ControlContext> lhs,
-                          ArrayRef<ControlContext> rhs) {
-  if (lhs.size() != rhs.size())
-    return false;
-  for (auto [a, b] : llvm::zip(lhs, rhs))
-    if (a.op != b.op || a.isThen != b.isThen)
-      return false;
-  return true;
-}
-
-static bool equivalentTemplate(const EdgeTemplate *lhs,
-                               const EdgeTemplate *rhs) {
-  if (lhs == rhs)
-    return true;
-  if (lhs->driver != rhs->driver)
-    return false;
-  if (lhs->sources.size() != rhs->sources.size())
-    return false;
-  for (auto [a, b] : llvm::zip(lhs->sources, rhs->sources))
-    if (a.place != b.place)
-      return false;
-  if (lhs->target.symbol != rhs->target.symbol)
-    return false;
-  if (!guardsEqual(lhs->target.guards, rhs->target.guards))
-    return false;
-  if (!editsEqual(lhs->editSummary, rhs->editSummary))
-    return false;
-  if (!contextsEqual(lhs->contexts, rhs->contexts))
-    return false;
-  if (lhs->tokenHash != rhs->tokenHash || lhs->delayHash != rhs->delayHash)
-    return false;
-  return true;
-}
-
-static bool equivalentPath(const EdgePath &lhs, const EdgePath &rhs) {
-  if (lhs.size() != rhs.size())
-    return false;
-  for (auto [a, b] : llvm::zip(lhs, rhs))
-    if (!equivalentTemplate(a, b))
-      return false;
-  return true;
-}
-
-static void dedupPaths(
-    DenseMap<StringAttr, SmallVector<EdgePath>> &observablePaths) {
-  for (auto &entry : observablePaths) {
-    SmallVector<EdgePath> unique;
-    for (EdgePath &path : entry.second) {
-      bool duplicate = false;
-      for (const EdgePath &seen : unique)
-        if (equivalentPath(path, seen)) {
-          duplicate = true;
-          break;
-        }
-      if (!duplicate)
-        unique.push_back(path);
-    }
-    entry.second.swap(unique);
-  }
-}
-
-static void clusterHyperedges(
-    DenseMap<StringAttr, SmallVector<const EdgeTemplate *>> &adjacency) {
-  for (auto &entry : adjacency) {
-    SmallVector<const EdgeTemplate *> unique;
-    for (const EdgeTemplate *templ : entry.second) {
-      bool duplicate = false;
-      for (const EdgeTemplate *seen : unique)
-        if (equivalentTemplate(templ, seen)) {
-          duplicate = true;
-          break;
-        }
-      if (!duplicate)
-        unique.push_back(templ);
-    }
-    entry.second.swap(unique);
-  }
-}
-
-// collect all the take dependencies for a value, by going backwards one-by-one through the operations
-//===----------------------------------------------------------------------===//
-// Utility helpers
-//===----------------------------------------------------------------------===//
-
-static LogicalResult resolvePlaceSymbol(Value handle, StringAttr &symbol) {
-  auto ref = handle.getDefiningOp<PlaceRefOp>();
-  if (!ref)
-    return failure();
-  symbol = ref.getPlaceAttr().getAttr();
-  return success();
-}
-
-static llvm::hash_code hashValueExpr(Value value,
-                                     DenseMap<Value, llvm::hash_code> &cache) {
-  if (auto it = cache.find(value); it != cache.end())
-    return it->second;
-
-  if (auto arg = dyn_cast<BlockArgument>(value)) {
-    llvm::hash_code h =
-        llvm::hash_combine(arg.getArgNumber(),
-                           reinterpret_cast<uintptr_t>(arg.getOwner()));
-    cache[value] = h;
-    return h;
-  }
-
-  Operation *def = value.getDefiningOp();
-  if (!def) {
-    llvm::hash_code h = llvm::hash_value(value.getAsOpaquePointer());
-    cache[value] = h;
-    return h;
-  }
-
-  unsigned resultNumber = 0;
-  if (auto res = dyn_cast<OpResult>(value))
-    resultNumber = res.getResultNumber();
-  llvm::hash_code h =
-      llvm::hash_combine(llvm::hash_value(def->getName().getStringRef()),
-                         resultNumber);
-  for (NamedAttribute attr : def->getAttrs())
-    h = llvm::hash_combine(
-        h, llvm::hash_value(attr.getName()),
-        llvm::hash_value(attr.getValue().getAsOpaquePointer()));
-  for (Value operand : def->getOperands())
-    h = llvm::hash_combine(h, hashValueExpr(operand, cache));
-  cache[value] = h;
-  return h;
-}
-
-static llvm::hash_code hashOptionalValue(Value value,
-                                         DenseMap<Value, llvm::hash_code> &cache) {
-  if (!value)
-    return llvm::hash_value(static_cast<void *>(nullptr));
-  return hashValueExpr(value, cache);
-}
-
-static void recordSourceRefs(Value root, TokenEditSignature &sig,
-                             ArrayRef<ObservableSource> sources,
-                             SmallPtrSetImpl<Value> &visited) {
-  if (!root || !visited.insert(root).second)
-    return;
-  if (auto get = root.getDefiningOp<TokenGetOp>()) {
-    for (auto [idx, src] : llvm::enumerate(sources))
-      if (src.takeValue == get.getToken())
-        sig.sourceRefs.push_back(idx);
-  }
-  if (Operation *producer = root.getDefiningOp())
-    for (Value operand : producer->getOperands())
-      recordSourceRefs(operand, sig, sources, visited);
-}
-
-// token edits supported only clone and set ops
-// get ops didn't change the token, so they are ignored
-static LogicalResult summarizeTokenEdits(
-    Value current, Value source, SmallVectorImpl<TokenEditSignature> &edits,
-    DenseMap<Value, llvm::hash_code> &hashCache,
-    ArrayRef<ObservableSource> sources) {
-  if (current == source)
-    return success();
-  Operation *def = current.getDefiningOp();
-  if (!def)
-    return failure();
-  if (auto set = dyn_cast<TokenSetOp>(def)) {
-    if (failed(summarizeTokenEdits(set.getToken(), source, edits, hashCache,
-                                   sources)))
-      return failure();
-    TokenEditSignature sig;
-    sig.keyHash = hashValueExpr(set.getKey(), hashCache);
-    sig.valueHash = hashValueExpr(set.getValue(), hashCache);
-    SmallPtrSet<Value, 8> visited;
-    recordSourceRefs(set.getValue(), sig, sources, visited);
-    recordSourceRefs(set.getKey(), sig, sources, visited);
-    edits.push_back(std::move(sig));
-    return success();
-  }
-  if (auto clone = dyn_cast<TokenCloneOp>(def))
-    return summarizeTokenEdits(clone.getToken(), source, edits, hashCache,
-                               sources);
-  return def->emitError(
-      "token flow includes unsupported op while summarizing");
-}
-
-static Value stripIndexCasts(Value value) {
-  Value current = value;
-  while (auto cast = current.getDefiningOp<arith::IndexCastOp>())
-    current = cast.getIn();
-  return current;
-}
-
-static std::optional<int64_t> getConstI64(Value value) {
-  if (!value)
-    return std::nullopt;
-  if (auto constOp = value.getDefiningOp<arith::ConstantOp>()) {
-    if (auto attr = dyn_cast<IntegerAttr>(constOp.getValue()))
-      return attr.getValue().getSExtValue();
-  }
-  return std::nullopt;
-}
-
-/// Attempt to infer a metadata guard for a place_list slot.
-static std::optional<TokenGuard> matchListIndexGuard(Value index,
-                                                     int64_t slot) {
-  DenseMap<Value, llvm::hash_code> guardHashCache;
-  Value current = stripIndexCasts(index);
-
-  auto buildGuard = [&](TokenGetOp get, int64_t offset,
-                        bool add) -> std::optional<TokenGuard> {
-    TokenGuard guard;
-    guard.key = get.getKey();
-    guard.keyHash = hashValueExpr(guard.key, guardHashCache);
-    guard.equalsValue = add ? slot - offset : slot + offset;
-    return guard;
-  };
-
-  if (auto get = current.getDefiningOp<TokenGetOp>())
-    return buildGuard(get, /*offset=*/0, /*add=*/true);
-
-  if (auto subi = current.getDefiningOp<arith::SubIOp>()) {
-    if (auto lhs = subi.getLhs().getDefiningOp<TokenGetOp>())
-      if (auto rhsConst = getConstI64(subi.getRhs()))
-        return buildGuard(lhs, *rhsConst, /*add=*/false);
-    if (auto rhs = subi.getRhs().getDefiningOp<TokenGetOp>())
-      if (auto lhsConst = getConstI64(subi.getLhs()))
-        return buildGuard(rhs, *lhsConst, /*add=*/true);
-  }
-
-  if (auto addi = current.getDefiningOp<arith::AddIOp>()) {
-    if (auto lhs = addi.getLhs().getDefiningOp<TokenGetOp>())
-      if (auto rhsConst = getConstI64(addi.getRhs()))
-        return buildGuard(lhs, *rhsConst, /*add=*/true);
-    if (auto rhs = addi.getRhs().getDefiningOp<TokenGetOp>())
-      if (auto lhsConst = getConstI64(addi.getLhs()))
-        return buildGuard(rhs, *lhsConst, /*add=*/true);
-  }
-
-  if (auto constIdx = getConstI64(current)) {
-    TokenGuard guard;
-    guard.equalsValue = constIdx.value();
-    guard.keyHash = hashOptionalValue(Value(), guardHashCache);
-    return guard;
-  }
-
-  return std::nullopt;
-}
-
-/// Resolve all potential destinations of an emit.
-static LogicalResult resolveEmitTargets(Value placeValue,
-                                        SmallVectorImpl<TargetInfo> &targets) {
-  if (auto ref = placeValue.getDefiningOp<PlaceRefOp>()) {
-    targets.push_back(TargetInfo{ref.getPlaceAttr().getAttr(), {}});
-    return success();
-  }
-
-  if (auto get = placeValue.getDefiningOp<ArrayGetOp>()) {
-    auto list = get.getArray().getDefiningOp<ArrayOp>();
-    if (!list)
-      return failure();
-    auto elements = list.getElements();
-
-    Value baseIndex = stripIndexCasts(get.getIndex());
-    if (auto constIdx = getConstI64(baseIndex)) {
-      if (*constIdx < 0 || *constIdx >= static_cast<int64_t>(elements.size()))
-        return failure();
-      
-      Value element = elements[*constIdx];
-      if (auto ref = element.getDefiningOp<PlaceRefOp>()) {
-        targets.push_back(TargetInfo{ref.getPlaceAttr().getAttr(), {}});
-        return success();
-      }
-      return failure();
-    }
-
-    for (auto [slot, val] : llvm::enumerate(elements)) {
-      if (auto ref = val.getDefiningOp<PlaceRefOp>()) {
-        auto sym = ref.getPlaceAttr();
-        TargetInfo info;
-        info.symbol = sym.getAttr();
-        if (auto guard = matchListIndexGuard(get.getIndex(), slot))
-          if (guard->key)
-            info.guards.push_back(*guard);
-        targets.push_back(std::move(info));
-      }
-    }
-    return success();
-  }
-
-  return failure();
-}
-
-/// Follow the SSA users of `token` and collect all reachable emits.
-static LogicalResult collectTokenFlows(
-    Value token, SmallVectorImpl<std::pair<EmitOp, Value>> &flows,
-    SmallPtrSetImpl<Value> &visited) {
-  if (!visited.insert(token).second)
-    return success();
-
-  for (Operation *user : token.getUsers()) {
-    if (auto emit = dyn_cast<EmitOp>(user)) {
-      flows.emplace_back(emit, token);
-      continue;
-    }
-    if (auto set = dyn_cast<TokenSetOp>(user)) {
-      if (failed(collectTokenFlows(set.getResult(), flows, visited)))
-        return failure();
-      continue;
-    }
-    if (auto clone = dyn_cast<TokenCloneOp>(user)) {
-      if (failed(collectTokenFlows(clone.getResult(), flows, visited)))
-        return failure();
-      continue;
-    }
-    if (isa<TokenGetOp>(user))
-      continue;
-    return user->emitError("unsupported token consumer in retain pass");
-  }
-  return success();
-}
 
 /// Recursively clone the SSA slice for `value`.
 static Value cloneValueInto(Value value, IRMapping &mapping,
@@ -580,12 +180,6 @@ static Value cloneValueInto(Value value, IRMapping &mapping,
   Operation *def = value.getDefiningOp();
   if (!def)
     return {};
-  if (auto take = dyn_cast<TakeOp>(def)) {
-    if (Value mapped = mapping.lookupOrNull(take.getResult()))
-      return mapped;
-    take.emitError("unmapped lpn.take while cloning hypergraph slice");
-    return {};
-  }
 
   for (Value operand : def->getOperands())
     if (!cloneValueInto(operand, mapping, builder))
@@ -640,12 +234,15 @@ static LogicalResult ensureTemplateSources(const EdgeTemplate *templ,
                                            Value driverToken, TokenEnv &tokens,
                                            TakeEnv &takes,
                                            ImplicitLocOpBuilder &builder) {
+  if (templ->sources.empty())
+    return failure();
+  Value driverTake = templ->sources.front().takeValue;
   auto placeType = PlaceType::get(builder.getContext());
   auto tokenType = TokenType::get(builder.getContext());
   for (const ObservableSource &src : templ->sources) {
     if (takes.contains(src.takeValue))
       continue;
-    if (src.takeValue == templ->driverTake) {
+    if (src.takeValue == driverTake) {
       takes[src.takeValue] = driverToken;
       continue;
     }
@@ -672,7 +269,9 @@ static Value buildGuardCondition(const SmallVectorImpl<TokenGuard> &guards,
   IRMapping mapping;
   mapContextValues(state.ssa, mapping);
   mapTemplateSources(templ, mapping, state.takes);
-  mapping.map(templ->driverTake, state.token);
+  if (templ->sources.empty())
+    return {};
+  mapping.map(templ->sources.front().takeValue, state.token);
   Value condition;
   for (const TokenGuard &guard : guards) {
     if (!guard.key)
@@ -683,7 +282,8 @@ static Value buildGuardCondition(const SmallVectorImpl<TokenGuard> &guards,
     Value lhs = builder.create<TokenGetOp>(i64Ty, state.token, keyValue);
     Value rhs = builder.create<arith::ConstantOp>(
         builder.getI64IntegerAttr(guard.equalsValue));
-    Value eq = builder.create<arith::CmpIOp>(arith::CmpIPredicate::eq, lhs, rhs);
+    Value eq =
+        builder.create<arith::CmpIOp>(arith::CmpIPredicate::eq, lhs, rhs);
     condition = condition ? builder.create<arith::AndIOp>(condition, eq) : eq;
   }
   return condition;
@@ -735,233 +335,24 @@ struct LPNRetainHypergraphPass
     if (observablePlaces.size() < 2)
       return success();
 
-    SmallVector<std::unique_ptr<EdgeTemplate>> templates;
-    DenseMap<StringAttr, SmallVector<const EdgeTemplate *>> adjacency;
-    DenseMap<Value, StringAttr> takePlaces;
-    DenseMap<Value, unsigned> takeGuardIds;
-    DenseMap<unsigned, ObservableSource> guardIdSources;
-    for (TransitionOp trans : net.getOps<TransitionOp>()) {
-      SmallVector<TakeOp, 8> takes;
-      for (TakeOp take : trans.getBody().getOps<TakeOp>())
-        takes.push_back(take);
-      SmallVector<ObservableSource> transitionSources;
-      for (TakeOp take : takes) {
-        StringAttr place;
-        if (failed(resolvePlaceSymbol(take.getPlace(), place)))
-          continue;
-        takePlaces[take.getResult()] = place;
-        transitionSources.push_back({place, take.getResult()});
-        if (auto guardAttr =
-                take->getAttrOfType<IntegerAttr>(kGuardIdAttr)) {
-          unsigned guardId = guardAttr.getInt();
-          takeGuardIds[take.getResult()] = guardId;
-          guardIdSources[guardId] = {place, take.getResult()};
-        }
-      }
-      for (TakeOp take : takes) {
-        StringAttr driverPlace = takePlaces.lookup(take.getResult());
-        if (!driverPlace)
-          continue;
-        SmallVector<std::pair<EmitOp, Value>> flows;
-        SmallPtrSet<Value, 8> visited;
-        if (failed(collectTokenFlows(take.getResult(), flows, visited)))
-          continue;
-        for (auto &[emit, tokenVal] : flows) {
-          SmallVector<TargetInfo> targets;
-          if (failed(resolveEmitTargets(emit.getPlace(), targets)))
-            continue;
-          SmallVector<ControlContext> contexts;
-          Operation *parent = emit.getOperation()->getParentOp();
+    TokenFlowAnalysisResult analysisResult;
+    if (failed(runTokenFlowAnalysis(net, observableNames, analysisResult)))
+      return failure();
 
-          while (parent && parent != trans) {
-            Block *emitBlock = emit->getBlock();
-            if (auto ifOp = dyn_cast<scf::IfOp>(parent)) {
-              Region &thenRegion = ifOp.getThenRegion();
-              Region &elseRegion = ifOp.getElseRegion();
-              bool inThen = blockInRegion(emitBlock, thenRegion);
-              bool inElse = blockInRegion(emitBlock, elseRegion);
-              assert((inThen || inElse) &&
-                     "emit block must belong to either then or else region");
-              bool hidden = ifOp->hasAttr("lpn.hidden_choice");
-              contexts.push_back({ifOp.getOperation(),
-                                  hidden ? ContextKind::ChoiceOp
-                                         : ContextKind::IfOp,
-                                  inThen});
-            } else if (auto choice = dyn_cast<ChoiceOp>(parent)) {
-              Region &thenRegion = choice.getThenRegion();
-              Region &elseRegion = choice.getElseRegion();
-              bool inThen = blockInRegion(emitBlock, thenRegion);
-              bool inElse = blockInRegion(emitBlock, elseRegion);
-              assert((inThen || inElse) &&
-                     "emit block must belong to either choice branch");
-              contexts.push_back(
-                  {choice.getOperation(), ContextKind::ChoiceOp, inThen});
-            } else if (auto forOp = dyn_cast<scf::ForOp>(parent)) {
-              Region &body = forOp.getRegion();
-              assert(blockInRegion(emitBlock, body) &&
-                     "loop body must contain emit");
-              contexts.push_back(
-                  {forOp.getOperation(), ContextKind::ForOp, true});
-            }
-            parent = parent->getParentOp();
-          }
-          std::reverse(contexts.begin(), contexts.end());
+    auto &adjacency = analysisResult.adjacency;
+    stats.totalHyperedges = analysisResult.totalHyperedges;
+    stats.guardHyperedges = analysisResult.guardHyperedges;
 
-          SmallVector<SmallVector<ObservableSource, 4>, 4> candidateSources;
-          bool usedGuardMetadata = false;
-          if (auto guardAttr =
-                  emit->getAttrOfType<ArrayAttr>(kGuardPathsAttr)) {
-            auto guardIt = takeGuardIds.find(take.getResult());
-            if (guardIt != takeGuardIds.end()) {
-              unsigned driverGuardId = guardIt->second;
-              for (Attribute attr : guardAttr) {
-                auto pathAttr = dyn_cast<ArrayAttr>(attr);
-                if (!pathAttr)
-                  continue;
-                SmallVector<unsigned, 4> guardIds;
-                guardIds.reserve(pathAttr.size());
-                bool containsDriver = false;
-                for (Attribute elem : pathAttr) {
-                  auto intAttr = dyn_cast<IntegerAttr>(elem);
-                  if (!intAttr)
-                    continue;
-                  unsigned guardId = intAttr.getInt();
-                  guardIds.push_back(guardId);
-                  if (guardId == driverGuardId)
-                    containsDriver = true;
-                }
-                if (!containsDriver)
-                  continue;
-                llvm::sort(guardIds);
-                guardIds.erase(
-                    std::unique(guardIds.begin(), guardIds.end()),
-                    guardIds.end());
-                SmallVector<ObservableSource, 4> pathSources;
-                for (unsigned guardId : guardIds) {
-                  auto srcIt = guardIdSources.find(guardId);
-                  if (srcIt == guardIdSources.end())
-                    continue;
-                  pathSources.push_back(srcIt->second);
-                }
-                if (pathSources.empty())
-                  continue;
-                auto driverIt = llvm::find_if(
-                    pathSources, [&](const ObservableSource &src) {
-                      return src.takeValue == take.getResult();
-                    });
-                if (driverIt == pathSources.end())
-                  continue;
-                std::swap(pathSources.front(), *driverIt);
-                if (pathSources.size() > 1)
-                  llvm::sort(pathSources.begin() + 1, pathSources.end(),
-                             [](const ObservableSource &a,
-                                const ObservableSource &b) {
-                               if (a.place != b.place)
-                                 return a.place.getValue() <
-                                        b.place.getValue();
-                               return a.takeValue.getAsOpaquePointer() <
-                                      b.takeValue.getAsOpaquePointer();
-                             });
-                candidateSources.push_back(std::move(pathSources));
-              }
-              if (!candidateSources.empty())
-                usedGuardMetadata = true;
-            }
-          }
-          if (!usedGuardMetadata) {
-            if (transitionSources.empty())
-              continue;
-            SmallVector<ObservableSource, 4> fallbackSources(
-                transitionSources.begin(), transitionSources.end());
-            auto driverIt = llvm::find_if(
-                fallbackSources, [&](const ObservableSource &src) {
-                  return src.takeValue == take.getResult();
-                });
-            if (driverIt == fallbackSources.end())
-              continue;
-            std::swap(fallbackSources.front(), *driverIt);
-            if (fallbackSources.size() > 1)
-              llvm::sort(fallbackSources.begin() + 1,
-                         fallbackSources.end(),
-                         [](const ObservableSource &a,
-                            const ObservableSource &b) {
-                           if (a.place != b.place)
-                             return a.place.getValue() <
-                                    b.place.getValue();
-                           return a.takeValue.getAsOpaquePointer() <
-                                  b.takeValue.getAsOpaquePointer();
-                         });
-            candidateSources.push_back(std::move(fallbackSources));
-          }
-
-          bool guardDerived = usedGuardMetadata;
-          for (SmallVector<ObservableSource, 4> &sources : candidateSources) {
-            if (sources.empty())
-              continue;
-            StringAttr driver = sources.front().place;
-            if (driver != driverPlace)
-              continue;
-
-            for (TargetInfo &target : targets) {
-              SmallVector<ObservableSource, 4> sourcesCopy = sources;
-            SmallVector<TokenEditSignature> editSummary;
-            DenseMap<Value, llvm::hash_code> hashCache;
-            if (failed(summarizeTokenEdits(tokenVal, take.getResult(),
-                                           editSummary, hashCache, sources)))
-              continue;
-            llvm::hash_code tokenHash = hashOptionalValue(tokenVal, hashCache);
-            llvm::hash_code delayHash =
-                hashOptionalValue(emit.getDelay(), hashCache);
-              auto templ = std::make_unique<EdgeTemplate>(
-                EdgeTemplate{driver,
-                             take.getResult(),
-                             target,
-                             std::move(sourcesCopy),
-                             tokenVal,
-                             emit.getDelay(),
-                             contexts,
-                             editSummary,
-                             tokenHash,
-                             delayHash});
-              const EdgeTemplate *ptr = templ.get();
-              adjacency[driver].push_back(ptr);
-              templates.push_back(std::move(templ));
-              ++stats.totalHyperedges;
-              if (guardDerived)
-                ++stats.guardHyperedges;
-            }
-          }
-        }
-      }
-    }
-
-    clusterHyperedges(adjacency);
-    stats.clusteredHyperedges = 0;
-    for (auto &entry : adjacency)
-      stats.clusteredHyperedges += entry.second.size();
+    stats.clusteredHyperedges = analysisResult.clusteredHyperedges;
+    stats.rawPaths = analysisResult.rawPaths;
+    stats.retainedPaths = analysisResult.retainedPaths;
 
     if (adjacency.empty()) {
       reportNetStats(net, stats);
       return success();
     }
 
-    DenseMap<StringAttr, SmallVector<EdgePath>> observablePaths;
-    stats.rawPaths = 0;
-    for (PlaceOp place : observablePlaces) {
-      StringAttr root = place.getSymNameAttr();
-      DenseSet<StringAttr> visited;
-      visited.insert(root);
-      EdgePath prefix;
-      dfsPaths(root, root, visited, prefix, observableNames, adjacency,
-               observablePaths);
-    }
-    for (auto &entry : observablePaths)
-      stats.rawPaths += entry.second.size();
-
-    dedupPaths(observablePaths);
-    stats.retainedPaths = 0;
-    for (auto &entry : observablePaths)
-      stats.retainedPaths += entry.second.size();
+    auto &observablePaths = analysisResult.observablePaths;
 
     if (observablePaths.empty()) {
       reportNetStats(net, stats);
@@ -990,9 +381,8 @@ struct LPNRetainHypergraphPass
       if (entry.second.empty())
         continue;
       std::string transName = (entry.first.getValue() + "_retain").str();
-      auto trans =
-          topBuilder.create<TransitionOp>(net.getLoc(),
-                                          topBuilder.getStringAttr(transName));
+      auto trans = topBuilder.create<TransitionOp>(
+          net.getLoc(), topBuilder.getStringAttr(transName));
       Region &region = trans.getBody();
       auto *block = new Block();
       region.push_back(block);
@@ -1046,11 +436,11 @@ struct LPNRetainHypergraphPass
     return (*(cursor.path))[cursor.edgeIndex];
   }
 
-  void dfsPaths(
-      StringAttr root, StringAttr current, DenseSet<StringAttr> &visited,
-      EdgePath &prefix, const DenseSet<StringAttr> &observables,
-      DenseMap<StringAttr, SmallVector<const EdgeTemplate *>> &adjacency,
-      DenseMap<StringAttr, SmallVector<EdgePath>> &paths) const {
+  void
+  dfsPaths(StringAttr root, StringAttr current, DenseSet<StringAttr> &visited,
+           EdgePath &prefix, const DenseSet<StringAttr> &observables,
+           DenseMap<StringAttr, SmallVector<const EdgeTemplate *>> &adjacency,
+           DenseMap<StringAttr, SmallVector<EdgePath>> &paths) const {
     if (observables.contains(current) && current != root) {
       paths[root].push_back(prefix);
       return;
@@ -1068,15 +458,13 @@ struct LPNRetainHypergraphPass
       visited.erase(next);
     }
   }
-
 };
 
 } // namespace
 
-
-
-LogicalResult LPNRetainHypergraphPass::emitCursorSet(SmallVector<CursorState> states,
-                            ImplicitLocOpBuilder &builder) const {
+LogicalResult
+LPNRetainHypergraphPass::emitCursorSet(SmallVector<CursorState> states,
+                                       ImplicitLocOpBuilder &builder) const {
   if (states.empty())
     return success();
 
@@ -1137,17 +525,17 @@ LogicalResult LPNRetainHypergraphPass::emitCursorSet(SmallVector<CursorState> st
   return success();
 }
 
-LogicalResult LPNRetainHypergraphPass::emitIfGroup(ContextGroup &group,
-                          ImplicitLocOpBuilder &builder) const {
+LogicalResult
+LPNRetainHypergraphPass::emitIfGroup(ContextGroup &group,
+                                     ImplicitLocOpBuilder &builder) const {
   if (group.thenStates.empty() && group.elseStates.empty())
     return success();
   auto ifOp = dyn_cast<scf::IfOp>(group.op);
   if (!ifOp)
     return builder.getInsertionBlock()->getParentOp()->emitError(
         "unsupported control context");
-  CursorState *rep =
-      !group.thenStates.empty() ? &group.thenStates.front()
-                                : &group.elseStates.front();
+  CursorState *rep = !group.thenStates.empty() ? &group.thenStates.front()
+                                               : &group.elseStates.front();
   const EdgeTemplate *templ = getTemplate(rep->cursor);
   if (!templ)
     return success();
@@ -1164,13 +552,12 @@ LogicalResult LPNRetainHypergraphPass::emitIfGroup(ContextGroup &group,
     return failure();
   bool hasElse = !group.elseStates.empty();
   scf::IfOp cloned = builder.create<scf::IfOp>(TypeRange(), cond, hasElse);
-  auto populate = [&](Region &region,
-                      SmallVector<CursorState, 4> branchStates)
-      -> LogicalResult {
+  auto populate =
+      [&](Region &region,
+          SmallVector<CursorState, 4> branchStates) -> LogicalResult {
     region.getBlocks().clear();
     Block &block = region.emplaceBlock();
-    ImplicitLocOpBuilder branchBuilder(builder.getLoc(),
-                                       builder.getContext());
+    ImplicitLocOpBuilder branchBuilder(builder.getLoc(), builder.getContext());
     branchBuilder.setInsertionPointToStart(&block);
     if (!branchStates.empty()) {
       SmallVector<CursorState, 4> advanced;
@@ -1195,8 +582,9 @@ LogicalResult LPNRetainHypergraphPass::emitIfGroup(ContextGroup &group,
   return success();
 }
 
-LogicalResult LPNRetainHypergraphPass::emitChoiceGroup(ContextGroup &group,
-                              ImplicitLocOpBuilder &builder) const {
+LogicalResult
+LPNRetainHypergraphPass::emitChoiceGroup(ContextGroup &group,
+                                         ImplicitLocOpBuilder &builder) const {
   if (group.thenStates.empty() && group.elseStates.empty())
     return success();
   auto choice = dyn_cast<ChoiceOp>(group.op);
@@ -1204,13 +592,12 @@ LogicalResult LPNRetainHypergraphPass::emitChoiceGroup(ContextGroup &group,
     return builder.getInsertionBlock()->getParentOp()->emitError(
         "unsupported choice context");
   ChoiceOp cloned = builder.create<ChoiceOp>();
-  auto populate = [&](Region &region,
-                      SmallVector<CursorState, 4> branchStates)
-      -> LogicalResult {
+  auto populate =
+      [&](Region &region,
+          SmallVector<CursorState, 4> branchStates) -> LogicalResult {
     region.getBlocks().clear();
     Block &block = region.emplaceBlock();
-    ImplicitLocOpBuilder branchBuilder(builder.getLoc(),
-                                       builder.getContext());
+    ImplicitLocOpBuilder branchBuilder(builder.getLoc(), builder.getContext());
     branchBuilder.setInsertionPointToStart(&block);
     if (!branchStates.empty()) {
       SmallVector<CursorState, 4> advanced;
@@ -1234,8 +621,9 @@ LogicalResult LPNRetainHypergraphPass::emitChoiceGroup(ContextGroup &group,
   return success();
 }
 
-LogicalResult LPNRetainHypergraphPass::emitForGroup(ContextGroup &group,
-                           ImplicitLocOpBuilder &builder) const {
+LogicalResult
+LPNRetainHypergraphPass::emitForGroup(ContextGroup &group,
+                                      ImplicitLocOpBuilder &builder) const {
   if (group.bodyStates.empty())
     return success();
   auto forOp = dyn_cast<scf::ForOp>(group.op);
@@ -1279,8 +667,9 @@ LogicalResult LPNRetainHypergraphPass::emitForGroup(ContextGroup &group,
   return success();
 }
 
-LogicalResult LPNRetainHypergraphPass::emitLeaf(CursorState state, const EdgeTemplate *templ,
-                       ImplicitLocOpBuilder &builder) const {
+LogicalResult
+LPNRetainHypergraphPass::emitLeaf(CursorState state, const EdgeTemplate *templ,
+                                  ImplicitLocOpBuilder &builder) const {
   if (failed(ensureTemplateSources(templ, state.token, state.tokens,
                                    state.takes, builder)))
     return failure();
@@ -1296,12 +685,10 @@ LogicalResult LPNRetainHypergraphPass::emitLeaf(CursorState state, const EdgeTem
     if (!stepDelay)
       return failure();
     Value totalDelay = ensureDelay(innerState.delay, inner);
-    totalDelay =
-        inner.create<arith::AddFOp>(totalDelay, stepDelay).getResult();
+    totalDelay = inner.create<arith::AddFOp>(totalDelay, stepDelay).getResult();
     innerState.tokens[templ->target.symbol].push_back(newToken);
-    bool last = innerState.cursor.path &&
-                (innerState.cursor.edgeIndex + 1 ==
-                 innerState.cursor.path->size());
+    bool last = innerState.cursor.path && (innerState.cursor.edgeIndex + 1 ==
+                                           innerState.cursor.path->size());
     if (last) {
       auto placeType = PlaceType::get(inner.getContext());
       auto placeAttr = FlatSymbolRefAttr::get(templ->target.symbol);
@@ -1319,8 +706,7 @@ LogicalResult LPNRetainHypergraphPass::emitLeaf(CursorState state, const EdgeTem
     return emitCursorSet(std::move(children), inner);
   };
 
-  Value cond =
-      buildGuardCondition(templ->target.guards, templ, state, builder);
+  Value cond = buildGuardCondition(templ->target.guards, templ, state, builder);
   if (!cond)
     return emitBody(std::move(state), builder);
 
@@ -1345,12 +731,10 @@ void LPNRetainHypergraphPass::reportNetStats(NetOp net,
   auto diag = net.emitRemark();
   diag << "[lpn-retain-hypergraph] hyperedges(before cluster)="
        << stats.totalHyperedges << " (guard=" << stats.guardHyperedges
-       << ", fallback=" << fallback << "), unique="
-       << stats.clusteredHyperedges << "; paths=" << stats.retainedPaths
-       << "/" << stats.rawPaths << "; transitions="
-       << stats.synthesizedTransitions;
+       << ", fallback=" << fallback << "), unique=" << stats.clusteredHyperedges
+       << "; paths=" << stats.retainedPaths << "/" << stats.rawPaths
+       << "; transitions=" << stats.synthesizedTransitions;
 }
-
 
 std::unique_ptr<Pass> createLPNRetainHypergraphPass() {
   return std::make_unique<LPNRetainHypergraphPass>();

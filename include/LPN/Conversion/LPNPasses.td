@@ -41,11 +41,6 @@ def LPNLinkTokenCreatesPass : Pass<"lpn-link-token-creates", "ModuleOp"> {
   let constructor = "mlir::lpn::createLPNLinkTokenCreatesPass()";
 }
 
-def LPNRetainObservablesPass : Pass<"lpn-retain-observables", "ModuleOp"> {
-  let summary = "Collapse networks to the user-marked observable places";
-  let constructor = "mlir::lpn::createLPNRetainObservablesPass()";
-}
-
 def LPNRetainHypergraphPass : Pass<"lpn-retain-hypergraph", "ModuleOp"> {
   let summary = "EXPERIMENTAL hypergraph-based observable reduction";
   let constructor = "mlir::lpn::createLPNRetainHypergraphPass()";

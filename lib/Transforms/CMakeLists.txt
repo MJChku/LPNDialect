@@ -8,7 +8,6 @@ add_mlir_library(MLIRLPNTransforms
   LPNLinkTokenCreatesPass.cpp
   LPNResolveChoicePass.cpp
   LPNDataflowSimplifyPass.cpp
-  LPNRetainObservablesPass.cpp
   LPNRetainHypergraphPass.cpp
 
   PARTIAL_SOURCES_INTENDED
@@ -24,5 +23,6 @@ add_mlir_library(MLIRLPNTransforms
   MLIRPass
   MLIRSupport
   MLIRTransformUtils
+  MLIRLPNAnalysis
   MLIRLPN
 )

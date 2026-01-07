@@ -10,7 +10,6 @@ namespace lpn {
 std::unique_ptr<Pass> createLPNSimulationPass();
 std::unique_ptr<Pass> createLPNValidationPass();
 std::unique_ptr<Pass> createLPNNormalizeDelaysPass();
-std::unique_ptr<Pass> createLPNRetainObservablesPass();
 std::unique_ptr<Pass> createLPNRetainHypergraphPass();
 std::unique_ptr<Pass> createLPNAbstractHiddenStatePass();
 std::unique_ptr<Pass> createLPNStripHiddenValuesPass();
