@@ -4,6 +4,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "LPN/Analysis/GuardTransitiveClosure.h"
 #include "LPN/Analysis/TokenFlowAnalysis.h"
 #include "LPN/Dialect/LPNTypes.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -252,6 +253,28 @@ static bool lessSource(const ObservableSource &a, const ObservableSource &b) {
   return a.takeValue.getAsOpaquePointer() < b.takeValue.getAsOpaquePointer();
 }
 
+static void canonicalizeSources(
+    llvm::SmallVectorImpl<ObservableSource> &sources) {
+  llvm::sort(sources.begin(), sources.end(), lessSource);
+  sources.erase(std::unique(sources.begin(), sources.end(),
+                            [](const ObservableSource &lhs,
+                               const ObservableSource &rhs) {
+                              return lhs.takeValue == rhs.takeValue;
+                            }),
+                sources.end());
+}
+
+static void appendUniqueSources(ArrayRef<ObservableSource> extras,
+                                llvm::SmallVectorImpl<ObservableSource> &dst) {
+  for (const ObservableSource &src : extras) {
+    bool exists = llvm::any_of(dst, [&](const ObservableSource &seen) {
+      return seen.takeValue == src.takeValue;
+    });
+    if (!exists)
+      dst.push_back(src);
+  }
+}
+
 static void addDriverVariants(
     ArrayRef<ObservableSource> base,
     llvm::SmallVectorImpl<llvm::SmallVector<ObservableSource, 4>> &out) {
@@ -485,9 +508,10 @@ static void enumerateObservablePaths(const ObservableSet &observables,
   dedupObservablePaths(result);
 }
 
-static bool collectGuardPathSources(
-    EmitOp emit, llvm::DenseMap<Value, unsigned> &takeGuardIds,
-    llvm::DenseMap<unsigned, ObservableSource> &guardIdSources,
+static bool collectGuardClosureSources(
+    EmitOp emit,
+    const llvm::DenseMap<unsigned, llvm::SmallVector<llvm::SmallVector<ObservableSource, 4>, 4>>
+        &guardIdClosures,
     llvm::SmallVectorImpl<llvm::SmallVector<ObservableSource, 4>> &out) {
   auto guardAttr = emit->getAttrOfType<ArrayAttr>(kGuardPathsAttr);
   if (!guardAttr)
@@ -497,39 +521,52 @@ static bool collectGuardPathSources(
     auto pathAttr = dyn_cast<ArrayAttr>(attr);
     if (!pathAttr)
       continue;
-    llvm::SmallVector<unsigned, 4> guardIds;
-    for (Attribute elem : pathAttr)
-      if (auto intAttr = dyn_cast<IntegerAttr>(elem))
-        guardIds.push_back(intAttr.getInt());
-    if (guardIds.empty())
-      continue;
-    llvm::sort(guardIds);
-    guardIds.erase(std::unique(guardIds.begin(), guardIds.end()),
-                   guardIds.end());
-    llvm::SmallVector<ObservableSource, 4> pathSources;
-    for (unsigned guardId : guardIds) {
-      auto it = guardIdSources.find(guardId);
-      if (it == guardIdSources.end())
+    llvm::SmallVector<llvm::SmallVector<ObservableSource, 4>, 4> combos;
+    combos.push_back({});
+    for (Attribute elem : pathAttr) {
+      auto intAttr = dyn_cast<IntegerAttr>(elem);
+      if (!intAttr)
         continue;
-      pathSources.push_back(it->second);
+      unsigned guardId = intAttr.getInt();
+      auto it = guardIdClosures.find(guardId);
+      if (it == guardIdClosures.end() || it->second.empty())
+        continue;
+      llvm::SmallVector<llvm::SmallVector<ObservableSource, 4>, 4> next;
+      for (const auto &base : combos) {
+        for (const auto &addition : it->second) {
+          llvm::SmallVector<ObservableSource, 4> merged(base.begin(),
+                                                       base.end());
+          appendUniqueSources(addition, merged);
+          canonicalizeSources(merged);
+          next.push_back(std::move(merged));
+        }
+      }
+      if (!next.empty())
+        combos.swap(next);
     }
-    if (pathSources.empty())
-      continue;
-    out.push_back(std::move(pathSources));
-    used = true;
+    for (auto &combo : combos) {
+      if (combo.empty())
+        continue;
+      out.push_back(std::move(combo));
+      used = true;
+    }
   }
   return used;
 }
 
 struct TokenFlowAnalysisImpl {
-  TokenFlowAnalysisImpl(NetOp net, const ObservableSet &,
+  TokenFlowAnalysisImpl(NetOp net, const ObservableSet &observables,
+                        const GuardTransitiveClosureResult &guardClosure,
                         TokenFlowAnalysisResult &result)
-      : net(net), result(result) {}
+      : net(net), observables(observables), guardClosure(guardClosure),
+        result(result) {}
 
   LogicalResult run() {
     takePlaces.clear();
-    takeGuardIds.clear();
-    guardIdSources.clear();
+    guardIdToTake.clear();
+    guardIdClosures.clear();
+    if (failed(collectTakeMetadata()))
+      return failure();
     for (TransitionOp trans : net.getOps<TransitionOp>())
       if (failed(processTransition(trans)))
         return failure();
@@ -537,19 +574,9 @@ struct TokenFlowAnalysisImpl {
   }
 
 private:
+  LogicalResult collectTakeMetadata();
+  LogicalResult populateGuardClosures(unsigned guardId, Value takeValue);
   LogicalResult processTransition(TransitionOp trans) {
-    for (TakeOp take : trans.getBody().getOps<TakeOp>()) {
-      StringAttr place;
-      if (failed(resolvePlaceSymbol(take.getPlace(), place)))
-        return take.emitError("failed to resolve place symbol");
-      takePlaces[take.getResult()] = place;
-      if (auto guardAttr = take->getAttrOfType<IntegerAttr>(kGuardIdAttr)) {
-        unsigned guardId = guardAttr.getInt();
-        takeGuardIds[take.getResult()] = guardId;
-        guardIdSources[guardId] = {place, take.getResult()};
-      }
-    }
-
     WalkResult walkResult = trans->walk([&](EmitOp emit) -> WalkResult {
       if (failed(processEmit(trans, emit)))
         return WalkResult::interrupt();
@@ -576,9 +603,9 @@ private:
     if (!ssaSources.empty())
       addDriverVariants(ssaSources, baseCandidates);
 
-    llvm::SmallVector<llvm::SmallVector<ObservableSource, 4>, 4> guardSources;
-    bool guardDerived = collectGuardPathSources(emit, takeGuardIds,
-                                                guardIdSources, guardSources);
+  llvm::SmallVector<llvm::SmallVector<ObservableSource, 4>, 4> guardSources;
+  bool guardDerived =
+    collectGuardClosureSources(emit, guardIdClosures, guardSources);
 
     llvm::SmallVector<llvm::SmallVector<ObservableSource, 4>, 4>
         candidateSources;
@@ -641,17 +668,82 @@ private:
   }
 
   NetOp net;
+  const ObservableSet &observables;
+  const GuardTransitiveClosureResult &guardClosure;
   TokenFlowAnalysisResult &result;
   llvm::DenseMap<Value, StringAttr> takePlaces;
-  llvm::DenseMap<Value, unsigned> takeGuardIds;
-  llvm::DenseMap<unsigned, ObservableSource> guardIdSources;
+  llvm::DenseMap<unsigned, Value> guardIdToTake;
+  llvm::DenseMap<unsigned, llvm::SmallVector<llvm::SmallVector<ObservableSource, 4>, 4>>
+      guardIdClosures;
 };
+
+LogicalResult TokenFlowAnalysisImpl::collectTakeMetadata() {
+  for (TransitionOp trans : net.getOps<TransitionOp>()) {
+    for (TakeOp take : trans.getBody().getOps<TakeOp>()) {
+      StringAttr place;
+      if (failed(resolvePlaceSymbol(take.getPlace(), place)))
+        return take.emitError("failed to resolve place symbol");
+      takePlaces[take.getResult()] = place;
+      if (auto guardAttr = take->getAttrOfType<IntegerAttr>(kGuardIdAttr)) {
+        unsigned guardId = guardAttr.getInt();
+        guardIdToTake[guardId] = take.getResult();
+      }
+    }
+  }
+  for (const auto &entry : guardIdToTake)
+    if (failed(populateGuardClosures(entry.first, entry.second)))
+      return failure();
+  return success();
+}
+
+LogicalResult TokenFlowAnalysisImpl::populateGuardClosures(unsigned guardId,
+                                                           Value takeValue) {
+  llvm::SmallVector<llvm::SmallVector<ObservableSource, 4>, 4> converted;
+  ArrayRef<GuardTransitiveClosureResult::GuardCombination> closures =
+      guardClosure.getClosures(takeValue);
+  if (closures.empty()) {
+    auto placeIt = takePlaces.find(takeValue);
+    if (placeIt != takePlaces.end() &&
+        observables.contains(placeIt->second)) {
+      ObservableSource src{placeIt->second, takeValue};
+      converted.push_back({src});
+    }
+    guardIdClosures[guardId] = std::move(converted);
+    return success();
+  }
+
+  for (const auto &combo : closures) {
+    if (combo.empty()) {
+      converted.push_back({});
+      continue;
+    }
+    llvm::SmallVector<ObservableSource, 4> sources;
+    for (Value guardTake : combo) {
+      auto placeIt = takePlaces.find(guardTake);
+      if (placeIt == takePlaces.end())
+        continue;
+      if (!observables.contains(placeIt->second))
+        continue;
+      sources.push_back({placeIt->second, guardTake});
+    }
+    if (sources.empty())
+      continue;
+    canonicalizeSources(sources);
+    converted.push_back(std::move(sources));
+  }
+  guardIdClosures[guardId] = std::move(converted);
+  return success();
+}
 
 } // namespace
 
 LogicalResult runTokenFlowAnalysis(NetOp net, const ObservableSet &observables,
                                    TokenFlowAnalysisResult &result) {
-  TokenFlowAnalysisImpl impl(net, observables, result);
+  GuardTransitiveClosureResult guardClosure;
+  if (failed(
+          runGuardTransitiveClosureAnalysis(net, observables, guardClosure)))
+    return failure();
+  TokenFlowAnalysisImpl impl(net, observables, guardClosure, result);
   if (failed(impl.run()))
     return failure();
   clusterHyperedges(result);

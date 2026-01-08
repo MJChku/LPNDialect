@@ -7,6 +7,7 @@
 #ifndef LPN_ANALYSIS_TOKENFLOWANALYSIS_H
 #define LPN_ANALYSIS_TOKENFLOWANALYSIS_H
 
+#include "LPN/Analysis/AnalysisCommon.h"
 #include "LPN/Dialect/LPNOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Value.h"
@@ -23,8 +24,6 @@ namespace mlir {
 namespace lpn {
 
 class NetOp;
-
-using ObservableSet = llvm::DenseSet<StringAttr, llvm::DenseMapInfo<StringAttr>>;
 
 struct TokenGuard {
 	Value key;
