@@ -203,9 +203,9 @@ LogicalResult GuardClosureContext::compute(Value takeValue) {
   GuardNode &node = nodeIt->second;
   if (node.state == GuardNode::State::Done)
     return success();
+  // Cycle means the guard depends only on itself or other non-observable
+  // guards; drop it quietly so downstream analyses treat it as unguarded.
   if (node.state == GuardNode::State::Visiting) {
-    takeValue.getDefiningOp()->emitWarning(
-        "detected cycle while resolving guard closure; ignoring guard");
     node.combos.clear();
     node.state = GuardNode::State::Done;
     return success();
