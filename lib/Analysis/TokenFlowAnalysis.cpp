@@ -214,18 +214,18 @@ static void recordSourceRefs(Value root, TokenEditSignature &sig,
 }
 
 static LogicalResult
-summarizeTokenEdits(Value current, Value source,
+summarizeTokenEdits(Value current,
                     llvm::SmallVectorImpl<TokenEditSignature> &edits,
                     llvm::DenseMap<Value, llvm::hash_code> &hashCache,
                     ArrayRef<ObservableSource> sources) {
-  if (current == source)
-    return success();
   Operation *def = current.getDefiningOp();
   if (!def)
     return failure();
+  // Stop at token sources (TakeOp or CreateOp)
+  if (isa<TakeOp, TokenCreateOp>(def))
+    return success();
   if (auto set = dyn_cast<TokenSetOp>(def)) {
-    if (failed(summarizeTokenEdits(set.getToken(), source, edits, hashCache,
-                                   sources)))
+    if (failed(summarizeTokenEdits(set.getToken(), edits, hashCache, sources)))
       return failure();
     TokenEditSignature sig;
     sig.keyHash = hashValueExpr(set.getKey(), hashCache);
@@ -237,8 +237,7 @@ summarizeTokenEdits(Value current, Value source,
     return success();
   }
   if (auto clone = dyn_cast<TokenCloneOp>(def))
-    return summarizeTokenEdits(clone.getToken(), source, edits, hashCache,
-                               sources);
+    return summarizeTokenEdits(clone.getToken(), edits, hashCache, sources);
   return def->emitError("token flow includes unsupported op while summarizing");
 }
 
@@ -259,271 +258,42 @@ static void canonicalizeSources(
                 sources.end());
 }
 
-static void appendUniqueSources(ArrayRef<ObservableSource> extras,
-                                llvm::SmallVectorImpl<ObservableSource> &dst) {
-  for (const ObservableSource &src : extras) {
-    bool exists = llvm::any_of(dst, [&](const ObservableSource &seen) {
-      return seen.takeValue == src.takeValue;
-    });
-    if (!exists)
-      dst.push_back(src);
-  }
-}
-
-static void addDriverVariants(
-    ArrayRef<ObservableSource> base,
-    llvm::SmallVectorImpl<llvm::SmallVector<ObservableSource, 4>> &out) {
-  for (const ObservableSource &driver : base) {
-    llvm::SmallVector<ObservableSource, 4> variant;
-    variant.push_back(driver);
-    for (const ObservableSource &src : base) {
-      if (src.takeValue == driver.takeValue)
-        continue;
-      variant.push_back(src);
-    }
-    if (variant.size() > 1)
-      llvm::sort(variant.begin() + 1, variant.end(), lessSource);
-    out.push_back(std::move(variant));
-  }
-}
-
-static LogicalResult
-collectTokenSources(Value token, llvm::SmallVectorImpl<TakeOp> &sources,
-                    llvm::SmallPtrSetImpl<Value> &visited) {
-  if (!visited.insert(token).second)
-    return success();
-  if (auto take = token.getDefiningOp<TakeOp>()) {
-    sources.push_back(take);
-    return success();
-  }
-  if (auto set = token.getDefiningOp<TokenSetOp>())
-    return collectTokenSources(set.getToken(), sources, visited);
-  if (auto clone = token.getDefiningOp<TokenCloneOp>())
-    return collectTokenSources(clone.getToken(), sources, visited);
-  if (token.getDefiningOp<TokenCreateOp>())
-    return success();
-  if (auto arg = dyn_cast<BlockArgument>(token))
-    return arg.getOwner()->getParentOp()->emitError(
-               "unsupported block argument token in retain analysis"),
-           failure();
-  if (Operation *def = token.getDefiningOp())
-    return def->emitError(
-               "unsupported token producer while tracing emit sources"),
-           failure();
-  return failure();
-}
-
-static LogicalResult
-traceEmitSources(EmitOp emit, llvm::DenseMap<Value, StringAttr> &takePlaces,
-                 llvm::SmallVectorImpl<ObservableSource> &sources) {
-  llvm::SmallVector<TakeOp, 4> takes;
-  llvm::SmallPtrSet<Value, 16> visited;
-  if (failed(collectTokenSources(emit.getToken(), takes, visited)))
-    return failure();
+static void dedupSegments(llvm::SmallVectorImpl<GuardPathSegment> &segments) {
   llvm::DenseSet<Value> seen;
-  for (TakeOp take : takes) {
-    Value tok = take.getResult();
-    if (!seen.insert(tok).second)
+  llvm::SmallVector<GuardPathSegment, 8> filtered;
+  filtered.reserve(segments.size());
+  for (const GuardPathSegment &segment : segments) {
+    if (segment.producedTake && !seen.insert(segment.producedTake).second)
       continue;
-    auto placeIt = takePlaces.find(tok);
-    if (placeIt == takePlaces.end())
-      continue;
-    sources.push_back({placeIt->second, tok});
+    filtered.push_back(segment);
   }
-  if (sources.size() > 1)
-    llvm::sort(sources, lessSource);
-  return success();
+  segments.swap(filtered);
 }
 
-
-
-static bool guardsEqual(ArrayRef<TokenGuard> lhs, ArrayRef<TokenGuard> rhs) {
-  if (lhs.size() != rhs.size())
-    return false;
-  for (auto [a, b] : llvm::zip(lhs, rhs)) {
-    if (a.equalsValue != b.equalsValue)
-      return false;
-    if ((a.key && !b.key) || (!a.key && b.key))
-      return false;
-    if (a.key && a.keyHash != b.keyHash)
-      return false;
+static llvm::SmallVector<GuardPathVariant, 4>
+combineVariants(llvm::ArrayRef<GuardPathVariant> lhs,
+                llvm::ArrayRef<GuardPathVariant> rhs) {
+  llvm::SmallVector<GuardPathVariant, 4> result;
+  if (lhs.empty()) {
+    result.append(rhs.begin(), rhs.end());
+    return result;
   }
-  return true;
-}
-
-static bool editsEqual(ArrayRef<TokenEditSignature> lhs,
-             ArrayRef<TokenEditSignature> rhs) {
-  if (lhs.size() != rhs.size())
-    return false;
-  for (auto [a, b] : llvm::zip(lhs, rhs))
-    if (a.keyHash != b.keyHash || a.valueHash != b.valueHash)
-      return false;
-  return true;
-}
-
-
-static bool contextsEqual(ArrayRef<ControlContext> lhs,
-               ArrayRef<ControlContext> rhs) {
-  if (lhs.size() != rhs.size())
-    return false;
-  for (auto [a, b] : llvm::zip(lhs, rhs))
-    if (a.op != b.op || a.inThen != b.inThen)
-      return false;
-  return true;
-}
-
-static bool equivalentTemplate(const EdgeTemplate *lhs,
-                    const EdgeTemplate *rhs) {
-  if (lhs == rhs)
-    return true;
-  if (!lhs || !rhs)
-    return false;
-  if (lhs->driver != rhs->driver)
-    return false;
-  if (lhs->sources.size() != rhs->sources.size())
-    return false;
-  for (auto [a, b] : llvm::zip(lhs->sources, rhs->sources))
-    if (a.place != b.place)
-      return false;
-  if (lhs->target.symbol != rhs->target.symbol)
-    return false;
-  if (!guardsEqual(lhs->target.guards, rhs->target.guards))
-    return false;
-  if (!editsEqual(lhs->editSummary, rhs->editSummary))
-    return false;
-  if (!contextsEqual(lhs->contexts, rhs->contexts))
-    return false;
-  if (lhs->tokenHash != rhs->tokenHash || lhs->delayHash != rhs->delayHash)
-    return false;
-  return true;
-}
-
-static bool equivalentPath(const EdgePath &lhs, const EdgePath &rhs) {
-  if (lhs.size() != rhs.size())
-    return false;
-  for (auto [a, b] : llvm::zip(lhs, rhs))
-    if (!equivalentTemplate(a, b))
-      return false;
-  return true;
-}
-
-static void clusterHyperedges(TokenFlowAnalysisResult &result) {
-  result.clusteredHyperedges = 0;
-  for (auto &entry : result.adjacency) {
-    llvm::SmallVector<const EdgeTemplate *> unique;
-    for (const EdgeTemplate *templ : entry.second) {
-      bool duplicate = llvm::any_of(unique, [&](const EdgeTemplate *seen) {
-        return equivalentTemplate(templ, seen);
-      });
-      if (!duplicate)
-        unique.push_back(templ);
+  if (rhs.empty()) {
+    result.append(lhs.begin(), lhs.end());
+    return result;
+  }
+  for (const auto &left : lhs)
+    for (const auto &right : rhs) {
+      GuardPathVariant variant;
+      variant.observables.append(left.observables.begin(),
+                                 left.observables.end());
+      variant.observables.append(right.observables.begin(),
+                                 right.observables.end());
+      variant.segments.append(left.segments.begin(), left.segments.end());
+      variant.segments.append(right.segments.begin(), right.segments.end());
+      result.push_back(std::move(variant));
     }
-    result.clusteredHyperedges += unique.size();
-    entry.second.swap(unique);
-  }
-}
-
-static void dfsPaths(StringAttr root, StringAttr current,
-           DenseSet<StringAttr> &visited, EdgePath &prefix,
-           const ObservableSet &observables,
-           TokenFlowAnalysisResult &result) {
-  if (observables.contains(current) && current != root) {
-    result.observablePaths[root].push_back(prefix);
-    ++result.rawPaths;
-    return;
-  }
-  auto it = result.adjacency.find(current);
-  if (it == result.adjacency.end())
-    return;
-  for (const EdgeTemplate *templ : it->second) {
-    StringAttr next = templ->target.symbol;
-    if (!visited.insert(next).second)
-      continue;
-    prefix.push_back(templ);
-    dfsPaths(root, next, visited, prefix, observables, result);
-    prefix.pop_back();
-    visited.erase(next);
-  }
-}
-
-static void dedupObservablePaths(TokenFlowAnalysisResult &result) {
-  result.retainedPaths = 0;
-  for (auto &entry : result.observablePaths) {
-    llvm::SmallVector<EdgePath> unique;
-    for (EdgePath &path : entry.second) {
-      bool duplicate = llvm::any_of(unique, [&](const EdgePath &seen) {
-        return equivalentPath(path, seen);
-      });
-      if (!duplicate)
-        unique.push_back(path);
-    }
-    result.retainedPaths += unique.size();
-    entry.second.swap(unique);
-  }
-}
-
-static void enumerateObservablePaths(const ObservableSet &observables,
-                      TokenFlowAnalysisResult &result) {
-  result.observablePaths.clear();
-  result.rawPaths = 0;
-  result.retainedPaths = 0;
-  if (result.adjacency.empty())
-    return;
-  for (StringAttr root : observables) {
-    DenseSet<StringAttr> visited;
-    visited.insert(root);
-    EdgePath prefix;
-    dfsPaths(root, root, visited, prefix, observables, result);
-  }
-  if (result.rawPaths == 0)
-    return;
-  dedupObservablePaths(result);
-}
-
-static bool collectGuardClosureSources(
-    EmitOp emit,
-    const llvm::DenseMap<unsigned, llvm::SmallVector<llvm::SmallVector<ObservableSource, 4>, 4>>
-        &guardIdClosures,
-    llvm::SmallVectorImpl<llvm::SmallVector<ObservableSource, 4>> &out) {
-  auto guardAttr = emit->getAttrOfType<ArrayAttr>(kGuardPathsAttr);
-  if (!guardAttr)
-    return false;
-  bool used = false;
-  for (Attribute attr : guardAttr) {
-    auto pathAttr = dyn_cast<ArrayAttr>(attr);
-    if (!pathAttr)
-      continue;
-    llvm::SmallVector<llvm::SmallVector<ObservableSource, 4>, 4> combos;
-    combos.push_back({});
-    for (Attribute elem : pathAttr) {
-      auto intAttr = dyn_cast<IntegerAttr>(elem);
-      if (!intAttr)
-        continue;
-      unsigned guardId = intAttr.getInt();
-      auto it = guardIdClosures.find(guardId);
-      if (it == guardIdClosures.end() || it->second.empty())
-        continue;
-      llvm::SmallVector<llvm::SmallVector<ObservableSource, 4>, 4> next;
-      for (const auto &base : combos) {
-        for (const auto &addition : it->second) {
-          llvm::SmallVector<ObservableSource, 4> merged(base.begin(),
-                                                       base.end());
-          appendUniqueSources(addition, merged);
-          canonicalizeSources(merged);
-          next.push_back(std::move(merged));
-        }
-      }
-      if (!next.empty())
-        combos.swap(next);
-    }
-    for (auto &combo : combos) {
-      if (combo.empty())
-        continue;
-      out.push_back(std::move(combo));
-      used = true;
-    }
-  }
-  return used;
+  return result;
 }
 
 struct TokenFlowAnalysisImpl {
@@ -535,23 +305,40 @@ struct TokenFlowAnalysisImpl {
 
   LogicalResult run() {
     takePlaces.clear();
-    guardIdToTake.clear();
-    guardIdClosures.clear();
-    if (failed(collectTakeMetadata()))
+    result.emitMetadata.clear();
+    result.observablePaths.clear();
+    result.totalHyperedges = 0;
+    result.guardHyperedges = 0;
+    if (failed(collectTakePlaces()))
       return failure();
     for (TransitionOp trans : net.getOps<TransitionOp>())
       if (failed(processTransition(trans)))
         return failure();
-    return success();
+    return resolveObservablePaths();
   }
 
 private:
-  LogicalResult collectTakeMetadata();
-  LogicalResult populateGuardClosures(unsigned guardId, Value takeValue);
+  LogicalResult collectTakePlaces() {
+    for (TransitionOp trans : net.getOps<TransitionOp>()) {
+      for (TakeOp take : trans.getBody().getOps<TakeOp>()) {
+        StringAttr place;
+        if (failed(resolvePlaceSymbol(take.getPlace(), place)))
+          return take.emitError("failed to resolve place symbol");
+        takePlaces[take.getResult()] = place;
+      }
+    }
+    return success();
+  }
+
   LogicalResult processTransition(TransitionOp trans) {
     ControlFlowTrace trace(trans);
+    llvm::DenseMap<unsigned, Value> guardIdToTake;
+    for (TakeOp take : trans.getBody().getOps<TakeOp>())
+      if (auto guardAttr = take->getAttrOfType<IntegerAttr>(kGuardIdAttr))
+        guardIdToTake[guardAttr.getInt()] = take.getResult();
+
     WalkResult walkResult = trans->walk([&](EmitOp emit) -> WalkResult {
-      if (failed(processEmit(trans, emit, trace)))
+      if (failed(processEmit(trans, emit, trace, guardIdToTake)))
         return WalkResult::interrupt();
       return WalkResult::advance();
     });
@@ -560,83 +347,16 @@ private:
     return success();
   }
 
-  LogicalResult processEmit(TransitionOp trans, EmitOp emit, ControlFlowTrace &trace) {
-    llvm::ArrayRef<ControlContext> contexts = trace.getTrace(emit);
+  LogicalResult processEmit(TransitionOp trans, EmitOp emit,
+                            ControlFlowTrace &trace,
+                            const llvm::DenseMap<unsigned, Value> &guardIdToTake);
+  LogicalResult resolveObservablePaths();
 
-    llvm::SmallVector<TargetInfo, 4> targets;
-    if (failed(resolveEmitTargets(emit.getPlace(), targets)))
-      return emit.emitError("failed to resolve emit targets"), failure();
-
-    llvm::SmallVector<ObservableSource, 4> ssaSources;
-    if (failed(traceEmitSources(emit, takePlaces, ssaSources)))
-      return failure();
-
-    llvm::SmallVector<llvm::SmallVector<ObservableSource, 4>, 4> baseCandidates;
-    if (!ssaSources.empty())
-      addDriverVariants(ssaSources, baseCandidates);
-
-  llvm::SmallVector<llvm::SmallVector<ObservableSource, 4>, 4> guardSources;
-  bool guardDerived =
-    collectGuardClosureSources(emit, guardIdClosures, guardSources);
-
-    llvm::SmallVector<llvm::SmallVector<ObservableSource, 4>, 4>
-        candidateSources;
-    if (baseCandidates.empty())
-      return success();
-    if (!guardSources.empty()) {
-      for (const auto &base : baseCandidates) {
-        for (const auto &extras : guardSources) {
-          llvm::SmallVector<ObservableSource, 4> merged(base.begin(),
-                                                        base.end());
-          for (const ObservableSource &src : extras) {
-            bool exists = llvm::any_of(merged, [&](const ObservableSource &it) {
-              return it.takeValue == src.takeValue;
-            });
-            if (!exists)
-              merged.push_back(src);
-          }
-          if (merged.size() > 1)
-            llvm::sort(merged.begin() + 1, merged.end(), lessSource);
-          candidateSources.push_back(std::move(merged));
-        }
-      }
-    } else {
-      candidateSources = baseCandidates;
-      guardDerived = false;
-    }
-
-    if (candidateSources.empty())
-      return success();
-
-    for (const TargetInfo &target : targets) {
-      for (const auto &sources : candidateSources) {
-        if (sources.empty())
-          continue;
-        auto templ = std::make_unique<EdgeTemplate>();
-        templ->driver = sources.front().place;
-        templ->sources.assign(sources.begin(), sources.end());
-        templ->target = target;
-        templ->tokenValue = emit.getToken();
-        templ->delayValue = emit.getDelay();
-        templ->contexts.assign(contexts.begin(), contexts.end());
-
-        llvm::DenseMap<Value, llvm::hash_code> hashCache;
-        if (failed(summarizeTokenEdits(emit.getToken(),
-                                       sources.front().takeValue,
-                                       templ->editSummary, hashCache, sources)))
-          return failure();
-        templ->tokenHash = hashOptionalValue(emit.getToken(), hashCache);
-        templ->delayHash = hashOptionalValue(emit.getDelay(), hashCache);
-
-        const EdgeTemplate *ptr = templ.get();
-        result.adjacency[templ->driver].push_back(ptr);
-        result.templates.push_back(std::move(templ));
-        ++result.totalHyperedges;
-        if (guardDerived)
-          ++result.guardHyperedges;
-      }
-    }
-    return success();
+  bool isSatisfiedByInitialTokens(Value takeValue) const {
+    auto variants = guardClosure.getPaths(takeValue);
+    return llvm::any_of(variants, [](const GuardPathVariant &variant) {
+      return variant.segments.empty() && variant.observables.empty();
+    });
   }
 
   NetOp net;
@@ -644,68 +364,149 @@ private:
   const GuardTransitiveClosureResult &guardClosure;
   TokenFlowAnalysisResult &result;
   llvm::DenseMap<Value, StringAttr> takePlaces;
-  llvm::DenseMap<unsigned, Value> guardIdToTake;
-  llvm::DenseMap<unsigned, llvm::SmallVector<llvm::SmallVector<ObservableSource, 4>, 4>>
-      guardIdClosures;
 };
 
-LogicalResult TokenFlowAnalysisImpl::collectTakeMetadata() {
-  for (TransitionOp trans : net.getOps<TransitionOp>()) {
-    for (TakeOp take : trans.getBody().getOps<TakeOp>()) {
-      StringAttr place;
-      if (failed(resolvePlaceSymbol(take.getPlace(), place)))
-        return take.emitError("failed to resolve place symbol");
-      takePlaces[take.getResult()] = place;
-      if (auto guardAttr = take->getAttrOfType<IntegerAttr>(kGuardIdAttr)) {
-        unsigned guardId = guardAttr.getInt();
-        guardIdToTake[guardId] = take.getResult();
+LogicalResult TokenFlowAnalysisImpl::processEmit(
+    TransitionOp trans, EmitOp emit, ControlFlowTrace &trace,
+    const llvm::DenseMap<unsigned, Value> &guardIdToTake) {
+  llvm::ArrayRef<ControlContext> contexts = trace.getTrace(emit);
+
+  llvm::SmallVector<TargetInfo, 4> targets;
+  if (failed(resolveEmitTargets(emit.getPlace(), targets)))
+    return emit.emitError("failed to resolve emit targets"), failure();
+
+  auto guardAttr = emit->getAttrOfType<ArrayAttr>(kGuardPathsAttr);
+  if (!guardAttr || guardAttr.empty())
+    return success();
+
+  unsigned pathIndex = 0;
+  for (Attribute attr : guardAttr) {
+    auto pathAttr = dyn_cast<ArrayAttr>(attr);
+    if (!pathAttr) {
+      ++pathIndex;
+      continue;
+    }
+
+    llvm::SmallVector<Value, 4> guardTakes;
+    llvm::SmallVector<ObservableSource, 4> guardSources;
+    bool referencedGuard = false;
+    for (Attribute elem : pathAttr) {
+      auto intAttr = dyn_cast<IntegerAttr>(elem);
+      if (!intAttr)
+        continue;
+      auto it = guardIdToTake.find(intAttr.getInt());
+      if (it == guardIdToTake.end())
+        continue;
+      referencedGuard = true;
+      Value takeValue = it->second;
+      // Guards that can be satisfied entirely by initial tokens do not need
+      // to be replayed here. TODO: require explicit initial-token counts when
+      // the retain pipeline begins modeling depletion.
+      if (isSatisfiedByInitialTokens(takeValue))
+        continue;
+      guardTakes.push_back(takeValue);
+      if (auto placeIt = takePlaces.find(takeValue); placeIt != takePlaces.end())
+        guardSources.push_back({placeIt->second, takeValue});
+    }
+
+    if (!referencedGuard) {
+      ++pathIndex;
+      continue;
+    }
+
+    for (const TargetInfo &target : targets) {
+      EmitMetadata metadata;
+      metadata.transition = trans;
+      metadata.emit = emit;
+      metadata.pathIndex = pathIndex;
+      metadata.targetPlace = target.symbol;
+      metadata.tokenValue = emit.getToken();
+      metadata.delayValue = emit.getDelay();
+      metadata.contexts.assign(contexts.begin(), contexts.end());
+      metadata.target = target;
+      metadata.guardTakes = guardTakes;
+      metadata.hasGuardPath = true;
+
+      llvm::DenseMap<Value, llvm::hash_code> hashCache;
+      if (failed(summarizeTokenEdits(emit.getToken(), metadata.edits, hashCache,
+                                     guardSources)))
+        return failure();
+      metadata.tokenHash = hashOptionalValue(emit.getToken(), hashCache);
+      metadata.delayHash = hashOptionalValue(emit.getDelay(), hashCache);
+
+      EmitPathKey key{emit.getOperation(), pathIndex, target.symbol};
+      result.emitMetadata[key] = std::move(metadata);
+    }
+
+    ++pathIndex;
+  }
+
+  return success();
+}
+
+LogicalResult TokenFlowAnalysisImpl::resolveObservablePaths() {
+  for (const auto &entry : result.emitMetadata) {
+    const EmitMetadata &metadata = entry.second;
+    if (!metadata.hasGuardPath)
+      continue;
+    if (!observables.contains(metadata.target.symbol))
+      continue;
+
+    llvm::SmallVector<GuardPathVariant, 4> combos;
+    combos.emplace_back();
+    bool feasible = true;
+    for (Value guardTake : metadata.guardTakes) {
+      llvm::ArrayRef<GuardPathVariant> variants =
+          guardClosure.getPaths(guardTake);
+      if (variants.empty()) {
+        feasible = false;
+        break;
+      }
+      combos = combineVariants(combos, variants);
+      if (combos.empty()) {
+        feasible = false;
+        break;
       }
     }
+    if (!feasible || combos.empty())
+      continue;
+
+    for (GuardPathVariant &variant : combos) {
+      llvm::DenseSet<Value> satisfied;
+      for (const GuardPathSegment &segment : variant.segments)
+        if (segment.producedTake)
+          satisfied.insert(segment.producedTake);
+      for (Value obs : variant.observables)
+        satisfied.insert(obs);
+      bool missingGuard = llvm::any_of(
+          metadata.guardTakes,
+          [&](Value take) { return !satisfied.contains(take); });
+      if (missingGuard)
+        continue;
+
+      dedupSegments(variant.segments);
+      ObservablePath path;
+      path.terminalKey = entry.first;
+      path.prefixSegments = std::move(variant.segments);
+      for (Value obs : variant.observables) {
+        auto placeIt = takePlaces.find(obs);
+        if (placeIt == takePlaces.end())
+          return net.emitError(
+                     "failed to resolve observable source place during guard closure"),
+                 failure();
+        path.sources.push_back({placeIt->second, obs});
+      }
+      canonicalizeSources(path.sources);
+      result.observablePaths[metadata.target.symbol].push_back(
+          std::move(path));
+      ++result.totalHyperedges;
+      ++result.guardHyperedges;
+    }
   }
-  for (const auto &entry : guardIdToTake)
-    if (failed(populateGuardClosures(entry.first, entry.second)))
-      return failure();
+
   return success();
 }
 
-LogicalResult TokenFlowAnalysisImpl::populateGuardClosures(unsigned guardId,
-                                                           Value takeValue) {
-  llvm::SmallVector<llvm::SmallVector<ObservableSource, 4>, 4> converted;
-  ArrayRef<GuardTransitiveClosureResult::GuardCombination> closures =
-      guardClosure.getClosures(takeValue);
-  if (closures.empty()) {
-    auto placeIt = takePlaces.find(takeValue);
-    if (placeIt != takePlaces.end() &&
-        observables.contains(placeIt->second)) {
-      ObservableSource src{placeIt->second, takeValue};
-      converted.push_back({src});
-    }
-    guardIdClosures[guardId] = std::move(converted);
-    return success();
-  }
-
-  for (const auto &combo : closures) {
-    if (combo.empty()) {
-      converted.push_back({});
-      continue;
-    }
-    llvm::SmallVector<ObservableSource, 4> sources;
-    for (Value guardTake : combo) {
-      auto placeIt = takePlaces.find(guardTake);
-      if (placeIt == takePlaces.end())
-        continue;
-      if (!observables.contains(placeIt->second))
-        continue;
-      sources.push_back({placeIt->second, guardTake});
-    }
-    if (sources.empty())
-      continue;
-    canonicalizeSources(sources);
-    converted.push_back(std::move(sources));
-  }
-  guardIdClosures[guardId] = std::move(converted);
-  return success();
-}
 
 } // namespace
 
@@ -716,11 +517,7 @@ LogicalResult runTokenFlowAnalysis(NetOp net, const ObservableSet &observables,
           runGuardTransitiveClosureAnalysis(net, observables, guardClosure)))
     return failure();
   TokenFlowAnalysisImpl impl(net, observables, guardClosure, result);
-  if (failed(impl.run()))
-    return failure();
-  clusterHyperedges(result);
-  enumerateObservablePaths(observables, result);
-  return success();
+  return impl.run();
 }
 
 } // namespace mlir::lpn

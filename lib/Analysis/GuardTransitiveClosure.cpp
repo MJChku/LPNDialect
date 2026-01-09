@@ -17,17 +17,15 @@ struct GuardNode {
   Value takeValue;
   StringAttr place;
   bool isObservable = false;
-  GuardTransitiveClosureResult::GuardCombination baseCombo;
-  llvm::SmallVector<GuardTransitiveClosureResult::GuardCombination, 4> combos;
+  llvm::SmallVector<GuardPathVariant, 4> paths;
   enum class State { Unvisited, Visiting, Done } state = State::Unvisited;
 };
 
-struct GuardPathInfo {
-  llvm::SmallVector<Value, 4> guards;
-};
-
-struct ProducerInfo {
-  llvm::SmallVector<GuardPathInfo, 4> guardPaths;
+struct ProducerPath {
+  Operation *emitOp = nullptr;
+  unsigned pathIndex = 0;
+  StringAttr target;
+  llvm::SmallVector<Value, 4> guardTakes;
 };
 
 static bool hasInitialTokens(StringAttr place,
@@ -80,37 +78,74 @@ static LogicalResult collectEmitPlaces(
   return failure();
 }
 
-static void dedupCombinationSet(
-    llvm::SmallVector<GuardTransitiveClosureResult::GuardCombination, 4>
-        &combos) {
-  for (auto &combo : combos) {
-    llvm::sort(combo.begin(), combo.end(), [](Value a, Value b) {
-      return a.getAsOpaquePointer() < b.getAsOpaquePointer();
-    });
-  }
-  llvm::sort(combos, [](const auto &lhs, const auto &rhs) {
-    return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(),
-                                        rhs.end(), [](Value a, Value b) {
-                                          return a.getAsOpaquePointer() <
-                                                 b.getAsOpaquePointer();
-                                        });
-  });
-  combos.erase(std::unique(combos.begin(), combos.end(),
-                           [](const auto &lhs, const auto &rhs) {
-                             if (lhs.size() != rhs.size())
-                               return false;
-                             for (auto [a, b] : llvm::zip(lhs, rhs))
-                               if (a != b)
-                                 return false;
-                             return true;
-                           }),
-               combos.end());
+static void canonicalizeVariant(GuardPathVariant &variant) {
+  llvm::sort(variant.observables.begin(), variant.observables.end(),
+             [](Value a, Value b) {
+               return a.getAsOpaquePointer() < b.getAsOpaquePointer();
+             });
 }
 
-static llvm::SmallVector<GuardTransitiveClosureResult::GuardCombination, 4>
-cartProduct(llvm::ArrayRef<GuardTransitiveClosureResult::GuardCombination> lhs,
-            llvm::ArrayRef<GuardTransitiveClosureResult::GuardCombination> rhs) {
-  llvm::SmallVector<GuardTransitiveClosureResult::GuardCombination, 4> result;
+static bool segmentsLess(const GuardPathSegment &lhs,
+                         const GuardPathSegment &rhs) {
+  if (lhs.emit != rhs.emit)
+    return lhs.emit < rhs.emit;
+  if (lhs.pathIndex != rhs.pathIndex)
+    return lhs.pathIndex < rhs.pathIndex;
+  if (lhs.target != rhs.target)
+    return lhs.target.getAsOpaquePointer() < rhs.target.getAsOpaquePointer();
+  return lhs.producedTake.getAsOpaquePointer() <
+         rhs.producedTake.getAsOpaquePointer();
+}
+
+static bool variantsLess(const GuardPathVariant &lhs,
+                         const GuardPathVariant &rhs) {
+  if (lhs.segments.size() != rhs.segments.size())
+    return lhs.segments.size() < rhs.segments.size();
+  for (auto [lSeg, rSeg] : llvm::zip(lhs.segments, rhs.segments)) {
+    if (segmentsLess(lSeg, rSeg))
+      return true;
+    if (segmentsLess(rSeg, lSeg))
+      return false;
+  }
+  if (lhs.observables.size() != rhs.observables.size())
+    return lhs.observables.size() < rhs.observables.size();
+  for (auto [lObs, rObs] : llvm::zip(lhs.observables, rhs.observables)) {
+    if (lObs.getAsOpaquePointer() < rObs.getAsOpaquePointer())
+      return true;
+    if (rObs.getAsOpaquePointer() < lObs.getAsOpaquePointer())
+      return false;
+  }
+  return false;
+}
+
+static bool variantsEqual(const GuardPathVariant &lhs,
+                          const GuardPathVariant &rhs) {
+  if (lhs.segments.size() != rhs.segments.size() ||
+      lhs.observables.size() != rhs.observables.size())
+    return false;
+  for (auto [lSeg, rSeg] : llvm::zip(lhs.segments, rhs.segments)) {
+    if (lSeg.emit != rSeg.emit || lSeg.pathIndex != rSeg.pathIndex ||
+        lSeg.target != rSeg.target || lSeg.producedTake != rSeg.producedTake)
+      return false;
+  }
+  for (auto [lObs, rObs] : llvm::zip(lhs.observables, rhs.observables))
+    if (lObs != rObs)
+      return false;
+  return true;
+}
+
+static void dedupVariantSet(llvm::SmallVectorImpl<GuardPathVariant> &variants) {
+  for (auto &variant : variants)
+    canonicalizeVariant(variant);
+  llvm::sort(variants.begin(), variants.end(), variantsLess);
+  variants.erase(std::unique(variants.begin(), variants.end(), variantsEqual),
+                 variants.end());
+}
+
+static llvm::SmallVector<GuardPathVariant, 4>
+cartProductVariants(llvm::ArrayRef<GuardPathVariant> lhs,
+                    llvm::ArrayRef<GuardPathVariant> rhs) {
+  llvm::SmallVector<GuardPathVariant, 4> result;
   if (lhs.empty()) {
     result.append(rhs.begin(), rhs.end());
     return result;
@@ -121,9 +156,14 @@ cartProduct(llvm::ArrayRef<GuardTransitiveClosureResult::GuardCombination> lhs,
   }
   for (const auto &left : lhs)
     for (const auto &right : rhs) {
-      auto &combo = result.emplace_back();
-      combo.append(left.begin(), left.end());
-      combo.append(right.begin(), right.end());
+      GuardPathVariant combo;
+      combo.observables.append(left.observables.begin(),
+                               left.observables.end());
+      combo.observables.append(right.observables.begin(),
+                               right.observables.end());
+      combo.segments.append(left.segments.begin(), left.segments.end());
+      combo.segments.append(right.segments.begin(), right.segments.end());
+      result.push_back(std::move(combo));
     }
   return result;
 }
@@ -132,7 +172,7 @@ struct GuardClosureContext {
   NetOp net;
   const ObservableSet &observables;
   llvm::DenseMap<Value, GuardNode> nodes;
-  llvm::DenseMap<StringAttr, llvm::SmallVector<ProducerInfo>> producers;
+  llvm::DenseMap<StringAttr, llvm::SmallVector<ProducerPath, 4>> producers;
   llvm::DenseMap<StringAttr, PlaceOp> placeLookup;
 
   GuardClosureContext(NetOp net, const ObservableSet &observables)
@@ -168,12 +208,16 @@ LogicalResult GuardClosureContext::initialize() {
       llvm::SmallVector<StringAttr, 4> targets;
       if (failed(collectEmitPlaces(emit.getPlace(), targets)))
         return emit.emitError("failed to resolve emit targets");
-      llvm::SmallVector<GuardPathInfo, 4> guardPaths;
+      unsigned pathIndex = 0;
       for (Attribute attr : guardsAttr) {
         auto pathAttr = llvm::dyn_cast<ArrayAttr>(attr);
-        if (!pathAttr)
+        if (!pathAttr) {
+          ++pathIndex;
           continue;
-        GuardPathInfo path;
+        }
+  ProducerPath base;
+  base.emitOp = emit.getOperation();
+        base.pathIndex = pathIndex;
         for (Attribute elem : pathAttr) {
           auto intAttr = llvm::dyn_cast<IntegerAttr>(elem);
           if (!intAttr)
@@ -182,14 +226,15 @@ LogicalResult GuardClosureContext::initialize() {
           auto it = guardIdToTake.find(guardId);
           if (it == guardIdToTake.end())
             continue;
-          path.guards.push_back(it->second);
+          base.guardTakes.push_back(it->second);
         }
-        guardPaths.push_back(std::move(path));
+        for (StringAttr place : targets) {
+          ProducerPath entry = base;
+          entry.target = place;
+          producers[place].push_back(std::move(entry));
+        }
+        ++pathIndex;
       }
-      if (guardPaths.empty())
-        continue;
-      for (StringAttr place : targets)
-        producers[place].push_back(ProducerInfo{guardPaths});
     }
   }
 
@@ -206,57 +251,67 @@ LogicalResult GuardClosureContext::compute(Value takeValue) {
   // Cycle means the guard depends only on itself or other non-observable
   // guards; drop it quietly so downstream analyses treat it as unguarded.
   if (node.state == GuardNode::State::Visiting) {
-    node.combos.clear();
+    node.paths.clear();
     node.state = GuardNode::State::Done;
     return success();
   }
 
   node.state = GuardNode::State::Visiting;
   if (node.isObservable) {
-    GuardTransitiveClosureResult::GuardCombination combo;
-    combo.push_back(takeValue);
-    node.combos.push_back(std::move(combo));
+    GuardPathVariant variant;
+    variant.observables.push_back(takeValue);
+    node.paths.push_back(std::move(variant));
   } else {
     auto prodIt = producers.find(node.place);
     if (prodIt == producers.end()) {
       if (hasInitialTokens(node.place, placeLookup))
-        node.combos.push_back({});
+        node.paths.emplace_back();
     } else {
-      for (const ProducerInfo &producer : prodIt->second) {
-        for (const GuardPathInfo &path : producer.guardPaths) {
-      llvm::SmallVector<GuardTransitiveClosureResult::GuardCombination, 4>
-        combos;
-          combos.push_back({});
-          bool feasible = true;
-          for (Value guardTake : path.guards) {
-            if (failed(compute(guardTake)))
-              return failure();
-            auto &childCombos = nodes[guardTake].combos;
-            if (childCombos.empty()) {
-              feasible = false;
-              break;
-            }
-            combos = cartProduct(combos, childCombos);
+      for (const ProducerPath &producer : prodIt->second) {
+        llvm::SmallVector<GuardPathVariant, 4> combos;
+        combos.emplace_back();
+        bool feasible = true;
+        for (Value guardTake : producer.guardTakes) {
+          if (failed(compute(guardTake)))
+            return failure();
+          auto &childPaths = nodes[guardTake].paths;
+          if (childPaths.empty()) {
+            feasible = false;
+            break;
           }
-          if (feasible)
-            node.combos.append(combos.begin(), combos.end());
+          combos = cartProductVariants(combos, childPaths);
+          if (combos.empty()) {
+            feasible = false;
+            break;
+          }
+        }
+        if (!feasible)
+          continue;
+        for (auto &variant : combos) {
+          GuardPathSegment segment;
+          segment.emit = producer.emitOp;
+          segment.pathIndex = producer.pathIndex;
+          segment.target = producer.target;
+          segment.producedTake = node.takeValue;
+          variant.segments.push_back(segment);
+          node.paths.push_back(std::move(variant));
         }
       }
     }
   }
 
-  if (!node.combos.empty())
-    dedupCombinationSet(node.combos);
+  if (!node.paths.empty())
+    dedupVariantSet(node.paths);
   node.state = GuardNode::State::Done;
   return success();
 }
 
 } // namespace
 
-ArrayRef<GuardTransitiveClosureResult::GuardCombination>
-GuardTransitiveClosureResult::getClosures(Value takeValue) const {
-  auto it = guardClosures.find(takeValue);
-  if (it == guardClosures.end())
+ArrayRef<GuardPathVariant>
+GuardTransitiveClosureResult::getPaths(Value takeValue) const {
+  auto it = guardPaths.find(takeValue);
+  if (it == guardPaths.end())
     return {};
   return it->second;
 }
@@ -271,7 +326,7 @@ LogicalResult runGuardTransitiveClosureAnalysis(
     if (failed(ctx.compute(entry.first)))
       return failure();
   for (auto &entry : ctx.nodes)
-    result.guardClosures[entry.first] = entry.second.combos;
+    result.guardPaths[entry.first] = entry.second.paths;
   return success();
 }
 

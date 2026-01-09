@@ -10,6 +10,7 @@
 
 #include "LPN/Analysis/AnalysisCommon.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -20,16 +21,28 @@ namespace mlir::lpn {
 
 class NetOp;
 
-/// Records the observable guard combinations that can satisfy a guard id.
+/// Describes a single emit-path segment that produces a guard take.
+struct GuardPathSegment {
+  Operation *emit = nullptr;
+  unsigned pathIndex = 0;
+  StringAttr target;
+  Value producedTake;
+};
+
+/// Represents one concrete way to satisfy a guard take.
+struct GuardPathVariant {
+  llvm::SmallVector<Value, 4> observables;
+  llvm::SmallVector<GuardPathSegment, 4> segments;
+};
+
+/// Records the observable guard combinations (with path context) that can
+/// satisfy a guard id.
 struct GuardTransitiveClosureResult {
-  using GuardCombination = llvm::SmallVector<Value, 4>;
+  llvm::DenseMap<Value, llvm::SmallVector<GuardPathVariant, 4>> guardPaths;
 
-  /// Closure for each guard-producing take value.
-  llvm::DenseMap<Value, llvm::SmallVector<GuardCombination, 4>> guardClosures;
-
-  /// Returns the closures for `takeValue`. If none exist, returns an empty
-  /// array reference.
-  llvm::ArrayRef<GuardCombination> getClosures(Value takeValue) const;
+  /// Returns the path variants for `takeValue`. If none exist, returns an
+  /// empty array reference.
+  llvm::ArrayRef<GuardPathVariant> getPaths(Value takeValue) const;
 };
 
 /// Run the guard transitive closure analysis.
