@@ -210,14 +210,6 @@ struct CursorState {
   SSAEnv ssa;
 };
 
-struct ContextGroup {
-  Operation *op = nullptr;
-  ControlContext::Kind kind = ControlContext::Kind::IfOp;
-  SmallVector<CursorState, 4> thenStates;
-  SmallVector<CursorState, 4> elseStates;
-  SmallVector<CursorState, 4> bodyStates;
-};
-
 static void mapContextValues(const SSAEnv &env, IRMapping &mapping) {
   for (const auto &entry : env)
     mapping.map(entry.first, entry.second);
@@ -420,12 +412,12 @@ struct LPNRetainHypergraphPass
 
   LogicalResult emitCursorSet(SmallVector<CursorState> states,
                               ImplicitLocOpBuilder &builder) const;
-  LogicalResult emitIfGroup(ContextGroup &group,
-                            ImplicitLocOpBuilder &builder) const;
-  LogicalResult emitChoiceGroup(ContextGroup &group,
-                                ImplicitLocOpBuilder &builder) const;
-  LogicalResult emitForGroup(ContextGroup &group,
-                             ImplicitLocOpBuilder &builder) const;
+  LogicalResult emitIfContext(const ControlContext &ctx, CursorState state,
+                              ImplicitLocOpBuilder &builder) const;
+  LogicalResult emitChoiceContext(const ControlContext &ctx, CursorState state,
+                                  ImplicitLocOpBuilder &builder) const;
+  LogicalResult emitForContext(const ControlContext &ctx, CursorState state,
+                               ImplicitLocOpBuilder &builder) const;
   LogicalResult emitLeaf(CursorState state, const EdgeTemplate *templ,
                          ImplicitLocOpBuilder &builder) const;
   void reportNetStats(NetOp net, const NetStats &stats) const;
@@ -468,10 +460,6 @@ LPNRetainHypergraphPass::emitCursorSet(SmallVector<CursorState> states,
   if (states.empty())
     return success();
 
-  SmallVector<CursorState, 4> ready;
-  DenseMap<Operation *, ContextGroup> groups;
-  SmallVector<Operation *, 8> order;
-
   for (CursorState &stateRef : states) {
     CursorState state = std::move(stateRef);
     const EdgeTemplate *templ = getTemplate(state.cursor);
@@ -479,48 +467,24 @@ LPNRetainHypergraphPass::emitCursorSet(SmallVector<CursorState> states,
       continue;
     if (state.cursor.contextIndex < templ->contexts.size()) {
       const ControlContext &ctx = templ->contexts[state.cursor.contextIndex];
-      ContextGroup &group = groups[ctx.op];
-      if (!group.op) {
-        group.op = ctx.op;
-        group.kind = ctx.kind;
-        order.push_back(ctx.op);
-      }
-      if (ctx.kind == ControlContext::Kind::ForOp) {
-        group.bodyStates.push_back(std::move(state));
-      } else if (ctx.inThen) {
-        group.thenStates.push_back(std::move(state));
-      } else {
-        group.elseStates.push_back(std::move(state));
+      switch (ctx.kind) {
+      case ControlContext::Kind::IfOp:
+        if (failed(emitIfContext(ctx, std::move(state), builder)))
+          return failure();
+        break;
+      case ControlContext::Kind::ChoiceOp:
+        if (failed(emitChoiceContext(ctx, std::move(state), builder)))
+          return failure();
+        break;
+      case ControlContext::Kind::ForOp:
+        if (failed(emitForContext(ctx, std::move(state), builder)))
+          return failure();
+        break;
+      case ControlContext::Kind::Unknown:
+        break;
       }
       continue;
     }
-    ready.push_back(std::move(state));
-  }
-
-  for (Operation *op : order) {
-    ContextGroup &group = groups[op];
-    switch (group.kind) {
-    case ControlContext::Kind::IfOp:
-      if (failed(emitIfGroup(group, builder)))
-        return failure();
-      break;
-    case ControlContext::Kind::ChoiceOp:
-      if (failed(emitChoiceGroup(group, builder)))
-        return failure();
-      break;
-    case ControlContext::Kind::ForOp:
-      if (failed(emitForGroup(group, builder)))
-        return failure();
-      break;
-    case ControlContext::Kind::Unknown:
-      break;
-    }
-  }
-
-  for (CursorState &state : ready) {
-    const EdgeTemplate *templ = getTemplate(state.cursor);
-    if (!templ)
-      continue;
     if (failed(emitLeaf(std::move(state), templ, builder)))
       return failure();
   }
@@ -528,121 +492,133 @@ LPNRetainHypergraphPass::emitCursorSet(SmallVector<CursorState> states,
 }
 
 LogicalResult
-LPNRetainHypergraphPass::emitIfGroup(ContextGroup &group,
-                                     ImplicitLocOpBuilder &builder) const {
-  if (group.thenStates.empty() && group.elseStates.empty())
-    return success();
-  auto ifOp = dyn_cast<scf::IfOp>(group.op);
+LPNRetainHypergraphPass::emitIfContext(const ControlContext &ctx,
+                                       CursorState state,
+                                       ImplicitLocOpBuilder &builder) const {
+  auto ifOp = dyn_cast<scf::IfOp>(ctx.op);
   if (!ifOp)
     return builder.getInsertionBlock()->getParentOp()->emitError(
         "unsupported control context");
-  CursorState *rep = !group.thenStates.empty() ? &group.thenStates.front()
-                                               : &group.elseStates.front();
-  const EdgeTemplate *templ = getTemplate(rep->cursor);
+  const EdgeTemplate *templ = getTemplate(state.cursor);
   if (!templ)
     return success();
-  TokenEnv condTokens = rep->tokens;
-  TakeEnv condTakes = rep->takes;
-  if (failed(ensureTemplateSources(templ, rep->token, condTokens, condTakes,
+  TokenEnv condTokens = state.tokens;
+  TakeEnv condTakes = state.takes;
+  if (failed(ensureTemplateSources(templ, state.token, condTokens, condTakes,
                                    builder)))
     return failure();
   IRMapping mapping;
-  mapContextValues(rep->ssa, mapping);
+  mapContextValues(state.ssa, mapping);
   mapTemplateSources(templ, mapping, condTakes);
   Value cond = cloneValueInto(ifOp.getCondition(), mapping, builder);
   if (!cond)
     return failure();
-  bool hasElse = !group.elseStates.empty();
+  bool hasElse = !ifOp.getElseRegion().empty() || !ctx.inThen;
   scf::IfOp cloned = builder.create<scf::IfOp>(TypeRange(), cond, hasElse);
-  auto populate =
-      [&](Region &region,
-          SmallVector<CursorState, 4> branchStates) -> LogicalResult {
+  auto populateEmpty = [&](Region &region) -> LogicalResult {
     region.getBlocks().clear();
     Block &block = region.emplaceBlock();
     ImplicitLocOpBuilder branchBuilder(builder.getLoc(), builder.getContext());
     branchBuilder.setInsertionPointToStart(&block);
-    if (!branchStates.empty()) {
-      SmallVector<CursorState, 4> advanced;
-      advanced.reserve(branchStates.size());
-      for (CursorState &state : branchStates) {
-        CursorState next = std::move(state);
-        next.cursor.contextIndex++;
-        advanced.push_back(std::move(next));
-      }
-      if (failed(emitCursorSet(std::move(advanced), branchBuilder)))
-        return failure();
-    }
     branchBuilder.create<scf::YieldOp>();
     return success();
   };
-  if (failed(populate(cloned.getThenRegion(), std::move(group.thenStates))))
-    return failure();
-  if (hasElse)
-    if (failed(populate(cloned.getElseRegion(), std::move(group.elseStates))))
+  auto populateActive = [&](Region &region,
+                            CursorState branchState) -> LogicalResult {
+    region.getBlocks().clear();
+    Block &block = region.emplaceBlock();
+    ImplicitLocOpBuilder branchBuilder(builder.getLoc(), builder.getContext());
+    branchBuilder.setInsertionPointToStart(&block);
+    CursorState next = std::move(branchState);
+    next.cursor.contextIndex++;
+    SmallVector<CursorState, 1> advanced;
+    advanced.push_back(std::move(next));
+    if (failed(emitCursorSet(std::move(advanced), branchBuilder)))
       return failure();
+    branchBuilder.create<scf::YieldOp>();
+    return success();
+  };
+  if (ctx.inThen) {
+    if (failed(populateActive(cloned.getThenRegion(), std::move(state))))
+      return failure();
+    if (hasElse)
+      if (failed(populateEmpty(cloned.getElseRegion())))
+        return failure();
+  } else {
+    if (failed(populateEmpty(cloned.getThenRegion())))
+      return failure();
+    if (failed(populateActive(cloned.getElseRegion(), std::move(state))))
+      return failure();
+  }
   builder.setInsertionPointAfter(cloned);
   return success();
 }
 
 LogicalResult
-LPNRetainHypergraphPass::emitChoiceGroup(ContextGroup &group,
-                                         ImplicitLocOpBuilder &builder) const {
-  if (group.thenStates.empty() && group.elseStates.empty())
-    return success();
-  auto choice = dyn_cast<ChoiceOp>(group.op);
+LPNRetainHypergraphPass::emitChoiceContext(const ControlContext &ctx,
+                                           CursorState state,
+                                           ImplicitLocOpBuilder &builder) const {
+  auto choice = dyn_cast<ChoiceOp>(ctx.op);
   if (!choice)
     return builder.getInsertionBlock()->getParentOp()->emitError(
         "unsupported choice context");
   ChoiceOp cloned = builder.create<ChoiceOp>();
-  auto populate =
-      [&](Region &region,
-          SmallVector<CursorState, 4> branchStates) -> LogicalResult {
+  auto populateEmpty = [&](Region &region) -> LogicalResult {
     region.getBlocks().clear();
     Block &block = region.emplaceBlock();
     ImplicitLocOpBuilder branchBuilder(builder.getLoc(), builder.getContext());
     branchBuilder.setInsertionPointToStart(&block);
-    if (!branchStates.empty()) {
-      SmallVector<CursorState, 4> advanced;
-      advanced.reserve(branchStates.size());
-      for (CursorState &state : branchStates) {
-        CursorState next = std::move(state);
-        next.cursor.contextIndex++;
-        advanced.push_back(std::move(next));
-      }
-      if (failed(emitCursorSet(std::move(advanced), branchBuilder)))
-        return failure();
-    }
     branchBuilder.create<ChoiceYieldOp>();
     return success();
   };
-  if (failed(populate(cloned.getThenRegion(), std::move(group.thenStates))))
-    return failure();
-  if (failed(populate(cloned.getElseRegion(), std::move(group.elseStates))))
-    return failure();
+  auto populateActive = [&](Region &region,
+                            CursorState branchState) -> LogicalResult {
+    region.getBlocks().clear();
+    Block &block = region.emplaceBlock();
+    ImplicitLocOpBuilder branchBuilder(builder.getLoc(), builder.getContext());
+    branchBuilder.setInsertionPointToStart(&block);
+    CursorState next = std::move(branchState);
+    next.cursor.contextIndex++;
+    SmallVector<CursorState, 1> advanced;
+    advanced.push_back(std::move(next));
+    if (failed(emitCursorSet(std::move(advanced), branchBuilder)))
+      return failure();
+    branchBuilder.create<ChoiceYieldOp>();
+    return success();
+  };
+  if (ctx.inThen) {
+    if (failed(populateActive(cloned.getThenRegion(), std::move(state))))
+      return failure();
+    if (failed(populateEmpty(cloned.getElseRegion())))
+      return failure();
+  } else {
+    if (failed(populateEmpty(cloned.getThenRegion())))
+      return failure();
+    if (failed(populateActive(cloned.getElseRegion(), std::move(state))))
+      return failure();
+  }
   builder.setInsertionPointAfter(cloned);
   return success();
 }
 
 LogicalResult
-LPNRetainHypergraphPass::emitForGroup(ContextGroup &group,
-                                      ImplicitLocOpBuilder &builder) const {
-  if (group.bodyStates.empty())
-    return success();
-  auto forOp = dyn_cast<scf::ForOp>(group.op);
+LPNRetainHypergraphPass::emitForContext(const ControlContext &ctx,
+                                        CursorState state,
+                                        ImplicitLocOpBuilder &builder) const {
+  auto forOp = dyn_cast<scf::ForOp>(ctx.op);
   if (!forOp)
     return builder.getInsertionBlock()->getParentOp()->emitError(
         "unsupported loop context");
-  CursorState &rep = group.bodyStates.front();
-  const EdgeTemplate *templ = getTemplate(rep.cursor);
+  const EdgeTemplate *templ = getTemplate(state.cursor);
   if (!templ)
     return success();
-  TokenEnv loopTokens = rep.tokens;
-  TakeEnv loopTakes = rep.takes;
-  if (failed(ensureTemplateSources(templ, rep.token, loopTokens, loopTakes,
+  TokenEnv loopTokens = state.tokens;
+  TakeEnv loopTakes = state.takes;
+  if (failed(ensureTemplateSources(templ, state.token, loopTokens, loopTakes,
                                    builder)))
     return failure();
   IRMapping mapping;
-  mapContextValues(rep.ssa, mapping);
+  mapContextValues(state.ssa, mapping);
   mapTemplateSources(templ, mapping, loopTakes);
   Value lower = cloneValueInto(forOp.getLowerBound(), mapping, builder);
   Value upper = cloneValueInto(forOp.getUpperBound(), mapping, builder);
@@ -654,14 +630,11 @@ LPNRetainHypergraphPass::emitForGroup(ContextGroup &group,
   body.clear();
   ImplicitLocOpBuilder inner(builder.getLoc(), builder.getContext());
   inner.setInsertionPointToStart(&body);
-  SmallVector<CursorState, 4> advanced;
-  advanced.reserve(group.bodyStates.size());
-  for (CursorState &state : group.bodyStates) {
-    CursorState next = std::move(state);
-    next.cursor.contextIndex++;
-    next.ssa[forOp.getBody()->getArgument(0)] = cloned.getInductionVar();
-    advanced.push_back(std::move(next));
-  }
+  CursorState next = std::move(state);
+  next.cursor.contextIndex++;
+  next.ssa[forOp.getBody()->getArgument(0)] = cloned.getInductionVar();
+  SmallVector<CursorState, 1> advanced;
+  advanced.push_back(std::move(next));
   if (failed(emitCursorSet(std::move(advanced), inner)))
     return failure();
   inner.create<scf::YieldOp>();
