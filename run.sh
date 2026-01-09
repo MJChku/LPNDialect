@@ -6,7 +6,7 @@
 #       -DLLVM_DIR=/home/jiacma/lpn_mlir/.deps/llvm-project-main/install/lib/cmake/llvm \
 #       -DMLIR_DIR=/home/jiacma/lpn_mlir/.deps/llvm-project-main/install/lib/cmake/mlir \
 #       -DCMAKE_BUILD_TYPE=RelWithDebInfo
-cmake --build build
+cmake --build build -j 8
 
 PYTHONPATH=. python3 examples/cache_net.py > /tmp/cache_net.mlir
 ./build/tools/lpn-opt/lpn-opt --mlir-print-ir-after-all --lpn-synthesize-guards \

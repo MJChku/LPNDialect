@@ -8,6 +8,7 @@
 #define LPN_ANALYSIS_TOKENFLOWANALYSIS_H
 
 #include "LPN/Analysis/AnalysisCommon.h"
+#include "LPN/Analysis/ControlFlowTrace.h"
 #include "LPN/Dialect/LPNOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Value.h"
@@ -42,13 +43,7 @@ struct TokenEditSignature {
 	llvm::SmallVector<unsigned, 4> sourceRefs;
 };
 
-enum class ContextKind { IfOp, ChoiceOp, ForOp };
 
-struct ControlContext {
-	Operation *op = nullptr;
-	ContextKind kind = ContextKind::IfOp;
-	bool isThen = true;
-};
 
 struct ObservableSource {
 	StringAttr place;

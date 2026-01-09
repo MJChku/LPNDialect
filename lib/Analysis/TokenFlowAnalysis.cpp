@@ -4,6 +4,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "LPN/Analysis/ControlFlowTrace.h"
 #include "LPN/Analysis/GuardTransitiveClosure.h"
 #include "LPN/Analysis/TokenFlowAnalysis.h"
 #include "LPN/Dialect/LPNTypes.h"
@@ -28,13 +29,7 @@ hashValueExpr(Value value, llvm::DenseMap<Value, llvm::hash_code> &cache);
 static llvm::hash_code
 hashOptionalValue(Value value, llvm::DenseMap<Value, llvm::hash_code> &cache);
 
-static bool blockInRegion(Block *block, Region &region) {
-  for (Region *current = block ? block->getParent() : nullptr; current;
-       current = current->getParentRegion())
-    if (current == &region)
-      return true;
-  return false;
-}
+
 
 static LogicalResult resolvePlaceSymbol(Value handle, StringAttr &symbol) {
   auto ref = handle.getDefiningOp<PlaceRefOp>();
@@ -340,31 +335,7 @@ traceEmitSources(EmitOp emit, llvm::DenseMap<Value, StringAttr> &takePlaces,
   return success();
 }
 
-static void
-collectControlContexts(EmitOp emit, TransitionOp trans,
-                       llvm::SmallVectorImpl<ControlContext> &contexts) {
-  Operation *parent = emit->getParentOp();
-  while (parent && parent != trans) {
-    Block *emitBlock = emit->getBlock();
-    if (auto ifOp = dyn_cast<scf::IfOp>(parent)) {
-      Region &thenRegion = ifOp.getThenRegion();
-      bool inThen = blockInRegion(emitBlock, thenRegion);
-      bool hidden = ifOp->hasAttr("lpn.hidden_choice");
-      contexts.push_back({ifOp.getOperation(),
-                          hidden ? ContextKind::ChoiceOp : ContextKind::IfOp,
-                          inThen});
-    } else if (auto choice = dyn_cast<ChoiceOp>(parent)) {
-      Region &thenRegion = choice.getThenRegion();
-      bool inThen = blockInRegion(emitBlock, thenRegion);
-      contexts.push_back(
-          {choice.getOperation(), ContextKind::ChoiceOp, inThen});
-    } else if (auto forOp = dyn_cast<scf::ForOp>(parent)) {
-      contexts.push_back({forOp.getOperation(), ContextKind::ForOp, true});
-    }
-    parent = parent->getParentOp();
-  }
-  std::reverse(contexts.begin(), contexts.end());
-}
+
 
 static bool guardsEqual(ArrayRef<TokenGuard> lhs, ArrayRef<TokenGuard> rhs) {
   if (lhs.size() != rhs.size())
@@ -390,12 +361,13 @@ static bool editsEqual(ArrayRef<TokenEditSignature> lhs,
   return true;
 }
 
+
 static bool contextsEqual(ArrayRef<ControlContext> lhs,
                ArrayRef<ControlContext> rhs) {
   if (lhs.size() != rhs.size())
     return false;
   for (auto [a, b] : llvm::zip(lhs, rhs))
-    if (a.op != b.op || a.isThen != b.isThen)
+    if (a.op != b.op || a.inThen != b.inThen)
       return false;
   return true;
 }
@@ -577,8 +549,9 @@ private:
   LogicalResult collectTakeMetadata();
   LogicalResult populateGuardClosures(unsigned guardId, Value takeValue);
   LogicalResult processTransition(TransitionOp trans) {
+    ControlFlowTrace trace(trans);
     WalkResult walkResult = trans->walk([&](EmitOp emit) -> WalkResult {
-      if (failed(processEmit(trans, emit)))
+      if (failed(processEmit(trans, emit, trace)))
         return WalkResult::interrupt();
       return WalkResult::advance();
     });
@@ -587,9 +560,8 @@ private:
     return success();
   }
 
-  LogicalResult processEmit(TransitionOp trans, EmitOp emit) {
-    llvm::SmallVector<ControlContext, 4> contexts;
-    collectControlContexts(emit, trans, contexts);
+  LogicalResult processEmit(TransitionOp trans, EmitOp emit, ControlFlowTrace &trace) {
+    llvm::ArrayRef<ControlContext> contexts = trace.getTrace(emit);
 
     llvm::SmallVector<TargetInfo, 4> targets;
     if (failed(resolveEmitTargets(emit.getPlace(), targets)))

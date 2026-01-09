@@ -1,4 +1,5 @@
 add_mlir_library(MLIRLPNAnalysis
+  ControlFlowTrace.cpp
   GuardTransitiveClosure.cpp
   TokenFlowAnalysis.cpp
 

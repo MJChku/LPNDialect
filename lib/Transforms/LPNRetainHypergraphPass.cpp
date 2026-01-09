@@ -212,7 +212,7 @@ struct CursorState {
 
 struct ContextGroup {
   Operation *op = nullptr;
-  ContextKind kind = ContextKind::IfOp;
+  ControlContext::Kind kind = ControlContext::Kind::IfOp;
   SmallVector<CursorState, 4> thenStates;
   SmallVector<CursorState, 4> elseStates;
   SmallVector<CursorState, 4> bodyStates;
@@ -485,9 +485,9 @@ LPNRetainHypergraphPass::emitCursorSet(SmallVector<CursorState> states,
         group.kind = ctx.kind;
         order.push_back(ctx.op);
       }
-      if (ctx.kind == ContextKind::ForOp) {
+      if (ctx.kind == ControlContext::Kind::ForOp) {
         group.bodyStates.push_back(std::move(state));
-      } else if (ctx.isThen) {
+      } else if (ctx.inThen) {
         group.thenStates.push_back(std::move(state));
       } else {
         group.elseStates.push_back(std::move(state));
@@ -500,17 +500,19 @@ LPNRetainHypergraphPass::emitCursorSet(SmallVector<CursorState> states,
   for (Operation *op : order) {
     ContextGroup &group = groups[op];
     switch (group.kind) {
-    case ContextKind::IfOp:
+    case ControlContext::Kind::IfOp:
       if (failed(emitIfGroup(group, builder)))
         return failure();
       break;
-    case ContextKind::ChoiceOp:
+    case ControlContext::Kind::ChoiceOp:
       if (failed(emitChoiceGroup(group, builder)))
         return failure();
       break;
-    case ContextKind::ForOp:
+    case ControlContext::Kind::ForOp:
       if (failed(emitForGroup(group, builder)))
         return failure();
+      break;
+    case ControlContext::Kind::Unknown:
       break;
     }
   }
