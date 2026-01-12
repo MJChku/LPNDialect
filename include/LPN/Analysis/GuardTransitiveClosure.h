@@ -39,10 +39,14 @@ struct GuardPathVariant {
 /// satisfy a guard id.
 struct GuardTransitiveClosureResult {
   llvm::DenseMap<Value, llvm::SmallVector<GuardPathVariant, 4>> guardPaths;
+  // True if the take participates in a cyclic hidden dependency.
+  llvm::DenseMap<Value, bool> guardHasCycle;
 
   /// Returns the path variants for `takeValue`. If none exist, returns an
   /// empty array reference.
   llvm::ArrayRef<GuardPathVariant> getPaths(Value takeValue) const;
+  /// Returns true if any dependency on `takeValue` hits a cyclic hidden path.
+  bool hasCycle(Value takeValue) const;
 };
 
 /// Run the guard transitive closure analysis.

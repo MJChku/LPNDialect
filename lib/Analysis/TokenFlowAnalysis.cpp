@@ -389,7 +389,7 @@ LogicalResult TokenFlowAnalysisImpl::processEmit(
 
     llvm::SmallVector<Value, 4> guardTakes;
     llvm::SmallVector<ObservableSource, 4> guardSources;
-    bool referencedGuard = false;
+    bool referencedGuard = pathAttr.empty();
     for (Attribute elem : pathAttr) {
       auto intAttr = dyn_cast<IntegerAttr>(elem);
       if (!intAttr)

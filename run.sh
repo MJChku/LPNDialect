@@ -8,40 +8,51 @@
 #       -DCMAKE_BUILD_TYPE=RelWithDebInfo
 cmake --build build -j 8
 
-PYTHONPATH=. python3 examples/cache_net.py > /tmp/cache_net.mlir
-./build/tools/lpn-opt/lpn-opt --mlir-print-ir-after-all --lpn-synthesize-guards \
-  --lpn-normalize-delays \
-  --lpn-retain-hypergraph --lpn-strip-hidden-values \
-  --lpn-resolve-choices --canonicalize --cse \
-  --lpn-dataflow-simplify /tmp/cache_net.mlir > /tmp/cache_after_pass.mlir 2> /tmp/cache_pass_debug.log
+# PYTHONPATH=. python3 examples/cache_net.py > /tmp/cache_net.mlir
+# ./build/tools/lpn-opt/lpn-opt --mlir-print-ir-after-all --lpn-synthesize-guards \
+#   --lpn-prune-cyclic-guards \
+#   --lpn-normalize-delays \
+#   --lpn-retain-hypergraph --lpn-strip-hidden-values \
+#   --lpn-resolve-choices --canonicalize --cse \
+#   --lpn-dataflow-simplify /tmp/cache_net.mlir > /tmp/cache_after_pass.mlir 2> /tmp/cache_pass_debug.log
 
-PYTHONPATH=. python3 examples/split_merge_net.py > /tmp/split_merge.mlir
-./build/tools/lpn-opt/lpn-opt --lpn-synthesize-guards --lpn-normalize-delays \
-  --lpn-retain-hypergraph --lpn-strip-hidden-values \
-  --lpn-resolve-choices --canonicalize --cse \
-  --lpn-dataflow-simplify /tmp/split_merge.mlir > /tmp/split_merge_after.mlir
+# PYTHONPATH=. python3 examples/split_merge_net.py > /tmp/split_merge.mlir
+# ./build/tools/lpn-opt/lpn-opt --lpn-synthesize-guards \
+#  --lpn-prune-cyclic-guards \
+#  --lpn-normalize-delays \
+#   --lpn-retain-hypergraph --lpn-strip-hidden-values \
+#   --lpn-resolve-choices --canonicalize --cse \
+#   --lpn-dataflow-simplify /tmp/split_merge.mlir > /tmp/split_merge_after.mlir
 
-./build/tools/lpn-opt/lpn-opt --lpn-synthesize-guards --lpn-normalize-delays \
-  --lpn-retain-hypergraph --lpn-strip-hidden-values \
-  --lpn-resolve-choices --canonicalize --cse \
-  --lpn-dataflow-simplify /tmp/hyper_demo.mlir > /tmp/hyper_demo_after.mlir
+# ./build/tools/lpn-opt/lpn-opt --lpn-synthesize-guards \
+#  --lpn-prune-cyclic-guards \
+#  --lpn-normalize-delays \
+#   --lpn-retain-hypergraph --lpn-strip-hidden-values \
+#   --lpn-resolve-choices --canonicalize --cse \
+#   --lpn-dataflow-simplify /tmp/hyper_demo.mlir > /tmp/hyper_demo_after.mlir
 
 PYTHONPATH=. python3 examples/network_net.py > /tmp/network_net.mlir
-./build/tools/lpn-opt/lpn-opt --lpn-synthesize-guards --lpn-normalize-delays \
+./build/tools/lpn-opt/lpn-opt --mlir-print-ir-after-all --lpn-synthesize-guards \
+ --lpn-prune-cyclic-guards \
+ --lpn-normalize-delays \
   --lpn-retain-hypergraph --lpn-strip-hidden-values \
   --lpn-resolve-choices --canonicalize --cse \
-  --lpn-dataflow-simplify /tmp/network_net.mlir > /tmp/network_net_after.mlir
+  --lpn-dataflow-simplify /tmp/network_net.mlir > /tmp/network_net_after.mlir 2> /tmp/network_net_debug.log
 
 
-PYTHONPATH=. python3 examples/strip_demo.py > /tmp/strip_demo_branch.mlir
-./build/tools/lpn-opt/lpn-opt --mlir-print-ir-after-all --lpn-synthesize-guards --lpn-normalize-delays \
-  --lpn-retain-hypergraph --lpn-strip-hidden-values \
-  --lpn-resolve-choices --canonicalize --cse \
-  --lpn-dataflow-simplify /tmp/strip_demo_branch.mlir > /tmp/strip_demo_after.mlir 2> /tmp/strip_demo_pass_debug.log
+# PYTHONPATH=. python3 examples/strip_demo.py > /tmp/strip_demo_branch.mlir
+# ./build/tools/lpn-opt/lpn-opt --mlir-print-ir-after-all --lpn-synthesize-guards \
+#   --lpn-prune-cyclic-guards \
+#   --lpn-normalize-delays \
+#   --lpn-retain-hypergraph --lpn-strip-hidden-values \
+#   --lpn-resolve-choices --canonicalize --cse \
+#   --lpn-dataflow-simplify /tmp/strip_demo_branch.mlir > /tmp/strip_demo_after.mlir 2> /tmp/strip_demo_pass_debug.log
 
 
-PYTHONPATH=. python3 examples/emit_take_twice_net.py > /tmp/emit_take_twice_branch.mlir
-./build/tools/lpn-opt/lpn-opt --mlir-print-ir-after-all --lpn-synthesize-guards --lpn-normalize-delays \
-  --lpn-retain-hypergraph --lpn-strip-hidden-values \
-  --lpn-resolve-choices --canonicalize --cse \
-  --lpn-dataflow-simplify /tmp/emit_take_twice_branch.mlir > /tmp/emit_take_twice_after.mlir 2> /tmp/emit_take_twice_pass_debug.log
+# PYTHONPATH=. python3 examples/emit_take_twice_net.py > /tmp/emit_take_twice_branch.mlir
+# ./build/tools/lpn-opt/lpn-opt --mlir-print-ir-after-all --lpn-synthesize-guards \
+#   --lpn-prune-cyclic-guards \
+#   --lpn-normalize-delays \
+#   --lpn-retain-hypergraph --lpn-strip-hidden-values \
+#   --lpn-resolve-choices --canonicalize --cse \
+#   --lpn-dataflow-simplify /tmp/emit_take_twice_branch.mlir > /tmp/emit_take_twice_after.mlir 2> /tmp/emit_take_twice_pass_debug.log

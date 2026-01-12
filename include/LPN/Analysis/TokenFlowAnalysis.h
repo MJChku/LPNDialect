@@ -51,34 +51,6 @@ struct ObservableSource {
 	Value takeValue;
 };
 
-// Key for emit metadata: (emit operation, path index, target place)
-struct EmitPathKey {
-	Operation* emit;
-	unsigned pathIndex;
-	StringAttr target;
-};
-
-struct EmitPathKeyInfo : llvm::DenseMapInfo<EmitPathKey> {
-	static inline EmitPathKey getEmptyKey() {
-		return {llvm::DenseMapInfo<Operation*>::getEmptyKey(), 0, StringAttr()};
-	}
-	static inline EmitPathKey getTombstoneKey() {
-		return {llvm::DenseMapInfo<Operation*>::getTombstoneKey(), 0, StringAttr()};
-	}
-	static unsigned getHashValue(const EmitPathKey &key) {
-		llvm::hash_code targetHash =
-			(key.target != StringAttr()) ? llvm::hash_value(key.target)
-			                               : llvm::hash_code(0);
-		return llvm::hash_combine(
-			llvm::DenseMapInfo<Operation*>::getHashValue(key.emit),
-			key.pathIndex, targetHash);
-	}
-	static bool isEqual(const EmitPathKey &a, const EmitPathKey &b) {
-		return a.emit == b.emit && a.pathIndex == b.pathIndex &&
-		       a.target == b.target;
-	}
-};
-
 // Per-emit metadata: transformation info without path resolution
 struct EmitMetadata {
 	TransitionOp transition;  // Which transition this emit is in

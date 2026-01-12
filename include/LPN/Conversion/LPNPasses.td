@@ -36,6 +36,11 @@ def LPNSynthesizeGuardPass : Pass<"lpn-synthesize-guards", "ModuleOp"> {
   let constructor = "mlir::lpn::createLPNSynthesizeGuardPass()";
 }
 
+def LPNPruneCyclicGuardsPass : Pass<"lpn-prune-cyclic-guards", "ModuleOp"> {
+  let summary = "Drop guard IDs that only resolve through cyclic hidden paths.";
+  let constructor = "mlir::lpn::createLPNPruneCyclicGuardsPass()";
+}
+
 def LPNLinkTokenCreatesPass : Pass<"lpn-link-token-creates", "ModuleOp"> {
   let summary = "Thread observable token dependencies through lpn.token.create.";
   let constructor = "mlir::lpn::createLPNLinkTokenCreatesPass()";
