@@ -1,6 +1,14 @@
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
 add_test(
+  NAME lpn-elf-workload
+  COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${PROJECT_SOURCE_DIR}
+          PYTHONDONTWRITEBYTECODE=1 ${Python3_EXECUTABLE}
+          ${CMAKE_CURRENT_SOURCE_DIR}/test_elf_workload.py
+          --tool $<TARGET_FILE:lpn-compile>
+)
+
+add_test(
   NAME lpn-llama-model
   COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${PROJECT_SOURCE_DIR}
           PYTHONDONTWRITEBYTECODE=1 ${Python3_EXECUTABLE}

@@ -173,6 +173,7 @@ private:
       function->addFnAttr(llvm::Attribute::WillReturn);
     }
     arrayCreateFn = runtime("lpn_array_create", ptr, {i64, ptr});
+    arrayStaticFn = runtime("lpn_array_static", ptr, {i64, ptr});
     arrayAllocFn = runtime("lpn_array_alloc", ptr, {i64, i64});
     arrayGetFn = runtime("lpn_array_get", i64, {ptr, i64});
     arraySetFn = runtime("lpn_array_set", ptr, {ptr, i64, i64});
@@ -393,6 +394,24 @@ private:
     }
     if (auto array = dyn_cast<ArrayOp>(&op)) {
       auto elements = array.getElements();
+      std::vector<llvm::Constant *> literals;
+      for (auto element : elements) {
+        auto *literal = llvm::dyn_cast<llvm::Constant>(asBits(value(element)));
+        if (!literal)
+          break;
+        literals.push_back(literal);
+      }
+      if (!elements.empty() && literals.size() == elements.size()) {
+        auto *type = llvm::ArrayType::get(i64, literals.size());
+        auto *global = new llvm::GlobalVariable(*module,type,true,
+            llvm::GlobalValue::PrivateLinkage,llvm::ConstantArray::get(type,literals),
+            "lpn.array.literal");
+        global->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+        std::array<llvm::Constant *,2> indices{integer(0),integer(0)};
+        auto *storage = llvm::ConstantExpr::getInBoundsGetElementPtr(type,global,indices);
+        put(array.getResult(),ir.CreateCall(arrayStaticFn,{integer(literals.size()),storage}));
+        return;
+      }
       llvm::Value *storage = llvm::ConstantPointerNull::get(
           llvm::cast<llvm::PointerType>(ptr));
       if (!elements.empty()) {
@@ -684,6 +703,7 @@ private:
   llvm::FunctionCallee placeFn, takeFn, emitFn, countFn, createFn, cloneFn;
   llvm::FunctionCallee peekFn, guardFn;
   llvm::FunctionCallee setFn, getFn, arrayCreateFn, arrayAllocFn, arrayGetFn;
+  llvm::FunctionCallee arrayStaticFn;
   llvm::FunctionCallee arraySetFn, arrayLenFn, checkStepFn, runFn;
   llvm::DenseMap<mlir::Value, llvm::Value *> values;
   std::map<std::string, int64_t> literalIds;

@@ -114,6 +114,26 @@ execute arbitrary ISA arithmetic or predict new control flow. Trace adapters
 discard observed timestamps when building the model. Use the original MLIR
 for timed validation.
 
+For real executable workloads, use the shared-ELF frontend and compact
+scoreboard described in [REAL_WORKLOAD.md](examples/coralnpu/REAL_WORKLOAD.md):
+
+```sh
+python3 -m examples.coralnpu.benchmark_workload \
+  --coral-root ../coralnpu --output /tmp/coral-real-100k \
+  --jobs 160 --runs 5 --lpn-compiler build/tools/lpn-compile/lpn-compile
+```
+
+This executes supported RV32/VME instructions independently to obtain the
+path, numerical results, and effective addresses from the same ELF as RTL.
+Unsupported instructions and external-memory workloads fail explicitly.
+The native LPN then predicts timing, using resource and dependency tokens.
+Build the RTL baseline with `-c opt --copt=-O3`; default fastbuild does not
+optimize generated simulator C++. Report ROI wall medians separately from
+frontend execution, graph construction, and native compilation. The command
+also reports the combined cost for a single use of the ELF. Disable dispatch,
+writeback, and transition traces during speed samples; keep the passive ROI
+timers. Native timers use `--wall-start=NAME --wall-end=NAME`.
+
 ```sh
 python3 -m examples.coralnpu.run \
   --trace examples/coralnpu/validation/rep32/alu_chain.csv \

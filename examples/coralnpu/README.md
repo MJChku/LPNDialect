@@ -13,10 +13,17 @@ and local/external memory ports. Time is expressed in cycles, although the
 generic native executable's output label remains `ns`. No cycle-by-cycle loop
 is added to the LPN simulator.
 
-The input is a dynamic instruction stream. `trace.py` decodes that stream from
+The original input is a dynamic instruction stream. `trace.py` decodes that stream from
 Verilator dispatch observations and discards measured timestamps when building
 the model. Consequently this predicts timing for a fixed execution path. It
 does not execute ISA arithmetic or independently predict control-flow changes.
+
+For executable inputs, [REAL_WORKLOAD.md](REAL_WORKLOAD.md) documents the
+shared-ELF benchmark. `elf.py` executes a supported RV32/VME subset using real
+operands, without RTL observations. `stream.py` turns that execution path and
+its effective addresses into a reusable LPN scoreboard with five transitions,
+independent of loop length. Numerical execution is preprocessing; the native
+LPN executable simulates timing. This path currently supports local memory.
 
 ## Run the RTL baseline
 
@@ -27,7 +34,7 @@ dispatch and scalar writeback. It does not change execution-unit behavior.
 ```sh
 cd ../coralnpu
 git apply ../LPNDialect/examples/coralnpu/verilator-observer.patch
-bazel build //tests/verilator_sim:rvv_core_mini_axi_sim --jobs=12 --linkopt=-latomic
+bazel build -c opt --copt=-O3 //tests/verilator_sim:rvv_core_mini_axi_sim --jobs=12 --linkopt=-latomic
 cd ../LPNDialect
 PYTHONPATH=. python3 -m examples.coralnpu.validate \
   --coral-root ../coralnpu --clang clang-20 \
@@ -61,6 +68,9 @@ executables ran in approximately 5–7 ms, compared with 110–203 ms for this
 Verilator build including initialization and observation output. The baseline
 used Bazel's default fastbuild configuration and debug ports. These are
 microkernel checks, not an accuracy or speed guarantee for arbitrary programs.
+Use the optimized baseline and ROI timers in the executable benchmark for
+speed comparisons; the historical fastbuild wall times include startup and
+observation overhead.
 Model latency parameters were refined against the 32-repeat kernels; the
 8-repeat cases check those parameters at another workload size.
 The subsequent held-out 16-repeat run also matches all five windows exactly
@@ -166,7 +176,7 @@ debug elaboration error. Apply the patch once to a fresh pinned checkout:
 ```sh
 cd ../coralnpu
 git apply ../LPNDialect/examples/coralnpu/verilator-observer.patch
-bazel build //tests/verilator_sim:vme_core_mini_axi_sim --jobs=12 --linkopt=-latomic
+bazel build -c opt --copt=-O3 //tests/verilator_sim:vme_core_mini_axi_sim --jobs=12 --linkopt=-latomic
 cd ../LPNDialect
 PYTHONPATH=. python3 -m examples.coralnpu.validate_matrix \
   --coral-root ../coralnpu --clang clang-20 \

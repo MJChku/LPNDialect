@@ -45,6 +45,10 @@ executable accepts `--max-time=NUMBER`, `--tokens`, `--stats`, and `--trace`. It
 counts. `lpn-opt --lpn-simulate model.mlir` remains available as an interpreting
 C++ reference implementation.
 
+Use `--wall-start=TRANSITION --wall-end=TRANSITION` to measure host elapsed
+time between the first successful firings of two named transitions, excluding
+initialization and output after the selected region.
+
 The native compiler currently accepts one `lpn.net` with place references,
 token operations, arrays, integer and floating-point arithmetic, `scf.if`,
 `scf.for`, and `func.func` helpers. It reports unsupported operations instead
@@ -110,6 +114,13 @@ in [examples/coralnpu/README.md](examples/coralnpu/README.md). It uses the exist
 event-driven simulator and native compiler. It models resource occupancy and
 register dependencies from a dynamic instruction stream; measured Verilator
 cycle timestamps are used only for comparisons.
+
+The [executable GEMM benchmark](examples/coralnpu/REAL_WORKLOAD.md) reads the
+same RISC-V ELF as Verilator, independently executes its supported instructions
+to obtain control flow and addresses, and compiles that path into a compact
+LPN scoreboard. It checks real BF16 matrix results and compares a region of
+over 100,000 RTL cycles. Reports separate the timing run from functional
+preprocessing and compilation.
 
 The matrix-enabled model includes CoralNPU's four staggered PE blocks, packed
 INT8/BF16/FP32 multiply-accumulate pipelines, accumulator reuse, and a tiled

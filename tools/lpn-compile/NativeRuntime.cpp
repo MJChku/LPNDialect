@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cmath>
+#include <chrono>
 #include <csetjmp>
 #include <cstdint>
 #include <cstdio>
@@ -85,6 +86,7 @@ struct Transaction {
 };
 
 std::vector<std::unique_ptr<Place>> places;
+std::unordered_map<const uint64_t *, std::unique_ptr<Array>> staticArrays;
 Transaction *active = nullptr;
 double currentTime = 0.0;
 uint64_t guardChecks = 0, bodyExecutions = 0, rollbacks = 0;
@@ -233,6 +235,16 @@ void *lpn_array_create(int64_t size, const uint64_t *elements) {
   return transaction().makeArray(std::move(array));
 }
 
+void *lpn_array_static(int64_t size, const uint64_t *elements) {
+  auto &array = staticArrays[elements];
+  if (!array) {
+    array = std::make_unique<Array>();
+    if (size)
+      array->elements.assign(elements,elements+size);
+  }
+  return array.get();
+}
+
 void *lpn_array_alloc(int64_t size, uint64_t fill) {
   if (size < 0)
     invalid("negative array size");
@@ -269,6 +281,7 @@ int lpn_run(int argc, char **argv, int64_t placeCount, const char **placeNames,
   bool printTokens = false;
   bool printStats = false;
   bool trace = false;
+  std::string wallStartName,wallEndName;
   for (int idx = 1; idx < argc; ++idx) {
     if (std::strncmp(argv[idx], "--max-time=", 11) == 0) {
       char *end = nullptr;
@@ -281,13 +294,19 @@ int lpn_run(int argc, char **argv, int64_t placeCount, const char **placeNames,
       printStats = true;
     } else if (std::strcmp(argv[idx], "--trace") == 0) {
       trace = true;
+    } else if (std::strncmp(argv[idx],"--wall-start=",13) == 0) {
+      wallStartName = argv[idx]+13;
+    } else if (std::strncmp(argv[idx],"--wall-end=",11) == 0) {
+      wallEndName = argv[idx]+11;
     } else {
       std::fprintf(stderr,
-                   "Usage: %s [--max-time=NUMBER] [--tokens] [--stats] [--trace]\n", argv[0]);
+                   "Usage: %s [--max-time=NUMBER] [--tokens] [--stats] [--trace] "
+                   "[--wall-start=TRANSITION --wall-end=TRANSITION]\n", argv[0]);
       return 2;
     }
   }
   places.clear();
+  staticArrays.clear();
   places.reserve(static_cast<size_t>(placeCount));
   for (int64_t idx = 0; idx < placeCount; ++idx) {
     if (initialCounts[idx] < 0)
@@ -299,11 +318,30 @@ int lpn_run(int argc, char **argv, int64_t placeCount, const char **placeNames,
     places.push_back(std::move(place));
   }
   currentTime = 0.0;
+  int64_t wallStart = -1,wallEnd = -1;
+  bool wallStarted = false,wallFinished = false;
+  std::chrono::steady_clock::time_point wallClock;
+  for (int64_t idx = 0; idx < transitionCount; ++idx) {
+    if (!wallStartName.empty() && wallStartName == transitionNames[idx]) wallStart = idx;
+    if (!wallEndName.empty() && wallEndName == transitionNames[idx]) wallEnd = idx;
+  }
+  if ((!wallStartName.empty() || !wallEndName.empty()) && (wallStart < 0 || wallEnd < 0))
+    invalid("wall-time profiling needs valid --wall-start and --wall-end transitions");
   guardChecks = bodyExecutions = rollbacks = 0;
   while (currentTime <= maxTime) {
     bool progress = false;
     for (int64_t idx = 0; idx < transitionCount; ++idx)
       while (tryFire(transitions[idx], enabled[idx])) {
+        if (idx == wallStart && !wallStarted) {
+          wallClock = std::chrono::steady_clock::now();
+          wallStarted = true;
+        }
+        if (idx == wallEnd && wallStarted && !wallFinished) {
+          double seconds = std::chrono::duration<double>(
+              std::chrono::steady_clock::now()-wallClock).count();
+          std::printf("Wall window elapsed: %.9f seconds\n",seconds);
+          wallFinished = true;
+        }
         if (trace)
           std::printf("[t=%.3f] fired %s\n", currentTime, transitionNames[idx]);
         progress = true;

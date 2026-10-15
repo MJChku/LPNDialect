@@ -2000,6 +2000,9 @@ class PythonRuntimeAPI:
   def __init__(self, simulator: "PythonSimulator"):
     self._sim = simulator
 
+  def select(self, condition, true_value, false_value, *, typ=None):
+    return true_value if condition else false_value
+
   def _as_int(self, value: Union[int, float]) -> int:
     return int(value)
 

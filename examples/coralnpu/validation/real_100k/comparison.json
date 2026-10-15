@@ -1,0 +1,78 @@
+{
+  "roi_rtl_cycles": 103372,
+  "rtl_observed_wall_seconds": 21.943189028650522,
+  "elf_sha256": "2f880083252fbbcbed9d13594de5d502d561725b8c488f16134645b3ee16ff5b",
+  "dynamic_instructions": 77770,
+  "roi_instructions": 76484,
+  "matrix_commands": 5120,
+  "macs": 2621440,
+  "checked_output_elements": 256,
+  "frontend_and_rtl_instruction_paths_identical": true,
+  "k": 64,
+  "jobs": 160,
+  "frontend_seconds": 2.0746908020228148,
+  "model_build_seconds": 1.4512576926499605,
+  "native_compile_seconds": 1.1652572322636843,
+  "roi_lpn_cycles": 100158.0,
+  "relative_cycle_error": -0.031091591533490726,
+  "accuracy_within_5_percent": true,
+  "benchmark_complete": true,
+  "wall_roi_samples_seconds": {
+    "verilator": [
+      20.988181134,
+      21.009352635,
+      21.130611572,
+      20.930985549,
+      21.068024332
+    ],
+    "lpn": [
+      1.00537567,
+      1.009375108,
+      1.001309827,
+      1.002243265,
+      1.006902834
+    ]
+  },
+  "wall_process_samples_seconds": {
+    "verilator": [
+      21.364575332030654,
+      21.38552052527666,
+      21.508691374212503,
+      21.3078248873353,
+      21.447407495230436
+    ],
+    "lpn": [
+      1.0200836658477783,
+      1.0242362152785063,
+      1.0162586402148008,
+      1.0169791374355555,
+      1.0216685887426138
+    ]
+  },
+  "wall_roi_median_seconds": {
+    "verilator": 21.009352635,
+    "lpn": 1.00537567
+  },
+  "roi_speedup": 20.897017166727338,
+  "method": "same ELF and complete dynamic instruction path; timestamp-free LPN input; real BF16 operands; ROI wall timers; traces disabled in timed runs; one warmup; alternating engine order; compilation and functional frontend excluded from runtime",
+  "coral_revision": "517f4c09bd5aabb4e8a16436d8853c912a24790b",
+  "lpn_zero_rollbacks": true,
+  "host": "icdslab2",
+  "baseline_build": "Bazel -c opt --copt=-O3",
+  "baseline_binary_sha256": "e9002919b1bc12afb1c46a7fa61c1f2c4981cc0f40a22c6a723cff374ea31dcf",
+  "model_input": "the identical RV32/VME ELF binary used by Verilator",
+  "wall_process_median_seconds": {
+    "verilator": 21.38552052527666,
+    "lpn": 1.0200836658477783
+  },
+  "single_use_lpn_seconds": 5.711289392784238,
+  "single_use_speedup": 3.744429506985861,
+  "dispatch_sha256": "5ef35ea7f6de8fbf592bee0b8f77c313af255997e7b5c918360b018a6b0b7472",
+  "output_reference_sha256": "0f9fb18a5f71ba65c59aa28c1aea5bc5a201c475c4ad3521bb3184dc22e3b2d1",
+  "measurement_date_utc": "2026-10-15",
+  "clang_version": "Ubuntu clang version 20.1.2 (0ubuntu1~24.04.3)",
+  "host_kernel": "Linux-6.9.0-0-generic-x86_64-with-glibc2.39",
+  "host_cpu_model": "AMD EPYC 7702P 64-Core Processor",
+  "single_use_cost_definition": "frontend_seconds + model_build_seconds + native_compile_seconds + median complete native process; ratio against median complete RTL process",
+  "lpn_native_binary_sha256": "1e03efa7b89422a11deb4d16b8414b27efc588403858d4a48d4180739b5c2db9"
+}
