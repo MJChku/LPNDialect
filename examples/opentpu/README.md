@@ -200,6 +200,12 @@ up to 64 decode tokens. Use the same command with
 such as `$HOME/lpn-runs/smollm2-135m-story`. At the pilot rate, prefill alone
 takes about 1.6 hours of RTL core execution and a complete 64-token continuation
 about three hours; an early EOS reduces only the decode portion.
+The [initial long-run checkpoint](validation/smollm2_story_initial/report.json)
+records progress, not a completed generation. Its first step, with the optimized
+token runtime and packed completion flags, passes all memory checks at **1.245%
+timing error**: RTL core **79.40 s**, LPN core **2.265 s** (**35.0×**, **0.975 M
+modeled cycles/s**); functional/native preparation plus execution **6.644 s**.
+The persistent run lives at `~/lpn-runs/smollm2-135m-story` on `icdslab2`.
 
 `report.json` is updated after each checked token. `state.json` selects one of
 two alternating snapshots containing DRAM (including KV cache) and logits.
