@@ -1,0 +1,52 @@
+diff --git a/opentpu/rtlsim.py b/opentpu/rtlsim.py
+index 5179451c..c01304dd 100644
+--- a/opentpu/rtlsim.py
++++ b/opentpu/rtlsim.py
+@@ -286,7 +286,7 @@ def build_top(cfg, dram_lat: int = 8, uarch: dict | None = None, axi: bool = Fal
+     shell = RTL / "shell"
+     mem = ([shell / "otpu_afifo.sv", shell / "otpu_mem_ch.sv", TB / LDC_MODELS[ldc],
+             TB / "otpu_ldc_mem.sv"] if ldc else [TB / "otpu_native_mem.sv"] if axi else [])
+-    return build("tb_top", [RTL / s for s in RTL_SOURCES] + mem + [TB / "tb_top.sv"],
++    return build("tb_top", [RTL / s for s in RTL_SOURCES] + mem + [TB / "lpn_wall.cpp", TB / "tb_top.sv"],
+                  top_params(cfg, dram_lat, uarch, 2 if ldc else axi, dram_bytes))
+ 
+ 
+diff --git a/sim/verilator/lpn_wall.cpp b/sim/verilator/lpn_wall.cpp
+new file mode 100644
+index 00000000..00d9cdcf
+--- /dev/null
++++ b/sim/verilator/lpn_wall.cpp
+@@ -0,0 +1,6 @@
++#include <chrono>
++
++extern "C" double lpn_wall_seconds() {
++  return std::chrono::duration<double>(
++      std::chrono::steady_clock::now().time_since_epoch()).count();
++}
+diff --git a/sim/verilator/tb_top.sv b/sim/verilator/tb_top.sv
+index cd405d6f..4c406ab7 100644
+--- a/sim/verilator/tb_top.sv
++++ b/sim/verilator/tb_top.sv
+@@ -5,6 +5,8 @@
+ // writes the next run's pokeb lines, the host's writes between the runs), +reload: the program
+ // loaded again, +r<k>_arg<j>=N: run k's arguments (else the run before's), then the next run.
+ module tb_top;
++  import "DPI-C" function real lpn_wall_seconds();
++  real lpn_wall_start;
+   parameter int S          = 1;
+   parameter int D          = 32;
+   parameter int MCOLS      = 8;
+@@ -99,10 +101,13 @@ module tb_top;
+     end
+     @(negedge clk);
+     rst = 1'b0;
++    if ($test$plusargs("lpn_wall")) lpn_wall_start = lpn_wall_seconds();
+     while (!all_halted && cycles < max_cycles) begin
+       @(negedge clk);
+       cycles++;
+     end
++    if ($test$plusargs("lpn_wall"))
++      $display("LPN_WALL seconds=%0.9f cycles=%0d", lpn_wall_seconds()-lpn_wall_start, cycles);
+     begin
+       int runs = 1;
+       string nm;

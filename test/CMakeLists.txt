@@ -1,5 +1,17 @@
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
+set(LPN_OPENTPU_ROOT "" CACHE PATH "Optional pinned FeSens/openTPU checkout for integration tests")
+if (LPN_OPENTPU_ROOT)
+  add_test(
+    NAME lpn-opentpu
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${PROJECT_SOURCE_DIR}
+            PYTHONDONTWRITEBYTECODE=1 ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/test_opentpu.py
+            --opentpu-root ${LPN_OPENTPU_ROOT}
+            --tool $<TARGET_FILE:lpn-compile>
+  )
+endif()
+
 add_test(
   NAME lpn-elf-workload
   COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${PROJECT_SOURCE_DIR}

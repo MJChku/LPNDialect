@@ -1,14 +1,15 @@
 ---
 name: lpn-modeling
-description: Build, use, and extend LPNDialect for fast event-driven Petri-net performance models, including composable Python components, atomic token operations, guard synthesis, native MLIR-to-binary compilation, and CoralNPU/Verilator validation. Use when working on this repository or constructing LPN network, accelerator, or memory timing models.
+description: Build and extend LPNDialect's event-driven Petri-net models, guard synthesis, and native compilation, including FeSens/openTPU executable-input validation against Verilator. Use for this repository's compiler, network, accelerator, and memory timing models.
 ---
 
 # LPNDialect modeling workflow
 
 Run commands from the repository root. Read [README.md](README.md) for the
-supported dialect and [examples/coralnpu/README.md](examples/coralnpu/README.md)
-for the accelerator model and baseline setup. On `icdslab2.epfl.ch`, the
-checkouts are `~/LPNDialect` and `~/coralnpu`.
+supported dialect and [examples/opentpu/README.md](examples/opentpu/README.md)
+for the active accelerator target and baseline setup. On `icdslab2.epfl.ch`,
+the checkouts are `~/LPNDialect` and `~/FeSens-openTPU`. The older `~/OpenTPU`
+is UCSBarchlab's design, a different project.
 
 ## Build and run
 
@@ -107,7 +108,43 @@ rollbacks. The atomic runtime remains a safeguard for incomplete annotations.
 Observable reduction currently rejects manual guards;
 do not discard the predicates to force reduction through.
 
-## CoralNPU and matrix models
+## FeSens/openTPU
+
+Read [examples/opentpu/README.md](examples/opentpu/README.md) for the pinned
+revision, observer patch, architecture, input format, and measured scope.
+Use Verilator 5.052 or a compatible newer version and a Python environment
+with NumPy. The model reads the same hex programs and big-endian DRAM files
+as the RTL harness. The upstream ISA simulator provides numerical execution
+and addresses; it supplies no baseline timing. Native LPN then predicts time
+from dataflow/resource tokens.
+
+```sh
+PYTHONPATH=. ../FeSens-openTPU/.venv/bin/python -m examples.opentpu.benchmark \
+  --opentpu-root ../FeSens-openTPU --output /tmp/opentpu-gemm \
+  --batch-rows 8 --runs 5 --lpn-compiler build/tools/lpn-compile/lpn-compile
+```
+
+Add `--workload mlp` to validate an upstream-compiled RMSNorm/SwiGLU/residual
+kernel. `examples.opentpu.run` emits or compiles an existing input bundle.
+Use `--batch-rows 1` as the fine-grained reference; larger groups are bounded
+by shape and FIFO capacity. Preserve separate initiation intervals and result
+latencies, early matrix prefetch, and dependency tokens. Compare actual cycles
+and numerical memory state against RTL after changing those assumptions.
+Report cycles/second, core wall medians, and preparation/compilation costs
+separately. Do not extrapolate kernel accuracy to whole Llama inference.
+
+Optional integration checks need the NumPy environment:
+
+```sh
+PYTHONPATH=. ../FeSens-openTPU/.venv/bin/python test/test_opentpu.py \
+  --opentpu-root ../FeSens-openTPU --tool build/tools/lpn-compile/lpn-compile
+```
+
+The backend rejects unsupported host synchronization, chaining, stream-engine
+instructions, WAITC, and multi-slice collectives. Extend these deliberately;
+do not silently assign arbitrary delays to unsupported instructions.
+
+## Previous CoralNPU and matrix models
 
 The model predicts timing for a dynamic instruction stream; it does not
 execute arbitrary ISA arithmetic or predict new control flow. Trace adapters

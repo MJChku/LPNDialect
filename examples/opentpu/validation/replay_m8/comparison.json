@@ -1,0 +1,126 @@
+{
+  "name": "repeated quantized GEMM",
+  "m": 8,
+  "n": 128,
+  "k": 2048,
+  "jobs": 3,
+  "macs": 6291456,
+  "checked_output_elements": 1024,
+  "seed": 47,
+  "output_tmem_word": 16384,
+  "output_dram_byte": 3145728,
+  "functional_frontend_seconds": 0.02766679972410202,
+  "float_reference_relative_error": 0.007744144353731682,
+  "matrix_batch_rows": [
+    2,
+    2,
+    2
+  ],
+  "model_build_seconds": 0.015889715403318405,
+  "native_compile_seconds": 0.22421496734023094,
+  "lpn_cycles": 16894.0,
+  "rtl_build_seconds": 0.07636057958006859,
+  "rtl_cycles": 16939,
+  "all_dram_and_tmem_bit_exact": true,
+  "identical_input_files": true,
+  "identical_command_paths": true,
+  "lpn_zero_rollbacks": true,
+  "dynamic_instructions": [
+    8
+  ],
+  "input_sha256": {
+    "prog_0.hex": "41ac04f813ca4d9c0b42312e8ec9edfff7c2ebfaf3b961772058dcc5945f23cc",
+    "dram_0.bin": "c299953fcb9df0c06e516f6d760a6b16ced5c4582abcb93ceb62eb8443549d20"
+  },
+  "relative_cycle_error": -0.002656591298187627,
+  "accuracy_within_5_percent": true,
+  "wall_core_samples_seconds": {
+    "verilator": [
+      0.796856677,
+      0.771823777,
+      0.781036431
+    ],
+    "lpn": [
+      0.001842481,
+      0.00203722,
+      0.002114617
+    ]
+  },
+  "wall_process_samples_seconds": {
+    "verilator": [
+      1.0126342978328466,
+      0.9885562285780907,
+      0.9971475973725319
+    ],
+    "lpn": [
+      0.005367612466216087,
+      0.005929324775934219,
+      0.005755715072154999
+    ]
+  },
+  "wall_core_median_seconds": {
+    "verilator": 0.781036431,
+    "lpn": 0.00203722
+  },
+  "wall_process_median_seconds": {
+    "verilator": 0.9971475973725319,
+    "lpn": 0.005755715072154999
+  },
+  "core_speedup": 383.3834495047172,
+  "cycles_per_second": {
+    "verilator": 21687.848770782883,
+    "lpn": 8292673.348975564
+  },
+  "single_use_lpn_seconds": 0.27352719753980637,
+  "single_use_speedup": 3.645515350360789,
+  "upstream_revision": "f237dab2f196855a59a083b1454786df8f01291f",
+  "config": {
+    "S": 1,
+    "D": 128,
+    "MCOLS": 4,
+    "ACT_BLOCKS": 64,
+    "TMEM_WORDS": 65536,
+    "DRAM_BYTES": 4194304,
+    "IMEM_WORDS": 4096,
+    "LANES": 8,
+    "PAIR": false,
+    "DSTEP": false,
+    "STREAM": false,
+    "ACT_ROWS": 16,
+    "SEQ_WC": false
+  },
+  "timing": {
+    "dram_latency": 8,
+    "dram_bytes_per_cycle": 128,
+    "window": 32,
+    "fifo_chunks": 128,
+    "chain_length": 16,
+    "epilogue_lanes": 2,
+    "quant_buffer_chunks": 1024,
+    "batch_rows": 8
+  },
+  "verilator": "Verilator v5.052 rev v5.052",
+  "verilator_flags": [
+    "--binary",
+    "-j",
+    "16",
+    "-Wno-fatal",
+    "-Wno-WIDTHEXPAND",
+    "-Wno-WIDTHTRUNC",
+    "-Wno-UNUSEDSIGNAL",
+    "-Wno-UNUSEDPARAM",
+    "-O3",
+    "--x-assign",
+    "0",
+    "--x-initial",
+    "0",
+    "-CFLAGS",
+    "-O3"
+  ],
+  "host": "icdslab2",
+  "numpy_version": "2.5.4",
+  "python_version": "3.12.3",
+  "measurement_date_utc": "2026-10-15",
+  "baseline_binary_sha256": "c4023741084e0c25e6ed95edf7915bd06bf33c93b26feff88214e6818a0dcd3a",
+  "method": "identical hex instructions and big-endian DRAM files; independent ISA numerical frontend; LPN row/resource dataflow; no observed timestamps in model; untraced core wall timers; one warmup then alternating engine order; preparation reported separately"
+}

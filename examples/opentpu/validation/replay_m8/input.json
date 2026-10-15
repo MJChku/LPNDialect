@@ -1,0 +1,22 @@
+{
+  "revision": "f237dab2f196855a59a083b1454786df8f01291f",
+  "config": {
+    "S": 1,
+    "D": 128,
+    "MCOLS": 4,
+    "ACT_BLOCKS": 64,
+    "TMEM_WORDS": 65536,
+    "DRAM_BYTES": 4194304,
+    "IMEM_WORDS": 4096,
+    "LANES": 8,
+    "PAIR": false,
+    "DSTEP": false,
+    "STREAM": false,
+    "ACT_ROWS": 16,
+    "SEQ_WC": false
+  },
+  "args": [],
+  "instruction_counts": [
+    6
+  ]
+}

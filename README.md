@@ -107,7 +107,20 @@ are trusted enabling conditions; incomplete annotations can still cause a
 failed take, which rolls back as a correctness safeguard. Such rollbacks should
 be investigated rather than relied on in a performance model.
 
-## CoralNPU model
+## FeSens/openTPU model
+
+The active accelerator target is [FeSens/openTPU](examples/opentpu/README.md).
+Its LPN model consumes the same encoded programs and operand files as the
+Verilator baseline. It models bounded matrix prefetch, systolic row groups,
+quantization, vector operations, command dependencies, and simple DRAM
+latency/bandwidth. The existing event-driven scheduler is unchanged.
+
+The validation command checks real quantized GEMM and an upstream-compiled
+SwiGLU MLP, compares complete numerical memory state, and reports absolute
+cycles/second as well as speedup and timing error. See the model README for
+the pinned upstream revision, reproduction commands, and current limits.
+
+## Previous CoralNPU model
 
 The composable timing model and Verilator comparison workflow are documented
 in [examples/coralnpu/README.md](examples/coralnpu/README.md). It uses the existing
