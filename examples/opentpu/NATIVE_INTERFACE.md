@@ -73,6 +73,7 @@ u64 raw element bits. Names are nonempty, at most 1024 bytes, contain no NUL,
 and must be unique. There are at most 10,000 tables; the native file reader
 limits total input size to 1 GiB and rejects truncation/trailing data. Integer
 values retain their low 64 bits. Noninteger Python values are rejected.
+The Python reference interprets those bits as signed i64, matching native code.
 Use separate input paths for concurrently running simulations.
 
 ## Reusable openTPU timing
@@ -160,3 +161,10 @@ input was previously validated in RTL at 2,194,095 cycles (+2.041% LPN error).
 These host timings ran alongside RTL validation. The
 [report](validation/native_reuse/comparison.json) records warmups, samples,
 input/numerical hashes and compiler/binary/IR hashes.
+
+A separate [trained-model pilot](validation/native_reuse_pilot/report.json)
+validated three steps, including a process restart/resume, at revision
+`1f2067b`. It produced " you have" from "Once". All DRAM/TMEM matched RTL bit
+for bit, cycle error stayed within 1.251%, and the second/third steps reused
+the timing executable, including after restart. The pilot is intentionally
+bounded; the original long validation continues on its frozen revision.

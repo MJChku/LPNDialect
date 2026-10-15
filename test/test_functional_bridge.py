@@ -1,7 +1,7 @@
 """The produced executable runs both Python-authored stages without Python."""
 
 import argparse
-import os
+import shutil
 from pathlib import Path
 import re
 import subprocess
@@ -12,6 +12,11 @@ import unittest
 
 class FunctionalBridgeTest(unittest.TestCase):
   tool = None
+
+  @classmethod
+  def setUpClass(cls):
+    if not all(shutil.which(n) for n in ("mlir-opt-20","mlir-translate-20","clang++-20")):
+      raise unittest.SkipTest("MLIR/LLVM 20 functional compiler tools not installed")
 
   def test_native_linked_functional_and_timing(self):
     with tempfile.TemporaryDirectory() as d:

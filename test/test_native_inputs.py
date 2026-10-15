@@ -29,21 +29,21 @@ def duration_net(values):
     idx = peek(cursor).get("id")
     guard(idx<command_count())
     token = take(cursor)
-    emit(cursor,token.set("id",idx+1),delay=sitofp(array(durations)[idx]))
+    changed = array_set(array(durations),0,999)
+    emit(cursor,token.set("id",idx+1).set("copied",changed[0]),delay=sitofp(array(durations)[idx]))
 
   @net.transition
   def complete():
     guard(count(cursor)>0)
     guard(peek(cursor).get("id")==command_count())
-    take(cursor)
-    emit(done,create())
+    emit(done,take(cursor))
 
   return net
 
 
-def input_copy_net():
+def input_copy_net(reference_values=None):
   net = NetBuilder("immutable_input")
-  values = InputArray("values",[7,11])
+  values = InputArray("values",[7,11] if reference_values is None else reference_values)
   seed = net.place("seed",initial_tokens=1)
   out = net.place("out",observable=True)
 
@@ -51,7 +51,8 @@ def input_copy_net():
   def copy():
     take(seed)
     changed = array_set(array(values),0,999)
-    emit(out,create().set("copied",changed[0]).set("original",array(values)[0]))
+    emit(out,create().set("copied",changed[0]).set("original",array(values)[0])
+         .set("negative",select(array(values)[0]<0,1,0)))
 
   return net
 
@@ -95,13 +96,15 @@ class NativeInputsTest(unittest.TestCase):
       out = Path(d);ir,binary,tables = out/"copy.mlir",out/"copy.native",out/"copy.tables"
       ir.write_text(input_copy_net().build())
       subprocess.run([self.tool,str(ir),"-o",str(binary)],check=True,capture_output=True,text=True)
-      write_input_tables(tables,{"values":[7,11]})
-      r = subprocess.run([str(binary),"--inputs="+str(tables),"--tokens"],
-          check=True,capture_output=True,text=True)
-      self.assertIn("'copied': 999",r.stdout)
-      self.assertIn("'original': 7",r.stdout)
-      sim = input_copy_net().python_simulator();sim.run()
-      self.assertEqual(sim.place_dicts("out"),[{"copied":999,"original":7}])
+      for values,expected in (([7,11],7),([0xffffffffffffffff,11],-1)):
+        write_input_tables(tables,{"values":values})
+        r = subprocess.run([str(binary),"--inputs="+str(tables),"--tokens"],
+            check=True,capture_output=True,text=True)
+        self.assertIn("'copied': 999",r.stdout)
+        self.assertIn(f"'original': {expected}",r.stdout)
+        self.assertIn(f"'negative': {int(expected<0)}",r.stdout)
+        sim = input_copy_net(values).python_simulator();sim.run()
+        self.assertEqual(sim.place_dicts("out"),[{"copied":999,"original":expected,"negative":int(expected<0)}])
       with self.assertRaises(TypeError):
         write_input_tables(tables,{"bad":[1.5]})
 
@@ -113,14 +116,14 @@ class NativeInputsTest(unittest.TestCase):
 #include <cstdint>
 int main() {
   uint64_t first[] = {2,3}, second[] = {7,11,13};
-  char name[] = "native-producer", stats[] = "--stats";
-  char *args[] = {name,stats};
+  char name[] = "native-producer", stats[] = "--stats", tokens[] = "--tokens";
+  char *args[] = {name,stats,tokens};
   if (lpn_bind_input_array("durations",-1,first)!=2) return 10;
   if (lpn_bind_input_array("durations",2,first)) return 11;
-  if (lpn_simulate(2,args)) return 12;
+  if (lpn_simulate(3,args)) return 12;
   if (lpn_simulated_time()!=5) return 15;
   if (lpn_bind_input_array("durations",3,second)) return 13;
-  if (lpn_simulate(2,args)) return 14;
+  if (lpn_simulate(3,args)) return 14;
   if (lpn_simulated_time()!=31) return 16;
   return lpn_clear_input_arrays();
 }
@@ -132,6 +135,7 @@ int main() {
       r = subprocess.run([str(binary)],check=True,capture_output=True,text=True)
       self.assertEqual([float(v) for v in re.findall(r"finished at t=([0-9.]+)",r.stdout)],[5,31])
       self.assertEqual(r.stdout.count("rollbacks: 0"),2)
+      self.assertEqual(r.stdout.count("'copied': 999"),2)
 
 
 if __name__=="__main__":

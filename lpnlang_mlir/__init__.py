@@ -699,6 +699,7 @@ class InputArray:
   def __post_init__(self):
     if not isinstance(self.name,str) or not self.name or "\0" in self.name or len(self.name.encode())>1024:
       raise ValueError("input-array names must be nonempty, at most 1024 UTF-8 bytes, without NUL")
+    object.__setattr__(self,"values",tuple(_to_signed_i64(operator.index(v)) for v in self.values))
 
   def __len__(self):
     return len(self.values)
@@ -2098,7 +2099,7 @@ class PythonRuntimeAPI:
                              Sequence[Union[Value, PlaceHandle, int, float]]]
             ) -> tuple:
     if len(elements)==1 and isinstance(elements[0],InputArray):
-      return tuple(elements[0].values)
+      return elements[0].values
     if len(elements) == 1 and isinstance(elements[0], (list, tuple)):
       elements = tuple(elements[0])
     return tuple(elements)
