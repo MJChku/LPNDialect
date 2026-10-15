@@ -1,0 +1,300 @@
+{
+  "scope": "same real input, functional execution + metadata/model preparation + compilation/cache + timing process",
+  "warmups": {
+    "original": {
+      "mode": "original",
+      "cycles": 2238884.0,
+      "functional_seconds": 1.8463612776249647,
+      "preparation_seconds": 1.2155178096145391,
+      "compile_seconds": 1.2139955125749111,
+      "native_core_seconds": 2.367104372,
+      "native_process_seconds": 2.370908910408616,
+      "full_lpn_seconds": 6.646783510223031,
+      "cache_hit": false,
+      "ir_bytes": 14327163,
+      "net": {
+        "places": 186,
+        "transitions": 14
+      },
+      "input_sha256": {
+        "prog_0.hex": "8a244a9950e557b297eff5f9570b0a52de994a0c1a766ffa87c45101decba7bf",
+        "dram_0.bin": "d3897558526084b43581bfabb602632cd3859f9d872ac679daaec537449d1a10"
+      },
+      "numerical_memory_sha256": [
+        {
+          "dram": "f7092679d1105d31849a5643b2e2c264101770fd447433da7bad67b30e769722",
+          "tmem": "31f59fe6cebd78c159e78ad0b677ba98338da960e64a89f8dce2bb450dba60f7"
+        }
+      ],
+      "compiler_sha256": "993c6e981acf10df01d04519b4574e3104e4f30237667b17c0330d1d5bc19ef3",
+      "binary_sha256": "b297d9af319d4c657db845a5b5573779c87d64ca24d1a24c2695db624380d884",
+      "timing_ir_sha256": "4221445a6fa498eeeef3f725bed05b53cbc5e0f0cc06006201d2e71a80cf79e1"
+    },
+    "reusable": {
+      "mode": "reusable",
+      "cycles": 2238884.0,
+      "functional_seconds": 1.826522210612893,
+      "preparation_seconds": 0.333188796415925,
+      "compile_seconds": 0.24090869165956974,
+      "native_core_seconds": 1.407802432,
+      "native_process_seconds": 1.413182858377695,
+      "full_lpn_seconds": 3.813802557066083,
+      "cache_hit": false,
+      "ir_bytes": 94228,
+      "net": {
+        "transitions": 15,
+        "places": 190,
+        "completion_flag_banks": 129,
+        "command_slots": 32,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          5811
+        ]
+      },
+      "input_sha256": {
+        "prog_0.hex": "8a244a9950e557b297eff5f9570b0a52de994a0c1a766ffa87c45101decba7bf",
+        "dram_0.bin": "d3897558526084b43581bfabb602632cd3859f9d872ac679daaec537449d1a10"
+      },
+      "numerical_memory_sha256": [
+        {
+          "dram": "f7092679d1105d31849a5643b2e2c264101770fd447433da7bad67b30e769722",
+          "tmem": "31f59fe6cebd78c159e78ad0b677ba98338da960e64a89f8dce2bb450dba60f7"
+        }
+      ],
+      "compiler_sha256": "354171f8add8b10fb6e37fc48855dd88f8736720a0ebe38c4578f7847fd3d117",
+      "binary_sha256": "a798f6ecd3ac0622a4a1b62b2f65197e3f05677f18f08be3513a903e4649c97c",
+      "timing_ir_sha256": "e5d2eeb3a9d539c43d5bea2205fbe2c4c8513a04b24f35f44548f2ef7f785b2d"
+    }
+  },
+  "samples": {
+    "original": [
+      {
+        "mode": "original",
+        "cycles": 2238884.0,
+        "functional_seconds": 1.8294441867619753,
+        "preparation_seconds": 1.2524078954011202,
+        "compile_seconds": 1.1886405535042286,
+        "native_core_seconds": 2.368991825,
+        "native_process_seconds": 2.372891252860427,
+        "full_lpn_seconds": 6.643383888527751,
+        "cache_hit": false,
+        "ir_bytes": 14327163,
+        "net": {
+          "places": 186,
+          "transitions": 14
+        },
+        "input_sha256": {
+          "prog_0.hex": "8a244a9950e557b297eff5f9570b0a52de994a0c1a766ffa87c45101decba7bf",
+          "dram_0.bin": "d3897558526084b43581bfabb602632cd3859f9d872ac679daaec537449d1a10"
+        },
+        "numerical_memory_sha256": [
+          {
+            "dram": "f7092679d1105d31849a5643b2e2c264101770fd447433da7bad67b30e769722",
+            "tmem": "31f59fe6cebd78c159e78ad0b677ba98338da960e64a89f8dce2bb450dba60f7"
+          }
+        ],
+        "compiler_sha256": "993c6e981acf10df01d04519b4574e3104e4f30237667b17c0330d1d5bc19ef3",
+        "binary_sha256": "b297d9af319d4c657db845a5b5573779c87d64ca24d1a24c2695db624380d884",
+        "timing_ir_sha256": "4221445a6fa498eeeef3f725bed05b53cbc5e0f0cc06006201d2e71a80cf79e1"
+      },
+      {
+        "mode": "original",
+        "cycles": 2238884.0,
+        "functional_seconds": 1.8446918800473213,
+        "preparation_seconds": 1.2499639298766851,
+        "compile_seconds": 1.1990669276565313,
+        "native_core_seconds": 2.348388891,
+        "native_process_seconds": 2.351435635238886,
+        "full_lpn_seconds": 6.645158372819424,
+        "cache_hit": false,
+        "ir_bytes": 14327163,
+        "net": {
+          "places": 186,
+          "transitions": 14
+        },
+        "input_sha256": {
+          "prog_0.hex": "8a244a9950e557b297eff5f9570b0a52de994a0c1a766ffa87c45101decba7bf",
+          "dram_0.bin": "d3897558526084b43581bfabb602632cd3859f9d872ac679daaec537449d1a10"
+        },
+        "numerical_memory_sha256": [
+          {
+            "dram": "f7092679d1105d31849a5643b2e2c264101770fd447433da7bad67b30e769722",
+            "tmem": "31f59fe6cebd78c159e78ad0b677ba98338da960e64a89f8dce2bb450dba60f7"
+          }
+        ],
+        "compiler_sha256": "993c6e981acf10df01d04519b4574e3104e4f30237667b17c0330d1d5bc19ef3",
+        "binary_sha256": "b297d9af319d4c657db845a5b5573779c87d64ca24d1a24c2695db624380d884",
+        "timing_ir_sha256": "4221445a6fa498eeeef3f725bed05b53cbc5e0f0cc06006201d2e71a80cf79e1"
+      },
+      {
+        "mode": "original",
+        "cycles": 2238884.0,
+        "functional_seconds": 1.8296425081789494,
+        "preparation_seconds": 1.2541702706366777,
+        "compile_seconds": 1.1828476916998625,
+        "native_core_seconds": 2.361811504,
+        "native_process_seconds": 2.3656013756990433,
+        "full_lpn_seconds": 6.632261846214533,
+        "cache_hit": false,
+        "ir_bytes": 14327163,
+        "net": {
+          "places": 186,
+          "transitions": 14
+        },
+        "input_sha256": {
+          "prog_0.hex": "8a244a9950e557b297eff5f9570b0a52de994a0c1a766ffa87c45101decba7bf",
+          "dram_0.bin": "d3897558526084b43581bfabb602632cd3859f9d872ac679daaec537449d1a10"
+        },
+        "numerical_memory_sha256": [
+          {
+            "dram": "f7092679d1105d31849a5643b2e2c264101770fd447433da7bad67b30e769722",
+            "tmem": "31f59fe6cebd78c159e78ad0b677ba98338da960e64a89f8dce2bb450dba60f7"
+          }
+        ],
+        "compiler_sha256": "993c6e981acf10df01d04519b4574e3104e4f30237667b17c0330d1d5bc19ef3",
+        "binary_sha256": "b297d9af319d4c657db845a5b5573779c87d64ca24d1a24c2695db624380d884",
+        "timing_ir_sha256": "4221445a6fa498eeeef3f725bed05b53cbc5e0f0cc06006201d2e71a80cf79e1"
+      }
+    ],
+    "reusable": [
+      {
+        "mode": "reusable",
+        "cycles": 2238884.0,
+        "functional_seconds": 1.8566121999174356,
+        "preparation_seconds": 0.33376010693609715,
+        "compile_seconds": 7.529370486736298e-05,
+        "native_core_seconds": 1.412477771,
+        "native_process_seconds": 1.4229210689663887,
+        "full_lpn_seconds": 3.613368669524789,
+        "cache_hit": true,
+        "ir_bytes": 94228,
+        "net": {
+          "transitions": 15,
+          "places": 190,
+          "completion_flag_banks": 129,
+          "command_slots": 32,
+          "matrix_engines_per_slice": 1,
+          "instructions_per_slice": [
+            5811
+          ]
+        },
+        "input_sha256": {
+          "prog_0.hex": "8a244a9950e557b297eff5f9570b0a52de994a0c1a766ffa87c45101decba7bf",
+          "dram_0.bin": "d3897558526084b43581bfabb602632cd3859f9d872ac679daaec537449d1a10"
+        },
+        "numerical_memory_sha256": [
+          {
+            "dram": "f7092679d1105d31849a5643b2e2c264101770fd447433da7bad67b30e769722",
+            "tmem": "31f59fe6cebd78c159e78ad0b677ba98338da960e64a89f8dce2bb450dba60f7"
+          }
+        ],
+        "compiler_sha256": "354171f8add8b10fb6e37fc48855dd88f8736720a0ebe38c4578f7847fd3d117",
+        "binary_sha256": "a798f6ecd3ac0622a4a1b62b2f65197e3f05677f18f08be3513a903e4649c97c",
+        "timing_ir_sha256": "e5d2eeb3a9d539c43d5bea2205fbe2c4c8513a04b24f35f44548f2ef7f785b2d"
+      },
+      {
+        "mode": "reusable",
+        "cycles": 2238884.0,
+        "functional_seconds": 1.852816654369235,
+        "preparation_seconds": 0.33423925191164017,
+        "compile_seconds": 7.532350718975067e-05,
+        "native_core_seconds": 1.410551879,
+        "native_process_seconds": 1.4212079849094152,
+        "full_lpn_seconds": 3.60833921469748,
+        "cache_hit": true,
+        "ir_bytes": 94228,
+        "net": {
+          "transitions": 15,
+          "places": 190,
+          "completion_flag_banks": 129,
+          "command_slots": 32,
+          "matrix_engines_per_slice": 1,
+          "instructions_per_slice": [
+            5811
+          ]
+        },
+        "input_sha256": {
+          "prog_0.hex": "8a244a9950e557b297eff5f9570b0a52de994a0c1a766ffa87c45101decba7bf",
+          "dram_0.bin": "d3897558526084b43581bfabb602632cd3859f9d872ac679daaec537449d1a10"
+        },
+        "numerical_memory_sha256": [
+          {
+            "dram": "f7092679d1105d31849a5643b2e2c264101770fd447433da7bad67b30e769722",
+            "tmem": "31f59fe6cebd78c159e78ad0b677ba98338da960e64a89f8dce2bb450dba60f7"
+          }
+        ],
+        "compiler_sha256": "354171f8add8b10fb6e37fc48855dd88f8736720a0ebe38c4578f7847fd3d117",
+        "binary_sha256": "a798f6ecd3ac0622a4a1b62b2f65197e3f05677f18f08be3513a903e4649c97c",
+        "timing_ir_sha256": "e5d2eeb3a9d539c43d5bea2205fbe2c4c8513a04b24f35f44548f2ef7f785b2d"
+      },
+      {
+        "mode": "reusable",
+        "cycles": 2238884.0,
+        "functional_seconds": 1.839301161468029,
+        "preparation_seconds": 0.332188256084919,
+        "compile_seconds": 7.493235170841217e-05,
+        "native_core_seconds": 1.417875096,
+        "native_process_seconds": 1.4241494461894035,
+        "full_lpn_seconds": 3.59571379609406,
+        "cache_hit": true,
+        "ir_bytes": 94228,
+        "net": {
+          "transitions": 15,
+          "places": 190,
+          "completion_flag_banks": 129,
+          "command_slots": 32,
+          "matrix_engines_per_slice": 1,
+          "instructions_per_slice": [
+            5811
+          ]
+        },
+        "input_sha256": {
+          "prog_0.hex": "8a244a9950e557b297eff5f9570b0a52de994a0c1a766ffa87c45101decba7bf",
+          "dram_0.bin": "d3897558526084b43581bfabb602632cd3859f9d872ac679daaec537449d1a10"
+        },
+        "numerical_memory_sha256": [
+          {
+            "dram": "f7092679d1105d31849a5643b2e2c264101770fd447433da7bad67b30e769722",
+            "tmem": "31f59fe6cebd78c159e78ad0b677ba98338da960e64a89f8dce2bb450dba60f7"
+          }
+        ],
+        "compiler_sha256": "354171f8add8b10fb6e37fc48855dd88f8736720a0ebe38c4578f7847fd3d117",
+        "binary_sha256": "a798f6ecd3ac0622a4a1b62b2f65197e3f05677f18f08be3513a903e4649c97c",
+        "timing_ir_sha256": "e5d2eeb3a9d539c43d5bea2205fbe2c4c8513a04b24f35f44548f2ef7f785b2d"
+      }
+    ]
+  },
+  "seconds_median": {
+    "original": {
+      "functional_seconds": 1.8296425081789494,
+      "preparation_seconds": 1.2524078954011202,
+      "compile_seconds": 1.1886405535042286,
+      "native_core_seconds": 2.361811504,
+      "native_process_seconds": 2.3656013756990433,
+      "full_lpn_seconds": 6.643383888527751
+    },
+    "reusable": {
+      "functional_seconds": 1.852816654369235,
+      "preparation_seconds": 0.33376010693609715,
+      "compile_seconds": 7.529370486736298e-05,
+      "native_core_seconds": 1.412477771,
+      "native_process_seconds": 1.4229210689663887,
+      "full_lpn_seconds": 3.60833921469748
+    }
+  },
+  "full_lpn_path_speedup": 1.8411195547990424,
+  "cycles_and_all_numerical_memory_identical": true,
+  "remaining": "Python/NumPy functional execution and Python metadata construction",
+  "note": "three or more alternating samples after warmup; initial input loading and package imports excluded; concurrent RTL validation",
+  "previously_validated_rtl_same_input": {
+    "position": 71,
+    "phase": "prefill",
+    "rtl_cycles": 2194095,
+    "lpn_cycles": 2238884.0,
+    "relative_cycle_error": 0.020413427859778288,
+    "rtl_core_seconds": 84.753873749,
+    "rtl_process_seconds": 96.5323085039854,
+    "all_dram_and_tmem_bit_exact": true,
+    "identical_input_files": true
+  }
+}

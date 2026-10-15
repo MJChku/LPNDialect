@@ -17,6 +17,8 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union, get_args, get_origin
 
+_jit_active_builder = ContextVar("lpn_jit_active_builder", default=None)
+
 
 _AST_OP_MAP = {
     ast.Add: operator.add,
@@ -688,6 +690,23 @@ class PlaceHandle:
   name: str
 
 
+@dataclass(frozen=True)
+class InputArray:
+  """Named immutable i64 input, with values for Python reference execution."""
+  name: str
+  values: Sequence[int]
+
+  def __post_init__(self):
+    if not isinstance(self.name,str) or not self.name or "\0" in self.name or len(self.name.encode())>1024:
+      raise ValueError("input-array names must be nonempty, at most 1024 UTF-8 bytes, without NUL")
+
+  def __len__(self):
+    return len(self.values)
+
+  def __iter__(self):
+    return iter(self.values)
+
+
 class TransitionBuilder:
   _global_id = 0
   _value_name_re = re.compile(r"%[A-Za-z0-9_$.]+")
@@ -859,6 +878,12 @@ class TransitionBuilder:
             *elements: Union[Value, PlaceHandle, int, float,
                              Sequence[Union[Value, PlaceHandle, int, float]]]
             ) -> Value:
+    if len(elements)==1 and isinstance(elements[0],InputArray):
+      name = self._next_value()
+      literal = "".join(chr(b) if 32<=b<127 and b not in (34,92) else f"\\{b:02X}"
+                        for b in elements[0].name.encode())
+      self._append(f'{name} = lpn.input_array "{literal}" : !lpn.array<i64>')
+      return self._wrap_value(name,"!lpn.array<i64>")
     if len(elements) == 1 and isinstance(elements[0], (list, tuple)):
       elements = tuple(elements[0])
     if not elements:
@@ -1681,7 +1706,11 @@ class NetBuilder:
                       extra_args: Sequence[Any] = ()) -> None:
     executor = TransitionScriptExecutor(fn,
                                         require_builder_arg=require_builder_arg)
-    executor(builder, *extra_args)
+    context = _jit_active_builder.set(builder)
+    try:
+      executor(builder, *extra_args)
+    finally:
+      _jit_active_builder.reset(context)
 
   def _make_transition(self,
                        name: str,
@@ -1797,6 +1826,8 @@ class NetBuilder:
               builder = arg.builder
               break
 
+        if builder is None:
+          builder = _jit_active_builder.get()
         if builder is not None:
           if kwargs:
             raise TypeError("keyword arguments are not supported in JIT helper calls")
@@ -2066,6 +2097,8 @@ class PythonRuntimeAPI:
             *elements: Union[Value, PlaceHandle, int, float,
                              Sequence[Union[Value, PlaceHandle, int, float]]]
             ) -> tuple:
+    if len(elements)==1 and isinstance(elements[0],InputArray):
+      return tuple(elements[0].values)
     if len(elements) == 1 and isinstance(elements[0], (list, tuple)):
       elements = tuple(elements[0])
     return tuple(elements)

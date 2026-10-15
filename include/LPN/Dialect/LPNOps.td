@@ -128,6 +128,19 @@ def ArrayOp : LPN_Op<"array", [Pure]> {
     "$elements attr-dict `:` type($elements) `->` type($array)";
 }
 
+def InputArrayOp : LPN_Op<"input_array", [Pure]> {
+  let summary = "Read an immutable named array bound before native simulation";
+  let description = [{
+    Resolves a named runtime input array. The binding is immutable for the
+    duration of a simulation. Native execution currently accepts i64 elements;
+    the host provides their raw 64-bit representation through the C ABI or a
+    versioned input-table file. A missing binding is an error.
+  }];
+  let arguments = (ins StrAttr:$name);
+  let results = (outs ArrayType:$array);
+  let assemblyFormat = "$name attr-dict `:` type($array)";
+}
+
 def ArrayGetOp : LPN_Op<"array.get", [Pure]> {
   let summary = "Read an element from an SSA array";
 

@@ -16,6 +16,27 @@ from examples.opentpu.workload import load, use_checkout
 class OpenTPUTest(unittest.TestCase):
   tool = None
 
+  def test_reusable_timing_accepts_changed_command_count_without_recompilation(self):
+    if not self.tool:
+      self.skipTest("native compiler not supplied")
+    from examples.opentpu.native_timing import ReusableTiming
+    with tempfile.TemporaryDirectory() as directory:
+      out = Path(directory)
+      runner = ReusableTiming(self.tool,out/"cache",capacity=128)
+      binary = None
+      for jobs in (2,70):
+        gemm(out/"input",n=8,kb=1,jobs=jobs)
+        workload = load(out/"input")
+        expected = CompactOpenTPU(workload).net.python_simulator().run(max_time=100000)
+        prepared = runner.prepare(workload,Timing(),out/"input.tables")
+        self.assertEqual(prepared.run()[0],expected)
+        self.assertEqual(prepared.cache_hit,binary is not None)
+        if binary is not None:
+          self.assertEqual(prepared.binary,binary)
+        binary = prepared.binary
+      with self.assertRaisesRegex(ValueError,"input_capacity"):
+        CompactOpenTPU(workload,input_capacity=4)
+
   def test_multiple_engines_overlap_independent_commands_and_keep_write_hazards(self):
     import copy
     from examples.opentpu.workload import execute

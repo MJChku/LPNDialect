@@ -58,6 +58,14 @@ admission to avoid dependency deadlocks. Use `model.statistics()` to count net
 objects. Hardware concurrency does not imply that host transition functions
 can run concurrently without scheduler synchronization.
 
+For native functional execution and reusable timing binaries, read
+[examples/opentpu/NATIVE_INTERFACE.md](examples/opentpu/NATIVE_INTERFACE.md).
+Use immutable named input tables for the native boundary. The shared-library
+ABI borrows producer buffers for a whole run; keep them alive and serialize
+calls to one runtime. `e2e --reuse-timing` avoids compiling per command stream.
+Full trained-model numerical execution remains Python/NumPy; do not describe
+the native scalar subset or linking demonstration as a complete neural model.
+
 Create places with `net.place(name, initial_tokens=N, observable=True)` as
 needed, and register transitions with `@net.transition`. Transition primitives
 such as `take`, `peek`, `count`, `guard`, `create`, and `emit` are supplied by

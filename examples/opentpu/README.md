@@ -2,6 +2,8 @@
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for component boundaries, explicit
 dependencies, matrix-engine experiments and net-size/CPU-parallelism details.
+See [NATIVE_INTERFACE.md](NATIVE_INTERFACE.md) for runtime input tables,
+compile-once timing, and the C++ functional/timing ABI.
 
 This is the active accelerator modeling target. The upstream is
 [FeSens/openTPU](https://github.com/FeSens/openTPU), pinned at

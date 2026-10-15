@@ -41,10 +41,11 @@ class DRAM:
 
 
 class SystolicArray:
-  def __init__(self,net,prefix,timing,buffer_chunks):
+  def __init__(self,net,prefix,timing,buffer_chunks,initial_buffers=None):
     self.compute = net.place(prefix+"_compute",initial_tokens=1)
     self.commands = net.place(prefix+"_commands",initial_tokens=2)
-    self.buffers = net.place(prefix+"_buffers",initial_tokens=max(1,timing.fifo_chunks//buffer_chunks))
+    self.buffers = net.place(prefix+"_buffers",initial_tokens=
+        max(1,timing.fifo_chunks//buffer_chunks) if initial_buffers is None else initial_buffers)
     self.spec = timing
 
 

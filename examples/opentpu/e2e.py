@@ -50,6 +50,7 @@ class CheckedBackend:
     self.cfg,self.options = cfg,options
     self.drams = [np.asarray(im,np.uint8).copy() for im in images]
     self.records = []
+    self.timing_runner = None
 
   def write(self,s,addr,data):
     import numpy as np
@@ -75,18 +76,28 @@ class CheckedBackend:
     front = time.perf_counter()-before
     timing = Timing(batch_rows=self.options.batch_rows,
                     dram_bytes_per_cycle=min(128,self.cfg.D))
-    before = time.perf_counter()
-    model = CompactOpenTPU(w,timing)
-    ir,binary = current/"model.mlir",current/"model.native"
-    ir.write_text(model.build())
-    build = time.perf_counter()-before
-    before = time.perf_counter()
-    result = subprocess.run([str(self.options.lpn_compiler),str(ir),"-o",str(binary)],
-                            capture_output=True,text=True)
-    (current/"compile.log").write_text(result.stdout+result.stderr)
-    result.check_returncode()
-    compile_seconds = time.perf_counter()-before
-    cycles,wall,process,log = native_observation(binary)
+    prepared = None
+    if self.options.reuse_timing:
+      from .native_timing import ReusableTiming
+      if self.timing_runner is None:
+        self.timing_runner = ReusableTiming(self.options.lpn_compiler,out/"timing-cache",
+            capacity=self.options.command_capacity)
+      prepared = self.timing_runner.prepare(w,timing,current/"timing.tables")
+      build,compile_seconds = prepared.preparation_seconds,prepared.compile_seconds
+      cycles,wall,process,log = prepared.run()
+    else:
+      before = time.perf_counter()
+      model = CompactOpenTPU(w,timing)
+      ir,binary = current/"model.mlir",current/"model.native"
+      ir.write_text(model.build())
+      build = time.perf_counter()-before
+      before = time.perf_counter()
+      result = subprocess.run([str(self.options.lpn_compiler),str(ir),"-o",str(binary)],
+                              capture_output=True,text=True)
+      (current/"compile.log").write_text(result.stdout+result.stderr)
+      result.check_returncode()
+      compile_seconds = time.perf_counter()-before
+      cycles,wall,process,log = native_observation(binary)
     (current/"lpn.log").write_text(log)
     print(json.dumps({"stage":"rtl","step":len(self.records),"predicted_cycles":cycles,
                       "frontend_seconds":front,"compile_seconds":compile_seconds}),flush=True)
@@ -143,6 +154,9 @@ class CheckedBackend:
         baseline_binary_sha256=digest(exe),timing=asdict(timing),
         numerical_validation="independent ISA versus RTL; INT8 checkpoint execution")
     record["core_speedup"] = record["rtl_core_seconds"]/wall
+    if prepared is not None:
+      record.update(timing_cache_hit=prepared.cache_hit,timing_net=prepared.statistics,
+          timing_ir_bytes=prepared.ir_bytes)
     record["single_use_lpn_seconds"] = front+build+compile_seconds+process
     if not record["accuracy_within_5_percent"]:
       atomic_json(out/"failed-step.json",record)
@@ -199,6 +213,9 @@ def main():
   p.add_argument("--rtl-timeout",type=float,default=28800)
   p.add_argument("--resume",action="store_true")
   p.add_argument("--max-steps",type=int,help="checkpoint and stop after this many total input tokens")
+  p.add_argument("--reuse-timing",action="store_true",
+      help="bind runtime command tables to a cached timing architecture")
+  p.add_argument("--command-capacity",type=int,default=8192)
   a = p.parse_args()
   use_checkout(a.opentpu_root)
   import numpy as np
@@ -212,7 +229,7 @@ def main():
   a.output.mkdir(parents=True,exist_ok=True)
   lock = (a.output/"run.lock").open("a")
   fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
-  if a.tokens<1 or a.cap<1 or a.depth not in (64,128):
+  if a.tokens<1 or a.cap<1 or a.command_capacity<1 or a.depth not in (64,128):
     p.error("positive tokens/cap and depth 64 or 128 required")
   rtlsim.VFLAGS[rtlsim.VFLAGS.index("-j")+1] = "16"
   rtlsim.VFLAGS += ["-CFLAGS","-O3"]
@@ -231,10 +248,13 @@ def main():
       config=asdict(cfg),prompt=a.prompt,prompt_ids=prompt,cap=a.cap,batch_rows=a.batch_rows,
       model_directory=str(a.model_dir),verilator=rtlsim.verilator_version(),verilator_flags=rtlsim.VFLAGS)
   identity["lpn_source_sha256"] = {name:digest(Path(__file__).with_name(name))
-                                  for name in ("e2e.py","compact.py","components.py","model.py","workload.py")}
+                                  for name in ("e2e.py","compact.py","components.py","model.py","workload.py","native_timing.py")}
   identity["lpn_compiler_sha256"] = digest(a.lpn_compiler)
   identity["lpn_runtime_sha256"] = digest(a.lpn_compiler.parent/"libLPNNativeRuntime.a")
   identity["lpn_frontend_sha256"] = digest(Path(__file__).resolve().parents[2]/"lpnlang_mlir/__init__.py")
+  identity["native_inputs_sha256"] = digest(Path(__file__).resolve().parents[2]/"lpnlang_mlir/native_inputs.py")
+  identity["reuse_timing"] = a.reuse_timing
+  identity["command_capacity"] = a.command_capacity
   identity["numpy_version"] = np.__version__
   identity["torch_version"] = torch.__version__
   identity["rtl_uarch"] = rtlsim.UARCH

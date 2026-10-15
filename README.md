@@ -9,6 +9,11 @@ executable runs compiled transitions without an MLIR interpreter.
 Agents working on models or the compiler should follow [SKILL.md](SKILL.md)
 for build commands, modeling semantics, and validation workflows.
 
+For native functional prepasses, [lpnfunc](lpnfunc/README.md) compiles a typed
+Python subset to a native library. The [functional/timing example](examples/native_functional/README.md)
+links both stages in C++. [Runtime input tables](examples/opentpu/NATIVE_INTERFACE.md)
+let one compiled openTPU timing architecture consume changing command streams.
+
 ## Model an all-to-all network
 
 From the repository root:

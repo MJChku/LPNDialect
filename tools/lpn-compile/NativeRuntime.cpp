@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <deque>
+#include <fstream>
 #include <limits>
 #include <memory>
 #include <queue>
@@ -59,6 +60,10 @@ void release(Token *token) {
 
 struct Array {
   std::vector<uint64_t> elements;
+  const uint64_t *borrowed = nullptr;
+  size_t borrowedSize = 0;
+  size_t size() const { return borrowed ? borrowedSize : elements.size(); }
+  const uint64_t *data() const { return borrowed ? borrowed : elements.data(); }
 };
 
 struct Place {
@@ -194,6 +199,8 @@ struct Transaction {
 std::vector<std::unique_ptr<Place>> places;
 std::unordered_map<const uint64_t *, std::unique_ptr<Array>> staticArrays;
 std::unordered_map<const uint64_t *, std::unique_ptr<Array>> staticPlaceArrays;
+std::unordered_map<std::string, std::unique_ptr<Array>> inputArrays;
+bool inRun = false;
 Transaction *active = nullptr;
 double currentTime = 0.0;
 uint64_t guardChecks = 0, bodyExecutions = 0, rollbacks = 0;
@@ -218,6 +225,48 @@ Place &placeAt(int64_t index) {
 void commitReady() {
   for (auto &place : places)
     place->commit(currentTime);
+}
+
+// Portable little-endian table format; producers need no model-specific API.
+// Header: LPNTBL1\0, u64 table count. Each table: u64 name bytes, u64 element
+// count, UTF-8 name bytes, then raw little-endian u64 elements.
+void loadInputArrays(const char *path) {
+  std::ifstream stream(path, std::ios::binary | std::ios::ate);
+  if (!stream) invalid("cannot open input-table file");
+  auto end = stream.tellg();
+  if (end < 16 || end > (int64_t(1) << 30)) invalid("invalid input-table file size");
+  uint64_t remaining = static_cast<uint64_t>(end);
+  stream.seekg(0);
+  auto read = [&](char *output, size_t count) {
+    if (count > remaining || !stream.read(output, count)) invalid("truncated input-table file");
+    remaining -= count;
+  };
+  auto u64 = [&]() {
+    unsigned char bytes[8];
+    read(reinterpret_cast<char *>(bytes), 8);
+    uint64_t value = 0;
+    for (int n = 0; n < 8; ++n) value |= uint64_t(bytes[n]) << (8*n);
+    return value;
+  };
+  char magic[8]; read(magic, 8);
+  if (std::memcmp(magic, "LPNTBL1\0", 8)) invalid("unsupported input-table format");
+  uint64_t tables = u64();
+  if (tables > 10000) invalid("too many input tables");
+  inputArrays.clear();
+  for (uint64_t n = 0; n < tables; ++n) {
+    uint64_t nameSize = u64(), count = u64();
+    if (!nameSize || nameSize > 1024 || nameSize > remaining)
+      invalid("invalid input-table name length");
+    std::string name(nameSize, '\0'); read(name.data(), nameSize);
+    if (name.find('\0') != std::string::npos || inputArrays.count(name))
+      invalid("duplicate or invalid input-table name");
+    if (count > remaining / 8) invalid("truncated input-table array");
+    auto array = std::make_unique<Array>();
+    array->elements.reserve(count);
+    for (uint64_t k = 0; k < count; ++k) array->elements.push_back(u64());
+    inputArrays.emplace(name, std::move(array));
+  }
+  if (remaining) invalid("trailing bytes in input-table file");
 }
 
 bool tryFire(void (*transition)(), bool (*enabled)()) {
@@ -269,6 +318,30 @@ double nextScheduledTime() {
 } // namespace
 
 extern "C" {
+
+int lpn_bind_input_array(const char *name, int64_t size, const uint64_t *values) {
+  if (inRun || !name || !*name || std::strlen(name)>1024 || size<0 || (size && !values))
+    return 2;
+  auto array = std::make_unique<Array>();
+  array->borrowed = values;
+  array->borrowedSize = static_cast<size_t>(size);
+  inputArrays[name] = std::move(array);
+  return 0;
+}
+
+int lpn_clear_input_arrays() {
+  if (inRun) return 2;
+  inputArrays.clear();
+  return 0;
+}
+
+void *lpn_input_array(const char *name) {
+  auto found = inputArrays.find(name);
+  if (found==inputArrays.end()) invalid("missing named input-array binding");
+  return found->second.get();
+}
+
+double lpn_simulated_time() { return currentTime; }
 
 void *lpn_place(int64_t index) { return &placeAt(index); }
 
@@ -388,14 +461,19 @@ void *lpn_array_alloc(int64_t size, uint64_t fill) {
 }
 
 uint64_t lpn_array_get(void *rawArray, int64_t index) {
-  auto &elements = static_cast<Array *>(rawArray)->elements;
-  if (index < 0 || static_cast<size_t>(index) >= elements.size())
+  auto &array = *static_cast<Array *>(rawArray);
+  if (index < 0 || static_cast<size_t>(index) >= array.size())
     invalid("array.get index out of range");
-  return elements[static_cast<size_t>(index)];
+  return array.data()[static_cast<size_t>(index)];
 }
 
 void *lpn_array_set(void *rawArray, int64_t index, uint64_t value) {
   Array copy = *static_cast<Array *>(rawArray);
+  if (copy.borrowed) {
+    copy.elements.assign(copy.borrowed, copy.borrowed+copy.borrowedSize);
+    copy.borrowed = nullptr;
+    copy.borrowedSize = 0;
+  }
   if (index < 0 || static_cast<size_t>(index) >= copy.elements.size())
     invalid("array.set index out of range");
   copy.elements[static_cast<size_t>(index)] = value;
@@ -403,7 +481,7 @@ void *lpn_array_set(void *rawArray, int64_t index, uint64_t value) {
 }
 
 int64_t lpn_array_len(void *rawArray) {
-  return static_cast<int64_t>(static_cast<Array *>(rawArray)->elements.size());
+  return static_cast<int64_t>(static_cast<Array *>(rawArray)->size());
 }
 
 int lpn_run(int argc, char **argv, int64_t placeCount, const char **placeNames,
@@ -415,6 +493,7 @@ int lpn_run(int argc, char **argv, int64_t placeCount, const char **placeNames,
   bool printTokens = false;
   bool printStats = false;
   bool trace = false;
+  const char *inputPath = nullptr;
   std::string wallStartName,wallEndName;
   for (int idx = 1; idx < argc; ++idx) {
     if (std::strncmp(argv[idx], "--max-time=", 11) == 0) {
@@ -428,6 +507,9 @@ int lpn_run(int argc, char **argv, int64_t placeCount, const char **placeNames,
       printStats = true;
     } else if (std::strcmp(argv[idx], "--trace") == 0) {
       trace = true;
+    } else if (std::strncmp(argv[idx], "--inputs=", 9) == 0) {
+      if (inputPath) invalid("duplicate --inputs option");
+      inputPath = argv[idx]+9;
     } else if (std::strncmp(argv[idx],"--wall-start=",13) == 0) {
       wallStartName = argv[idx]+13;
     } else if (std::strncmp(argv[idx],"--wall-end=",11) == 0) {
@@ -435,10 +517,13 @@ int lpn_run(int argc, char **argv, int64_t placeCount, const char **placeNames,
     } else {
       std::fprintf(stderr,
                    "Usage: %s [--max-time=NUMBER] [--tokens] [--stats] [--trace] "
-                   "[--wall-start=TRANSITION --wall-end=TRANSITION]\n", argv[0]);
+                   "[--wall-start=TRANSITION --wall-end=TRANSITION] [--inputs=FILE]\n", argv[0]);
       return 2;
     }
   }
+  if (inRun) invalid("nested/concurrent simulation is unsupported");
+  if (inputPath) loadInputArrays(inputPath);
+  inRun = true;
   places.clear();
   staticArrays.clear();
   staticPlaceArrays.clear();
@@ -529,6 +614,7 @@ int lpn_run(int argc, char **argv, int64_t placeCount, const char **placeNames,
       for (uint64_t n = 0; n < batch.count; ++n)
         printToken(batch.token);
   }
+  inRun = false;
   return 0;
 }
 

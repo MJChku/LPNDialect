@@ -6,6 +6,7 @@ than transition code. The existing event-driven LPN scheduler is unchanged.
 
 from bisect import bisect_left
 from math import ceil, gcd
+from lpnlang_mlir import InputArray
 
 from .model import OpenTPU, DRAM
 from .components import CommandInterface, CommandTiming, ExecutionUnit, MatrixEngine
@@ -88,9 +89,20 @@ def dependencies(commands,I,W,matrix_engines=1):
 class CompactOpenTPU(OpenTPU):
   supports_multiple_matrix_engines = True
 
-  def __init__(self,workload,timing=None):
+  def __init__(self,workload,timing=None,input_capacity=None):
+    if input_capacity is not None and (not isinstance(input_capacity,int) or
+        input_capacity<max(len(c) for c in workload.commands)):
+      raise ValueError("input_capacity must cover every slice's command count")
+    self.input_capacity = input_capacity
+    self.input_tables = {}
     self.components = {}
     super().__init__(workload,timing)
+
+  def _table(self,name,values):
+    if self.input_capacity is None:
+      return values
+    self.input_tables[name] = values
+    return InputArray(name,values)
 
   def statistics(self):
     """Counts of declared net objects; helpers and instructions are not transitions."""
@@ -108,7 +120,7 @@ class CompactOpenTPU(OpenTPU):
     if not ncommands:
       raise ValueError("empty command trace")
     memory = DRAM(net,prefix+"_dram",t)
-    nsig = ncommands
+    nsig = self.input_capacity or ncommands
     # Immutable flag banks replace thousands of individual completion places.
     # A bank latch is always present; delayed completion messages update it
     # atomically. This keeps the scheduler's place scans bounded and retains
@@ -139,7 +151,7 @@ class CompactOpenTPU(OpenTPU):
     kinds,latencies,services,port_ids = [],[],[],[]
     batches,chunkses,scale_flags,kbs,ns,row_services,tails = [],[],[],[],[],[],[]
     barriers,dispatch_delays,pipeline_delays = [],[],[]
-    last_register = ncommands
+    last_register = nsig
     for idx,c in enumerate(commands):
       ins,w = c.instruction,c.instruction.w
       u = W.UNIT.get(ins.op,5)
@@ -173,28 +185,40 @@ class CompactOpenTPU(OpenTPU):
       ns.append(n)
       row_services.append(row_service)
       tails.append(tail)
-    parameters = CommandTiming(latencies,services,port_ids,batches,chunkses,
-        scale_flags,kbs,ns,row_services,tails)
+    parameter_values = [latencies,services,port_ids,batches,chunkses,scale_flags,kbs,ns,row_services,tails]
+    parameters = CommandTiming(*(self._table(prefix+"_"+name,values)
+        for name,values in zip(CommandTiming.__dataclass_fields__,parameter_values)))
+    metadata = self._table(prefix+"_metadata",[ncommands,
+        max(1,t.fifo_chunks//max(b*c for b,c in zip(batches,chunkses)))])
 
     def csr(rows):
       offsets,flat = [0],[]
       for row in rows:
         flat.extend(row)
         offsets.append(len(flat))
-      return offsets,flat or [ncommands]
+      return offsets,flat or [nsig]
 
     # MM starts on DRAM dependencies; TMEM/ACT dependencies gate its compute.
     # Prefetch and compute ordering belong to each MatrixEngine, not this interface.
     starts = [dram_deps[i] if kinds[i]==W.U_MXU else deps[i] for i in range(ncommands)]
     offsets,indices = csr(starts)
     compute_offsets,compute_indices = csr(deps)
+    begins = self._table(prefix+"_starts_begin",offsets[:-1])
+    ends = self._table(prefix+"_starts_end",offsets[1:])
+    indices = self._table(prefix+"_starts_indices",indices)
+    compute_offsets = self._table(prefix+"_compute_offsets",compute_offsets)
+    compute_indices = self._table(prefix+"_compute_indices",compute_indices)
+    kinds = self._table(prefix+"_kinds",kinds)
+    barriers = self._table(prefix+"_register_barriers",barriers)
+    dispatch_delays = self._table(prefix+"_dispatch_delays",dispatch_delays)
+    pipeline_delays = self._table(prefix+"_pipeline_delays",pipeline_delays)
 
     @net.func(name=prefix+"_select_ready",args=("i64",),results=("i64",))
     def select_ready(unit):
       slot_places = array(slots)
-      kind,begin,end = array(kinds),array(offsets[:-1]),array(offsets[1:])
+      kind,begin,end = array(kinds),array(begins),array(ends)
       dep_indices = array(indices)
-      selected,oldest = subi(0,1),addi(ncommands,1)
+      selected,oldest = subi(0,1),addi(array(metadata)[0],1)
       selected_enabled = const_i64(0)==0
       for s in range(t.window):
         token = peek(slot_places[s])
@@ -224,9 +248,9 @@ class CompactOpenTPU(OpenTPU):
       guard(count(cursor)>0)
       guard(count(window)>0)
       idx = peek(cursor).get("id")
-      guard(idx<ncommands)
+      guard(idx<array(metadata)[0])
       bs,ps = array(barriers),array(pipeline_delays)
-      barrier = select(bs[idx]==ncommands,nsig,bs[idx])
+      barrier = bs[idx]
       guard(is_done(barrier))
       take(cursor)
       token = take(window).set("id",idx).set("active",1)
@@ -247,7 +271,9 @@ class CompactOpenTPU(OpenTPU):
     units = [ExecutionUnit(net,prefix+f"_unit_{u}",u,interface,parameters,memory)
              for u in (W.U_DMA,W.U_Q,W.U_VPU,W.U_COLL,5)]
     matrices = [MatrixEngine(net,prefix+f"_mxu_{engine}",cfg,t,interface,
-        parameters,memory,W.U_MXU) for engine in range(t.matrix_engines)]
+        parameters,memory,W.U_MXU,
+        buffer_metadata=metadata if self.input_capacity is not None else None)
+        for engine in range(t.matrix_engines)]
     self.components[sid] = {"memory":memory,"units":units,"matrix_engines":matrices}
 
     @net.transition(prefix+"_mark_done")
@@ -259,7 +285,7 @@ class CompactOpenTPU(OpenTPU):
       take(signals)
       token = take(bank)
       emit(bank,token.set("bits",ori(token.get("bits"),shli(1,remi(idx,64)))))
-      if idx==ncommands-1:
+      if idx==array(metadata)[0]-1:
         emit(finished,create())
 
     self.slice_done.append(finished)

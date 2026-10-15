@@ -24,7 +24,7 @@ inline bool isReadOnlyGuardFunction(func::FuncOp function,
       return;
     }
     if (isa<func::FuncOp,func::ReturnOp,scf::ForOp,scf::IfOp,scf::YieldOp,
-            PlaceRefOp,CountOp,PeekOp,ArrayOp,ArrayGetOp,ArraySetOp,ArrayLenOp,
+            PlaceRefOp,CountOp,PeekOp,ArrayOp,InputArrayOp,ArrayGetOp,ArraySetOp,ArrayLenOp,
             ArrayAllocOp,TokenCreateOp,TokenCloneOp,TokenGetOp,TokenSetOp,
             KeyLiteralOp,KeyRegOp>(op))
       return;

@@ -1,7 +1,34 @@
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
 set(LPN_OPENTPU_ROOT "" CACHE PATH "Optional pinned FeSens/openTPU checkout for integration tests")
+add_test(
+  NAME lpn-functional
+  COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${PROJECT_SOURCE_DIR}
+          PYTHONDONTWRITEBYTECODE=1 ${Python3_EXECUTABLE}
+          ${CMAKE_CURRENT_SOURCE_DIR}/test_functional.py
+)
+add_test(
+  NAME lpn-functional-bridge
+  COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${PROJECT_SOURCE_DIR}
+          PYTHONDONTWRITEBYTECODE=1 ${Python3_EXECUTABLE}
+          ${CMAKE_CURRENT_SOURCE_DIR}/test_functional_bridge.py
+          --tool $<TARGET_FILE:lpn-compile>
+)
+add_test(
+  NAME lpn-native-inputs
+  COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${PROJECT_SOURCE_DIR}
+          PYTHONDONTWRITEBYTECODE=1 ${Python3_EXECUTABLE}
+          ${CMAKE_CURRENT_SOURCE_DIR}/test_native_inputs.py
+          --tool $<TARGET_FILE:lpn-compile>
+)
 if (LPN_OPENTPU_ROOT)
+  add_test(
+    NAME lpn-native-functional-opentpu
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${PROJECT_SOURCE_DIR}
+            PYTHONDONTWRITEBYTECODE=1 ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/test_native_functional_opentpu.py
+            --opentpu-root ${LPN_OPENTPU_ROOT}
+  )
   add_test(
     NAME lpn-opentpu
     COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${PROJECT_SOURCE_DIR}

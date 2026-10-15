@@ -98,10 +98,12 @@ def mlp(out,m=4,h=1024,f=1024,tmem_words=65536):
       "float_reference_relative_error":relative,"macs":3*m*h*f}
 
 
-def native_observation(binary,trace=False):
+def native_observation(binary,trace=False,inputs=None):
   args = [str(binary),"--stats","--wall-start=begin","--wall-end=complete","--max-time=1000000000000"]
   if trace:
     args.append("--trace")
+  if inputs is not None:
+    args.append("--inputs="+str(inputs))
   before = time.perf_counter()
   r = subprocess.run(args,check=True,capture_output=True,text=True)
   process = time.perf_counter()-before

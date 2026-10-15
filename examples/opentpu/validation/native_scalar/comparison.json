@@ -1,0 +1,46 @@
+{
+  "workload": "data-dependent hardware loop, register-relative LD/ST, 16 words/transfer",
+  "scope": "scalar/control prepass only; no matrix, quantizer, VPU, LPN, or RTL timing",
+  "opentpu_revision": "f237dab2f196855a59a083b1454786df8f01291f",
+  "jobs": 8000,
+  "dynamic_instructions": 32005,
+  "numerical_memory_register_and_metadata_match": true,
+  "program_sha256": "73471faa443ad8467a5675e5d2494df65cc57e586fbcb26dbeff090eb222c002",
+  "image_sha256": "60d1d88e33bf44a64fa20467954875287f1f8ff3c8e98995d4c6866ef938adff",
+  "host": "Linux-6.9.0-0-generic-x86_64-with-glibc2.39",
+  "python": "3.12.3",
+  "numpy": "2.5.4",
+  "compile_or_cache_load_seconds": 0.4873611815273762,
+  "compile_cache_hit": false,
+  "seconds_samples": {
+    "python_prepass": [
+      1.094397872686386,
+      1.0930780805647373,
+      1.0945061556994915,
+      1.0907141715288162,
+      1.0899715535342693
+    ],
+    "native_prepass_with_python_adapter": [
+      0.3764692693948746,
+      0.37348735705018044,
+      0.37013139948248863,
+      0.37111089937388897,
+      0.36953761614859104
+    ],
+    "native_kernel_only": [
+      0.0009333398193120956,
+      0.000937536358833313,
+      0.0009317267686128616,
+      0.0009399093687534332,
+      0.0009268168359994888
+    ]
+  },
+  "seconds_median": {
+    "python_prepass": 1.0930780805647373,
+    "native_prepass_with_python_adapter": 0.37111089937388897,
+    "native_kernel_only": 0.0009333398193120956
+  },
+  "prepass_with_adapter_speedup": 2.945421658078214,
+  "kernel_only_vs_python_prepass_ratio": 1171.1469477112573,
+  "raw_kernel_excludes": "buffer allocation/reset, instruction assembly, trace adaptation and compilation"
+}

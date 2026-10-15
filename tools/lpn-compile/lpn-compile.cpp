@@ -175,6 +175,11 @@ private:
     }
     arrayCreateFn = runtime("lpn_array_create", ptr, {i64, ptr});
     arrayStaticFn = runtime("lpn_array_static", ptr, {i64, ptr});
+    inputArrayFn = runtime("lpn_input_array", ptr, {ptr});
+    auto *inputLookup = llvm::cast<llvm::Function>(inputArrayFn.getCallee());
+    inputLookup->setOnlyReadsMemory();
+    inputLookup->setDoesNotThrow();
+    inputLookup->addFnAttr(llvm::Attribute::WillReturn);
     arrayPlacesStaticFn = runtime("lpn_array_places_static", ptr, {i64, ptr});
     arrayAllocFn = runtime("lpn_array_alloc", ptr, {i64, i64});
     arrayGetFn = runtime("lpn_array_get", i64, {ptr, i64});
@@ -393,6 +398,12 @@ private:
       llvm::Value *key = value(get.getKey());
       put(get.getResult(), ir.CreateCall(getFn,
           {value(get.getToken()), keyPart(key, 0), keyPart(key, 1)}));
+      return;
+    }
+    if (auto input = dyn_cast<InputArrayOp>(&op)) {
+      if (!cast<ArrayType>(input.getArray().getType()).getElementType().isInteger(64))
+        fail("native input arrays require i64 elements");
+      put(input.getArray(), ir.CreateCall(inputArrayFn, {stringPointer(input.getName().str())}));
       return;
     }
     if (auto array = dyn_cast<ArrayOp>(&op)) {
@@ -712,7 +723,7 @@ private:
   void emitMain() {
     auto *type = llvm::FunctionType::get(i32, {i32, ptr}, false);
     auto *main = llvm::Function::Create(type, llvm::GlobalValue::ExternalLinkage,
-                                        "main", module.get());
+                                        "lpn_simulate", module.get());
     ir.SetInsertPoint(llvm::BasicBlock::Create(context, "entry", main));
     std::vector<llvm::Constant *> nameConstants;
     std::vector<llvm::Constant *> initConstants;
@@ -760,6 +771,13 @@ private:
          integer(transitions.size()), transitionArray, enabledArray, transitionNameArray,
          integer(literalConstants.size()), literalArray});
     ir.CreateRet(status);
+    auto *entry = llvm::Function::Create(type, llvm::GlobalValue::ExternalLinkage,
+                                         "main", module.get());
+    ir.SetInsertPoint(llvm::BasicBlock::Create(context, "entry", entry));
+    auto entryArgs = entry->arg_begin();
+    llvm::Value *entryArgc = &*entryArgs++;
+    llvm::Value *entryArgv = &*entryArgs;
+    ir.CreateRet(ir.CreateCall(main, {entryArgc, entryArgv}));
   }
 
   llvm::LLVMContext context;
@@ -769,7 +787,7 @@ private:
   llvm::FunctionCallee placeFn, takeFn, emitFn, countFn, createFn, cloneFn;
   llvm::FunctionCallee peekFn, peekReadOnlyFn, guardFn;
   llvm::FunctionCallee setFn, getFn, arrayCreateFn, arrayAllocFn, arrayGetFn;
-  llvm::FunctionCallee arrayStaticFn, arrayPlacesStaticFn;
+  llvm::FunctionCallee arrayStaticFn, arrayPlacesStaticFn, inputArrayFn;
   llvm::FunctionCallee arraySetFn, arrayLenFn, checkStepFn, runFn;
   llvm::DenseMap<mlir::Value, llvm::Value *> values;
   std::map<std::string, int64_t> literalIds;
@@ -788,8 +806,9 @@ private:
 } // namespace
 
 int main(int argc, char **argv) {
-  if (argc != 4 || std::string(argv[2]) != "-o") {
-    llvm::errs() << "Usage: lpn-compile input.mlir -o output-binary\n";
+  bool shared = argc == 5 && std::string(argv[4]) == "--shared";
+  if ((argc != 4 && !shared) || std::string(argv[2]) != "-o") {
+    llvm::errs() << "Usage: lpn-compile input.mlir -o output [--shared]\n";
     return 2;
   }
   mlir::DialectRegistry registry;
@@ -833,12 +852,12 @@ int main(int argc, char **argv) {
     if (llvm::sys::ExecuteAndWait(*optimizer, optimizeArgs) != 0)
       throw std::runtime_error("LLVM optimization failed");
     llvm::SmallVector<llvm::StringRef> codegenArgs{
-        *llc, "-O3", "-filetype=obj", llvmPath, "-o", objectPath};
+        *llc, "-O3", "-relocation-model=pic", "-filetype=obj", llvmPath, "-o", objectPath};
     int codegenStatus = llvm::sys::ExecuteAndWait(*llc, codegenArgs);
     if (codegenStatus != 0)
       throw std::runtime_error("LLVM object generation failed");
     llvm::SmallVector<llvm::StringRef> linkArgs{
-        *linker, objectPath, LPN_NATIVE_RUNTIME_PATH, "-O3", "-no-pie",
+        *linker, objectPath, LPN_NATIVE_RUNTIME_PATH, "-O3", shared ? "-shared" : "-no-pie",
         "-o", argv[3]};
     int linkStatus = llvm::sys::ExecuteAndWait(*linker, linkArgs);
     llvm::sys::fs::remove(llvmPath);

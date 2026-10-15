@@ -1,4 +1,5 @@
 add_library(LPNNativeRuntime STATIC NativeRuntime.cpp)
+set_target_properties(LPNNativeRuntime PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_features(LPNNativeRuntime PRIVATE cxx_std_17)
 
 add_llvm_executable(lpn-compile PARTIAL_SOURCES_INTENDED lpn-compile.cpp)

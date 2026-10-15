@@ -76,6 +76,13 @@ and 28 remaining queue/resource/control places. A second engine adds three
 transitions and six places, giving 17 transitions and 157 places for that trace.
 Counts grow with slice count, command-window size and completion-flag banks.
 
+The optional [reusable timing interface](NATIVE_INTERFACE.md) fixes a command
+capacity instead of sizing flags for one stream. With capacity 8192, one
+engine uses 15 transitions and 190 places: 129 flag banks, 32 command slots,
+and 29 other places. Its extra transition/place initializes buffer credits
+from runtime metadata once per simulation. This extra capacity allows changing
+command counts without recompiling.
+
 On that same frozen trained-model step, both binaries predict 2,238,884 cycles.
 Three alternating samples after warmup measured median native timing time
 2.367 s before and 1.244 s after the refactor, a 1.90x improvement. This is
