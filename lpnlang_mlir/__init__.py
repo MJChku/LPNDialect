@@ -1083,6 +1083,24 @@ class TransitionBuilder:
     self._append(f"{name} = arith.xori {lhs_val}, {rhs_val} : {typ}")
     return self._wrap_value(name, typ)
 
+  def andi(self, lhs, rhs, *, typ="i64") -> Value:
+    lhs_val,rhs_val = self._coerce_value(lhs,typ),self._coerce_value(rhs,typ)
+    name = self._next_value()
+    self._append(f"{name} = arith.andi {lhs_val}, {rhs_val} : {typ}")
+    return self._wrap_value(name,typ)
+
+  def ori(self, lhs, rhs, *, typ="i64") -> Value:
+    lhs_val,rhs_val = self._coerce_value(lhs,typ),self._coerce_value(rhs,typ)
+    name = self._next_value()
+    self._append(f"{name} = arith.ori {lhs_val}, {rhs_val} : {typ}")
+    return self._wrap_value(name,typ)
+
+  def shli(self, lhs, rhs, *, typ="i64") -> Value:
+    lhs_val,rhs_val = self._coerce_value(lhs,typ),self._coerce_value(rhs,typ)
+    name = self._next_value()
+    self._append(f"{name} = arith.shli {lhs_val}, {rhs_val} : {typ}")
+    return self._wrap_value(name,typ)
+
   def addf(self,
            lhs: Union[Value, float],
            rhs: Union[Value, float],
@@ -1613,7 +1631,7 @@ class NetBuilder:
       if array_match:
         inner = self._normalize_type_spec(array_match.group(1))
         return f"!lpn.array<{inner}>"
-      if cleaned.startswith("!lpn") or cleaned in ("i64", "index", "f64"):
+      if cleaned.startswith("!lpn") or cleaned in ("i1", "i64", "index", "f64"):
         return cleaned
       alias_value = NetBuilder._TYPE_ALIASES.get(alias_key)
       if alias_value:
@@ -2129,6 +2147,21 @@ class PythonRuntimeAPI:
 
   def xori(self, lhs: int, rhs: int, *, typ: str = "i64") -> int:
     return int(lhs) ^ int(rhs)
+
+  def andi(self, lhs: int, rhs: int, *, typ: str = "i64") -> int:
+    result = int(lhs)&int(rhs)
+    return bool(result) if typ=="i1" else _to_signed_i64(result)
+
+  def ori(self, lhs: int, rhs: int, *, typ: str = "i64") -> int:
+    result = int(lhs)|int(rhs)
+    return bool(result) if typ=="i1" else _to_signed_i64(result)
+
+  def shli(self, lhs: int, rhs: int, *, typ: str = "i64") -> int:
+    width = 1 if typ=="i1" else 64
+    if not 0<=int(rhs)<width:
+      raise ValueError("shift amount must be smaller than the integer width")
+    result = int(lhs)<<int(rhs)
+    return bool(result&1) if typ=="i1" else _to_signed_i64(result)
 
   def addf(self, lhs: float, rhs: float, *, typ: str = "f64") -> float:
     return float(lhs) + float(rhs)

@@ -1,4 +1,5 @@
 #pragma once
+#include "LPN/Analysis/GuardHelpers.h"
 
 // Executable enabling predicates are separate from reduction's take-ID paths:
 // repeated constant takes require a count, not merely an operation-site ID.
@@ -19,9 +20,10 @@ public:
         plan.lastManualGuard = &op;
       }
       op.walk([&](mlir::Operation *nested) {
-        if (mlir::isa<mlir::lpn::TakeOp, mlir::lpn::EmitOp,
-                      mlir::func::CallOp>(nested))
+        if (mlir::isa<mlir::lpn::TakeOp, mlir::lpn::EmitOp>(nested))
           effect = true;
+        if (auto call = mlir::dyn_cast<mlir::func::CallOp>(nested))
+          effect |= !mlir::lpn::isReadOnlyGuardHelper(call);
         if (mlir::isa<mlir::lpn::GuardOp>(nested) && nested != &op)
           reject("manual guards must be top-level");
       });

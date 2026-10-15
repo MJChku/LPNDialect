@@ -10,10 +10,39 @@ from examples.network_net import create_network_net
 from lpnlang_mlir import NetBuilder
 from test_native_compiler import (build_conditional_take_net, build_priority_net,
                                  build_blocked_guard_net)
+from test_native_compiler import build_read_only_helper_guard_net
+from test_native_compiler import build_bitmap_net
 
 
 class GuardRejectionTest(unittest.TestCase):
   tool = ""
+
+  def test_read_only_helper_predicate_is_preserved(self):
+    result = self.synthesize(build_read_only_helper_guard_net(1))
+    self.assertEqual(result.returncode,0,result.stderr)
+    self.assertIn('lpn.guard_mode = "manual"',result.stdout)
+
+  def test_cpp_interpreter_bitmap_high_bit(self):
+    result = self.synthesize(build_bitmap_net(),("--lpn-simulate",))
+    self.assertEqual(result.returncode,0,result.stderr)
+    self.assertIn("place sink: 1 token(s)",result.stdout)
+
+  def test_effectful_helper_before_manual_guard_is_rejected(self):
+    net = NetBuilder("effectful_predicate")
+    source = net.place("source",initial_tokens=1)
+
+    @net.func(args=("Place",),results=("i64",))
+    def consume(place):
+      func_return(take(place).get("ready"))
+
+    @net.transition
+    def invalid():
+      ready = builder.consume(source)
+      guard(ready>0)
+
+    result = self.synthesize(net)
+    self.assertNotEqual(result.returncode,0)
+    self.assertIn("precede",result.stderr)
 
   def synthesize(self, net, extra_args=()):
     with tempfile.TemporaryDirectory(prefix="lpn-guards-test-") as directory:

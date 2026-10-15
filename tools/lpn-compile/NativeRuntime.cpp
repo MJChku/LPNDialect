@@ -36,8 +36,26 @@ struct KeyHash {
 };
 
 struct Token {
-  std::unordered_map<Key, int64_t, KeyHash> fields;
+  using Fields = std::unordered_map<Key, int64_t, KeyHash>;
+  Fields fields;
+  uint64_t references = 1;
 };
+
+// Token payloads are immutable. Queues and transactions own handles, not
+// copies of the field map. Empty tokens share one allocation-free sentinel.
+Token emptyToken;
+uint64_t payloadAllocations = 0, fieldCopies = 0, emptyTakes = 0;
+
+Token *retain(Token *token) {
+  if (token != &emptyToken)
+    ++token->references;
+  return token;
+}
+
+void release(Token *token) {
+  if (token != &emptyToken && --token->references == 0)
+    delete token;
+}
 
 struct Array {
   std::vector<uint64_t> elements;
@@ -47,7 +65,7 @@ struct Place {
   struct Scheduled {
     double time;
     uint64_t order;
-    Token token;
+    Token *token;
   };
   struct LaterFirst {
     bool operator()(const Scheduled &a, const Scheduled &b) const {
@@ -55,29 +73,117 @@ struct Place {
     }
   };
   std::string name;
-  std::deque<Token> ready;
+  struct Batch {
+    Token *token;
+    uint64_t count;
+  };
+  // When a queue contains only empty tokens, no queue entries are needed.
+  // Mixed queues use runs of identical immutable handles to preserve FIFO.
+  uint64_t emptyReady = 0, readyCount = 0;
+  std::deque<Batch> ready;
   std::priority_queue<Scheduled, std::vector<Scheduled>, LaterFirst> scheduled;
   uint64_t nextOrder = 0;
+
+  ~Place() {
+    for (const Batch &batch : ready)
+      release(batch.token);
+    while (!scheduled.empty()) {
+      release(scheduled.top().token);
+      scheduled.pop();
+    }
+  }
+
+  void materializeEmpties() {
+    if (emptyReady) {
+      ready.push_back({&emptyToken, emptyReady});
+      emptyReady = 0;
+    }
+  }
+
+  void pushBack(Token *token) {
+    ++readyCount;
+    if (token == &emptyToken && ready.empty()) {
+      ++emptyReady;
+      return;
+    }
+    materializeEmpties();
+    if (!ready.empty() && ready.back().token == token)
+      ++ready.back().count;
+    else
+      ready.push_back({retain(token), 1});
+  }
+
+  void pushFront(Token *token) {
+    ++readyCount;
+    if (token == &emptyToken && ready.empty()) {
+      ++emptyReady;
+      return;
+    }
+    materializeEmpties();
+    if (!ready.empty() && ready.front().token == token)
+      ++ready.front().count;
+    else
+      ready.push_front({retain(token), 1});
+  }
+
+  Token *front() {
+    return emptyReady ? &emptyToken : ready.front().token;
+  }
+
+  // Transfer one owned handle out of the queue.
+  Token *popFront() {
+    --readyCount;
+    if (emptyReady) {
+      --emptyReady;
+      ++emptyTakes;
+      return &emptyToken;
+    }
+    Token *token = ready.front().token;
+    if (--ready.front().count == 0)
+      ready.pop_front();
+    else
+      retain(token);
+    if (token == &emptyToken)
+      ++emptyTakes;
+    return token;
+  }
 
   void commit(double time) {
     while (!scheduled.empty() && scheduled.top().time <= time + 1e-12) {
       // priority_queue::top returns a const reference.
-      ready.push_back(scheduled.top().token);
+      Token *token = scheduled.top().token;
+      pushBack(token);
       scheduled.pop();
+      release(token);
     }
   }
 };
 
 struct Transaction {
-  std::vector<std::pair<Place *, Token>> taken;
-  std::vector<std::tuple<Place *, Token, double>> emitted;
-  std::vector<std::unique_ptr<Token>> tokens;
+  std::vector<std::pair<Place *, Token *>> taken;
+  std::vector<std::tuple<Place *, Token *, double>> emitted;
+  std::vector<Token *> tokens;
   std::vector<std::unique_ptr<Array>> arrays;
   std::jmp_buf blocked;
 
-  Token *makeToken(Token token = {}) {
-    tokens.push_back(std::make_unique<Token>(std::move(token)));
-    return tokens.back().get();
+  ~Transaction() {
+    for (Token *token : tokens)
+      release(token);
+    for (auto &entry : taken)
+      release(entry.second);
+  }
+  Token *makeToken(Token::Fields fields = {}) {
+    if (fields.empty())
+      return &emptyToken;
+    Token *token = new Token{std::move(fields)};
+    ++payloadAllocations;
+    tokens.push_back(token);
+    return token;
+  }
+  Token *holdToken(Token *token) {
+    if (token != &emptyToken)
+      tokens.push_back(retain(token));
+    return token;
   }
   Array *makeArray(Array array = {}) {
     arrays.push_back(std::make_unique<Array>(std::move(array)));
@@ -87,6 +193,7 @@ struct Transaction {
 
 std::vector<std::unique_ptr<Place>> places;
 std::unordered_map<const uint64_t *, std::unique_ptr<Array>> staticArrays;
+std::unordered_map<const uint64_t *, std::unique_ptr<Array>> staticPlaceArrays;
 Transaction *active = nullptr;
 double currentTime = 0.0;
 uint64_t guardChecks = 0, bodyExecutions = 0, rollbacks = 0;
@@ -120,7 +227,9 @@ bool tryFire(void (*transition)(), bool (*enabled)()) {
     // arena supports immutable token/array expressions in manual predicates.
     Transaction scratch;
     active = &scratch;
-    bool ready = enabled();
+    volatile bool ready = false;
+    if (setjmp(scratch.blocked) == 0)
+      ready = enabled();
     active = nullptr;
     if (!ready)
       return false;
@@ -135,12 +244,12 @@ bool tryFire(void (*transition)(), bool (*enabled)()) {
       Place *place = std::get<0>(entry);
       place->scheduled.push(Place::Scheduled{std::get<2>(entry),
                                              place->nextOrder++,
-                                             std::move(std::get<1>(entry))});
+                                             retain(std::get<1>(entry))});
     }
   } else {
     ++rollbacks;
     for (auto it = txn->taken.rbegin(); it != txn->taken.rend(); ++it)
-      it->first->ready.push_front(std::move(it->second));
+      it->first->pushFront(it->second);
   }
   active = nullptr;
   delete txn;
@@ -171,20 +280,29 @@ void lpn_check_step(int64_t step) {
 void *lpn_take(void *rawPlace) {
   auto &txn = transaction();
   auto *place = static_cast<Place *>(rawPlace);
-  if (place->ready.empty())
+  if (!place->readyCount)
     longjmp(txn.blocked, 1);
-  Token token = std::move(place->ready.front());
-  place->ready.pop_front();
+  Token *token = place->popFront();
   txn.taken.emplace_back(place, token);
-  return txn.makeToken(std::move(token));
+  return token;
 }
 
 void *lpn_peek(void *rawPlace) {
   auto &txn = transaction();
   auto *place = static_cast<Place *>(rawPlace);
-  if (place->ready.empty())
+  if (!place->readyCount)
     longjmp(txn.blocked, 1);
-  return txn.makeToken(place->ready.front());
+  return txn.holdToken(place->front());
+}
+
+// Borrowing is restricted by the compiler to enabling predicates and scalar
+// helpers with no token-flow effects. A general body peek retains snapshot
+// semantics, including when a later take removes the original queue entry.
+void *lpn_peek_readonly(void *rawPlace) {
+  auto *place = static_cast<Place *>(rawPlace);
+  if (!place->readyCount)
+    longjmp(transaction().blocked, 1);
+  return place->front();
 }
 
 void lpn_guard(bool condition) {
@@ -198,23 +316,25 @@ void lpn_emit(void *rawPlace, void *rawToken, double delay) {
   if (!std::isfinite(delay) || !std::isfinite(ready))
     invalid("emit delay must produce a finite ready time");
   txn.emitted.emplace_back(static_cast<Place *>(rawPlace),
-                           *static_cast<Token *>(rawToken), ready);
+                           static_cast<Token *>(rawToken), ready);
 }
 
 int64_t lpn_count(void *rawPlace) {
-  return static_cast<int64_t>(static_cast<Place *>(rawPlace)->ready.size());
+  return static_cast<int64_t>(static_cast<Place *>(rawPlace)->readyCount);
 }
 
 void *lpn_token_create() { return transaction().makeToken(); }
 
 void *lpn_token_clone(void *rawToken) {
-  return transaction().makeToken(*static_cast<Token *>(rawToken));
+  return transaction().holdToken(static_cast<Token *>(rawToken));
 }
 
 void *lpn_token_set(void *rawToken, int64_t kind, int64_t key,
                     int64_t value) {
-  Token copy = *static_cast<Token *>(rawToken);
-  copy.fields[Key{static_cast<uint64_t>(kind), static_cast<uint64_t>(key)}] =
+  const auto &original = static_cast<Token *>(rawToken)->fields;
+  Token::Fields copy = original;
+  fieldCopies += !original.empty();
+  copy[Key{static_cast<uint64_t>(kind), static_cast<uint64_t>(key)}] =
       value;
   return transaction().makeToken(std::move(copy));
 }
@@ -241,6 +361,20 @@ void *lpn_array_static(int64_t size, const uint64_t *elements) {
     array = std::make_unique<Array>();
     if (size)
       array->elements.assign(elements,elements+size);
+  }
+  return array.get();
+}
+
+// Place addresses are stable for a run. Resolve an immutable list of indices
+// once, rather than rebuilding a list of handles in every guard and firing.
+void *lpn_array_places_static(int64_t size, const uint64_t *indices) {
+  // LLVM may merge identical integer literals and place-index globals. Their
+  // addresses must not alias cache entries with different interpretations.
+  auto &array = staticPlaceArrays[indices];
+  if (!array) {
+    array = std::make_unique<Array>();
+    for (int64_t index = 0; index < size; ++index)
+      array->elements.push_back(reinterpret_cast<uint64_t>(&placeAt(indices[index])));
   }
   return array.get();
 }
@@ -307,14 +441,15 @@ int lpn_run(int argc, char **argv, int64_t placeCount, const char **placeNames,
   }
   places.clear();
   staticArrays.clear();
+  staticPlaceArrays.clear();
   places.reserve(static_cast<size_t>(placeCount));
+  payloadAllocations = fieldCopies = emptyTakes = 0;
   for (int64_t idx = 0; idx < placeCount; ++idx) {
     if (initialCounts[idx] < 0)
       invalid("negative initial token count");
     auto place = std::make_unique<Place>();
     place->name = placeNames[idx];
-    for (int64_t count = 0; count < initialCounts[idx]; ++count)
-      place->ready.emplace_back();
+    place->emptyReady = place->readyCount = initialCounts[idx];
     places.push_back(std::move(place));
   }
   currentTime = 0.0;
@@ -360,15 +495,20 @@ int lpn_run(int argc, char **argv, int64_t placeCount, const char **placeNames,
         static_cast<unsigned long long>(guardChecks),
         static_cast<unsigned long long>(bodyExecutions),
         static_cast<unsigned long long>(rollbacks));
+  if (printStats)
+    std::printf("Token payload allocations: %llu; field copies on set: %llu; empty-token takes: %llu\n",
+        static_cast<unsigned long long>(payloadAllocations),
+        static_cast<unsigned long long>(fieldCopies),
+        static_cast<unsigned long long>(emptyTakes));
   for (const auto &place : places) {
-    std::printf("  place %s: %zu token(s)\n", place->name.c_str(),
-                place->ready.size());
+    std::printf("  place %s: %llu token(s)\n", place->name.c_str(),
+                static_cast<unsigned long long>(place->readyCount));
     if (!printTokens)
       continue;
-    for (const Token &token : place->ready) {
+    auto printToken = [&](const Token *token) {
       std::printf("    token {");
       bool first = true;
-      for (const auto &entry : token.fields) {
+      for (const auto &entry : token->fields) {
         if (!first)
           std::printf(", ");
         first = false;
@@ -382,7 +522,12 @@ int lpn_run(int argc, char **argv, int64_t placeCount, const char **placeNames,
                       static_cast<long long>(entry.second));
       }
       std::printf("}\n");
-    }
+    };
+    for (uint64_t n = 0; n < place->emptyReady; ++n)
+      printToken(&emptyToken);
+    for (const Place::Batch &batch : place->ready)
+      for (uint64_t n = 0; n < batch.count; ++n)
+        printToken(batch.token);
   }
   return 0;
 }

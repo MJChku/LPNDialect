@@ -1,4 +1,5 @@
 #include "LPN/Conversion/LPNPasses.h"
+#include "LPN/Analysis/GuardHelpers.h"
 #include "LPN/Dialect/LPNOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -262,8 +263,10 @@ private:
         invalidGuard |= seenTakeOrEmit;
       }
       op.walk([&](Operation *nested) {
-        if (isa<TakeOp, EmitOp, func::CallOp>(nested))
+        if (isa<TakeOp, EmitOp>(nested))
           seenTakeOrEmit = true;
+        if (auto call = dyn_cast<func::CallOp>(nested))
+          seenTakeOrEmit |= !isReadOnlyGuardHelper(call);
         if (isa<GuardOp>(nested) && nested != &op)
           invalidGuard = true;
       });

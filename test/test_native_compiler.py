@@ -111,17 +111,187 @@ def build_peek_after_take_net(tokens):
   return net
 
 
-def native_result(net, tool: str, max_time: float):
+def build_read_only_helper_guard_net(tokens,use_peek=False):
+  net = NetBuilder("helper_predicate")
+  source = net.place("source",initial_tokens=tokens)
+  sink = net.place("sink")
+
+  @net.func(args=("Place",),results=("i1",))
+  def available(place):
+    if use_peek:
+      func_return(peek(place).get("value")==0)
+    else:
+      func_return(count(place)>0)
+
+  @net.transition
+  def consume():
+    ready = available(array(source)[0])
+    guard(ready)
+    emit(sink,take(source))
+  return net
+
+
+def build_peek_snapshot_net():
+  net = NetBuilder("peek_snapshot")
+  seed = net.place("seed",initial_tokens=1)
+  source = net.place("source")
+  sink = net.place("sink")
+
+  @net.transition
+  def initialize():
+    take(seed)
+    emit(source,create().set("value",73))
+
+  @net.transition
+  def consume():
+    guard(count(source)>0)
+    saved = peek(source)
+    take(source)
+    emit(sink,saved)
+  return net
+
+
+def build_empty_predicate_peek_net():
+  net = NetBuilder("empty_predicate_peek")
+  source = net.place("source")
+  sink = net.place("sink")
+
+  @net.transition
+  def consume():
+    guard(peek(source).get("value")>0)
+    emit(sink,take(source))
+  return net
+
+
+def build_literal_place_cache_net():
+  net = NetBuilder("literal_place_cache")
+  source = net.place("source",initial_tokens=2)
+  sink = net.place("sink")
+
+  @net.transition
+  def transfer():
+    places = array(source,sink)
+    indices = array(0,1)
+    guard(count(places[indices[0]])>0)
+    emit(places[indices[1]],take(places[indices[0]]))
+  return net
+
+
+def build_mixed_token_net(rollback):
+  net = NetBuilder("mixed_tokens")
+  seed = net.place("seed",initial_tokens=1)
+  source = net.place("source")
+  sink = net.place("sink")
+  required = 6 if rollback else 5
+
+  @net.transition
+  def initialize():
+    take(seed)
+    emit(source,create())
+    emit(source,create().set("value",7),delay=1.0)
+    emit(source,create(),delay=1.0)
+    emit(source,create(),delay=2.0)
+    emit(source,create().set("value",9),delay=3.0)
+
+  @net.transition
+  def consume():
+    guard(count(source)>=5)
+    for _ in range(required):
+      emit(sink,take(source))
+  return net
+
+
+def build_token_handle_net():
+  net = NetBuilder("token_handles")
+  seed = net.place("seed",initial_tokens=1)
+  hops = [net.place(f"hop_{i}") for i in range(17)]
+  left,right = net.place("left"),net.place("right")
+
+  @net.transition
+  def initialize():
+    take(seed)
+    emit(hops[0],create().set("value",99))
+
+  for previous,following in zip(hops,hops[1:]):
+    @net.transition(previous.name+"_move")
+    def move(previous=previous,following=following):
+      emit(following,take(previous).clone())
+
+  @net.transition
+  def fanout():
+    token = take(hops[-1])
+    emit(left,token)
+    emit(right,token.set("value",100))
+  return net
+
+
+def build_billion_credit_net():
+  net = NetBuilder("billion_credits")
+  seed = net.place("seed",initial_tokens=1)
+  source = net.place("source",initial_tokens=1_000_000_000)
+  sink = net.place("sink")
+
+  @net.transition
+  def move_credits():
+    take(seed)
+    for _ in range(32):
+      emit(sink,take(source))
+  return net
+
+
+def build_bitmap_net():
+  net = NetBuilder("bitmap")
+  seed = net.place("seed",initial_tokens=1)
+  source,sink = net.place("source"),net.place("sink")
+
+  @net.transition
+  def initialize():
+    take(seed)
+    bits = const_i64(0)
+    for bit in range(64):
+      bits = ori(bits,shli(1,bit))
+    emit(source,create().set("mask",bits))
+
+  @net.transition
+  def consume():
+    guard(count(source)>0)
+    observed = peek(source)
+    guard(andi(observed.get("mask"),shli(1,63))!=0)
+    emit(sink,take(source).set("low",andi(observed.get("mask"),63)))
+  return net
+
+
+def build_guard_only_helper_net():
+  net = NetBuilder("guard_only_helper")
+  source = net.place("source",initial_tokens=1)
+  sink = net.place("sink")
+
+  @net.func(args=("Place",),results=("i1",))
+  def enabled(place):
+    temporary = peek(place).set("probe",1)
+    func_return(temporary.get("probe")==1)
+
+  @net.transition
+  def consume():
+    guard(enabled(array(source)[0]))
+    emit(sink,take(source))
+  return net
+
+
+def native_output(net, tool: str, max_time: float,print_tokens=True):
   with tempfile.TemporaryDirectory(prefix="lpn-native-test-") as directory:
     source = Path(directory) / "model.mlir"
     binary = Path(directory) / "model"
     source.write_text(net.build(), encoding="utf-8")
     subprocess.run([tool, str(source), "-o", str(binary)],
                    check=True, capture_output=True, text=True)
-    output = subprocess.run(
-        [str(binary), f"--max-time={max_time}", "--tokens"],
+    return subprocess.run(
+        [str(binary), f"--max-time={max_time}", "--stats"]+(["--tokens"] if print_tokens else []),
         check=True, capture_output=True, text=True, timeout=30).stdout
 
+
+def native_result(net, tool: str, max_time: float):
+  output = native_output(net,tool,max_time)
   match = re.search(r"Simulation finished at t=([0-9.]+)", output)
   if not match:
     raise AssertionError(f"native executable did not report final time:\n{output}")
@@ -140,6 +310,54 @@ def native_result(net, tool: str, max_time: float):
 
 class NativeCompilerTest(unittest.TestCase):
   tool = ""
+
+  def test_read_only_boolean_helper_in_guard(self):
+    for tokens in (0,2):
+      for use_peek in (False,True):
+        self.check_net(build_read_only_helper_guard_net(tokens,use_peek),1000)
+
+  def test_body_peek_remains_valid_after_take(self):
+    result = self.check_net(build_peek_snapshot_net(),1000)
+    self.assertEqual(result["sink"],[{"value":73}])
+
+  def test_empty_peek_disables_predicate_safely(self):
+    self.check_net(build_empty_predicate_peek_net(),1000)
+
+  def test_literal_and_place_array_caches_are_distinct(self):
+    result = self.check_net(build_literal_place_cache_net(),1000)
+    self.assertEqual(result["sink"],[{},{}])
+
+  def test_mixed_empty_and_valued_fifo_and_rollback(self):
+    for rollback in (False,True):
+      with self.subTest(rollback=rollback):
+        result = self.check_net(build_mixed_token_net(rollback),1000)
+        expected = [{},{"value":7},{},{},{"value":9}]
+        self.assertEqual(result["source" if rollback else "sink"],expected)
+        self.assertEqual(result["sink" if rollback else "source"],[])
+
+  def test_moving_cloning_and_fanout_share_immutable_payloads(self):
+    net = build_token_handle_net()
+    result = self.check_net(net,1000)
+    self.assertEqual(result["left"],[{"value":99}])
+    self.assertEqual(result["right"],[{"value":100}])
+    output = native_output(net,self.tool,1000)
+    self.assertIn("Token payload allocations: 2; field copies on set: 1",output)
+
+  def test_empty_tokens_use_counters_for_billion_credits(self):
+    output = native_output(build_billion_credit_net(),self.tool,1000,print_tokens=False)
+    self.assertIn("place source: 999999968 token(s)",output)
+    self.assertIn("place sink: 32 token(s)",output)
+    self.assertIn("Token payload allocations: 0; field copies on set: 0",output)
+
+  def test_bitmap_includes_signed_high_bit(self):
+    result = self.check_net(build_bitmap_net(),1000)
+    self.assertEqual(result["sink"],[{"mask":-1,"low":63}])
+
+  def test_guard_only_helper_is_not_reexecuted_in_body(self):
+    net = build_guard_only_helper_net()
+    self.check_net(net,1000)
+    output = native_output(net,self.tool,1000)
+    self.assertIn("Token payload allocations: 1;",output)
 
   def check_net(self, net, max_time):
     native_time, native_places = native_result(net, self.tool, max_time)

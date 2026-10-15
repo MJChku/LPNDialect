@@ -105,7 +105,7 @@ public:
     for (TransitionOp transition : net.getOps<TransitionOp>()) {
       GuardPlan plan = GuardInference().analyze(transition);
       emitEnabled(transition, plan, index);
-      emitTransition(transition, transitions[index++]);
+      emitTransition(transition, transitions[index++],plan);
     }
     emitMain();
     if (llvm::verifyModule(*module, &llvm::errs()))
@@ -158,6 +158,7 @@ private:
     placeFn = runtime("lpn_place", ptr, {i64});
     takeFn = runtime("lpn_take", ptr, {ptr});
     peekFn = runtime("lpn_peek", ptr, {ptr});
+    peekReadOnlyFn = runtime("lpn_peek_readonly", ptr, {ptr});
     guardFn = runtime("lpn_guard", llvm::Type::getVoidTy(context), {i1});
     emitFn = runtime("lpn_emit", llvm::Type::getVoidTy(context), {ptr, ptr, f64});
     countFn = runtime("lpn_count", i64, {ptr});
@@ -174,6 +175,7 @@ private:
     }
     arrayCreateFn = runtime("lpn_array_create", ptr, {i64, ptr});
     arrayStaticFn = runtime("lpn_array_static", ptr, {i64, ptr});
+    arrayPlacesStaticFn = runtime("lpn_array_places_static", ptr, {i64, ptr});
     arrayAllocFn = runtime("lpn_array_alloc", ptr, {i64, i64});
     arrayGetFn = runtime("lpn_array_get", i64, {ptr, i64});
     arraySetFn = runtime("lpn_array_set", ptr, {ptr, i64, i64});
@@ -319,7 +321,8 @@ private:
       if (checkingGuard)
         emitGuardTest(ir.CreateICmpSGT(
             ir.CreateCall(countFn, {value(peek.getPlace())}), integer(0)));
-      put(peek.getResult(), ir.CreateCall(peekFn, {value(peek.getPlace())}));
+      put(peek.getResult(), ir.CreateCall(checkingGuard || borrowingPeeks ? peekReadOnlyFn : peekFn,
+                                        {value(peek.getPlace())}));
       return;
     }
     if (auto guard = dyn_cast<GuardOp>(&op)) {
@@ -395,6 +398,24 @@ private:
     if (auto array = dyn_cast<ArrayOp>(&op)) {
       auto elements = array.getElements();
       std::vector<llvm::Constant *> literals;
+      std::vector<llvm::Constant *> placeIndices;
+      for (auto element : elements) {
+        auto ref = element.getDefiningOp<PlaceRefOp>();
+        if (!ref)
+          break;
+        placeIndices.push_back(integer(placeIds.at(ref.getPlaceAttr().getValue().str())));
+      }
+      if (!elements.empty() && placeIndices.size() == elements.size()) {
+        auto *type = llvm::ArrayType::get(i64, placeIndices.size());
+        auto *global = new llvm::GlobalVariable(*module, type, true,
+            llvm::GlobalValue::PrivateLinkage,
+            llvm::ConstantArray::get(type, placeIndices), "lpn.array.places");
+        global->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+        std::array<llvm::Constant *,2> indices{integer(0),integer(0)};
+        auto *storage = llvm::ConstantExpr::getInBoundsGetElementPtr(type,global,indices);
+        put(array.getResult(),ir.CreateCall(arrayPlacesStaticFn,{integer(placeIndices.size()),storage}));
+        return;
+      }
       for (auto element : elements) {
         auto *literal = llvm::dyn_cast<llvm::Constant>(asBits(value(element)));
         if (!literal)
@@ -482,6 +503,18 @@ private:
     if (auto xorOp = dyn_cast<arith::XOrIOp>(&op)) {
       put(xorOp.getResult(), ir.CreateXor(value(xorOp.getLhs()),
                                           value(xorOp.getRhs())));
+      return;
+    }
+    if (auto andOp = dyn_cast<arith::AndIOp>(&op)) {
+      put(andOp.getResult(), ir.CreateAnd(value(andOp.getLhs()),value(andOp.getRhs())));
+      return;
+    }
+    if (auto orOp = dyn_cast<arith::OrIOp>(&op)) {
+      put(orOp.getResult(), ir.CreateOr(value(orOp.getLhs()),value(orOp.getRhs())));
+      return;
+    }
+    if (auto shift = dyn_cast<arith::ShLIOp>(&op)) {
+      put(shift.getResult(), ir.CreateShl(value(shift.getLhs()),value(shift.getRhs())));
       return;
     }
     if (auto add = dyn_cast<arith::AddFOp>(&op)) {
@@ -575,6 +608,10 @@ private:
          op.getName().getStringRef().str());
   }
   void emitHelper(func::FuncOp function) {
+    llvm::DenseSet<Operation *> visiting;
+    borrowingPeeks = llvm::all_of(function.getResultTypes(), [](mlir::Type type) {
+      return type.isIntOrIndexOrFloat() || mlir::isa<KeyType>(type);
+    }) && isReadOnlyGuardFunction(function, visiting);
     auto *lowered = helpers.at(function.getSymName().str());
     auto *entry = llvm::BasicBlock::Create(context, "entry", lowered);
     ir.SetInsertPoint(entry);
@@ -582,6 +619,7 @@ private:
     for (auto [source, target] : llvm::zip(function.getArguments(), lowered->args()))
       put(source, &target);
     emitBlock(function.front());
+    borrowingPeeks = false;
   }
   void emitGuardTest(llvm::Value *condition) {
     auto *next = llvm::BasicBlock::Create(context, "guard.next",
@@ -622,14 +660,42 @@ private:
     guardDisabled = nullptr;
   }
 
-  void emitTransition(TransitionOp transition, llvm::Function *lowered) {
+  void emitTransition(TransitionOp transition, llvm::Function *lowered,
+                      const GuardPlan &plan) {
     auto *entry = llvm::BasicBlock::Create(context, "entry", lowered);
     ir.SetInsertPoint(entry);
     values.clear();
-    // Retain prefix SSA definitions needed by the body; the explicit
-    // predicates themselves were checked before entering this function.
+    // Predicates already ran before entry. Retain only prefix definitions
+    // used by the body: otherwise read-only helper calls and dynamic guard
+    // loops would execute a second time despite their results being unused.
+    llvm::DenseSet<Operation *> needed;
+    auto need = [&](auto &self,Operation *op) -> void {
+      if (!needed.insert(op).second)
+        return;
+      for (mlir::Value operand : op->getOperands())
+        if (Operation *definition = operand.getDefiningOp())
+          self(self,definition);
+      for (Region &region : op->getRegions())
+        for (Block &block : region)
+          for (Operation &nested : block)
+            self(self,&nested);
+    };
+    bool body = !plan.lastManualGuard;
+    for (Operation &op : transition.getBody().front()) {
+      if (body)
+        need(need,&op);
+      if (&op==plan.lastManualGuard)
+        body = true;
+    }
     skipManualGuardChecks = true;
-    emitBlock(transition.getBody().front());
+    for (Operation &op : transition.getBody().front()) {
+      if (isa<ScheduleReturnOp>(op)) {
+        ir.CreateRetVoid();
+        break;
+      }
+      if (needed.contains(&op))
+        emitOperation(op);
+    }
     skipManualGuardChecks = false;
   }
 
@@ -701,9 +767,9 @@ private:
   std::unique_ptr<llvm::Module> module;
   llvm::Type *i1, *i32, *i64, *f64, *ptr, *keyType;
   llvm::FunctionCallee placeFn, takeFn, emitFn, countFn, createFn, cloneFn;
-  llvm::FunctionCallee peekFn, guardFn;
+  llvm::FunctionCallee peekFn, peekReadOnlyFn, guardFn;
   llvm::FunctionCallee setFn, getFn, arrayCreateFn, arrayAllocFn, arrayGetFn;
-  llvm::FunctionCallee arrayStaticFn;
+  llvm::FunctionCallee arrayStaticFn, arrayPlacesStaticFn;
   llvm::FunctionCallee arraySetFn, arrayLenFn, checkStepFn, runFn;
   llvm::DenseMap<mlir::Value, llvm::Value *> values;
   std::map<std::string, int64_t> literalIds;
@@ -714,6 +780,7 @@ private:
   std::vector<llvm::Function *> enabled;
   std::vector<std::string> transitionNames;
   bool checkingGuard = false;
+  bool borrowingPeeks = false;
   bool skipManualGuardChecks = false;
   llvm::BasicBlock *guardDisabled = nullptr;
 };

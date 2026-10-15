@@ -929,6 +929,26 @@ private:
                             },
                             values);
     }
+    if (auto andi = dyn_cast<arith::AndIOp>(op))
+      return handleBinaryOp(andi, [&](RuntimeValue lhs, RuntimeValue rhs) {
+        return RuntimeValue::makeInt(lhs.asInt() & rhs.asInt());
+      }, values);
+    if (auto ori = dyn_cast<arith::OrIOp>(op))
+      return handleBinaryOp(ori, [&](RuntimeValue lhs, RuntimeValue rhs) {
+        return RuntimeValue::makeInt(lhs.asInt() | rhs.asInt());
+      }, values);
+    if (auto shli = dyn_cast<arith::ShLIOp>(op)) {
+      int64_t shift = lookup(shli.getRhs(),values).asInt();
+      unsigned width = cast<IntegerType>(shli.getType()).getWidth();
+      if (shift<0 || static_cast<uint64_t>(shift)>=width) {
+        emitError(shli.getLoc()) << "shift amount must be smaller than integer width";
+        return ExecStatus::Failed;
+      }
+      return handleBinaryOp(shli, [&](RuntimeValue lhs, RuntimeValue rhs) {
+        uint64_t bits = static_cast<uint64_t>(lhs.asInt()) << rhs.asInt();
+        return RuntimeValue::makeInt(static_cast<int64_t>(bits & (width==1 ? 1 : ~uint64_t(0))));
+      }, values);
+    }
     if (auto addf = dyn_cast<arith::AddFOp>(op)) {
       return handleBinaryOp(addf,
                             [&](RuntimeValue lhs, RuntimeValue rhs) {
