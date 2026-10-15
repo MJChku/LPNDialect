@@ -5,6 +5,7 @@ import hashlib
 import heapq
 import inspect
 import itertools
+import math
 import operator
 import re
 import sys
@@ -418,6 +419,9 @@ class TransitionScriptExecutor:
 
   def _exec_if(self, node: ast.If) -> None:
     cond_value = self._eval_expr(node.test)
+    if isinstance(cond_value, (bool, int)):
+      self._exec_block(node.body if cond_value else node.orelse)
+      return
     if not isinstance(cond_value, Value):
       raise TypeError("transition conditions must evaluate to LPN SSA values")
 
@@ -470,8 +474,8 @@ class TransitionScriptExecutor:
       lower = self._eval_expr(call.args[0])
       upper = self._eval_expr(call.args[1])
       step = self._eval_expr(call.args[2])
-      if isinstance(step, int) and step == 0:
-        raise ValueError("range() step cannot be zero in jit loops")
+      if isinstance(step, int) and step <= 0:
+        raise ValueError("range() step must be positive in jit loops")
     else:
       raise TypeError("range() expects 1-3 positional arguments in jit loops")
 
@@ -738,6 +742,10 @@ class TransitionBuilder:
       raise TypeError(f"expected value of type {typ}, but got {value.typ}")
     if typ == "i64":
       return self.const_i64(int(value))
+    if typ == "i1" and isinstance(value, (bool, int)):
+      name = self._next_value()
+      self._append(f"{name} = arith.constant {'true' if value else 'false'}")
+      return self._wrap_value(name, "i1")
     if typ == "f64":
       return self.const_f64(float(value))
     if typ == "index":
@@ -992,7 +1000,10 @@ class TransitionBuilder:
     return segments
 
   def const_f64(self, value: float) -> Value:
-    literal = f"{float(value):.6f}"
+    number = float(value)
+    if not math.isfinite(number):
+      raise ValueError("f64 constants must be finite")
+    literal = repr(number)
     name = self._next_value()
     self._append(f"{name} = arith.constant {literal} : f64")
     return self._wrap_value(name, "f64")
@@ -1154,15 +1165,7 @@ class TransitionBuilder:
       fn: Optional[Callable[..., None]],
       *fn_args: Any
   ) -> List[Statement]:
-    if fn is None:
-      return []
-    saved_ops = self._ops
-    branch_ops: List[Statement] = []
-    self._ops = branch_ops
-    try:
-      fn(self, *fn_args)
-    finally:
-      self._ops = saved_ops
+    branch_ops, _ = self._capture_ops_and_results(fn, *fn_args)
     return branch_ops
 
   def _capture_ops_and_results(
@@ -1173,13 +1176,25 @@ class TransitionBuilder:
     if fn is None:
       return [], None
     saved_ops = self._ops
+    saved_place_handles = self._place_handles
+    saved_literal_keys = self._literal_keys
+    saved_segment_values = self._literal_segment_values
+    saved_ssa_values = self._ssa_values
     branch_ops: List[Statement] = []
     self._ops = branch_ops
+    self._place_handles = dict(saved_place_handles)
+    self._literal_keys = dict(saved_literal_keys)
+    self._literal_segment_values = dict(saved_segment_values)
+    self._ssa_values = dict(saved_ssa_values)
     result = None
     try:
       result = fn(self, *fn_args)
     finally:
       self._ops = saved_ops
+      self._place_handles = saved_place_handles
+      self._literal_keys = saved_literal_keys
+      self._literal_segment_values = saved_segment_values
+      self._ssa_values = saved_ssa_values
     return branch_ops, result
 
   def if_op(
@@ -1187,6 +1202,10 @@ class TransitionBuilder:
       cond: Union[Value, str],
       true_fn: Callable[['TransitionBuilder'], None],
       false_fn: Optional[Callable[['TransitionBuilder'], None]] = None) -> None:
+    if isinstance(cond, Value) and cond.typ != "i1":
+      if cond.typ not in ("i64", "index"):
+        raise TypeError("if condition must be an integer or i1 value")
+      cond = self.cmpi("ne", cond, 0, typ=cond.typ)
     cond_name = cond.name if isinstance(cond, Value) else cond
     true_ops = self._capture_ops(true_fn)
     false_ops = self._capture_ops(false_fn) if false_fn else None
@@ -1233,6 +1252,18 @@ class TransitionBuilder:
     self._append(
         f"{name} = lpn.take {handle} : !lpn.place -> !lpn.token")
     return self._wrap_token(name)
+
+  def peek(self, place: Union[PlaceHandle, Value]) -> TokenValue:
+    """Read the next ready token without removing it; block when empty."""
+    handle = self._resolve_place_operand(place)
+    name = self._next_value()
+    self._append(f"{name} = lpn.peek {handle} : !lpn.place -> !lpn.token")
+    return self._wrap_token(name)
+
+  def guard(self, condition: Union[Value, bool]) -> None:
+    """Annotate an explicit enabling predicate before consuming tokens."""
+    cond = self._coerce_value(condition, "i1")
+    self._append(f"lpn.guard {cond} : i1")
 
   def take_handle(self, handle: Value) -> TokenValue:
     if handle.typ != "!lpn.place":
@@ -1342,6 +1373,8 @@ class TransitionBuilder:
                 step: Union[Value, int] = 1,
                 iter_args: Sequence[Value] = (),
                 body: Callable[..., Any]) -> Sequence[Value]:
+    if isinstance(step, int) and step <= 0:
+      raise ValueError("scf.for step must be positive")
     lb = self._coerce_value(lower, "index")
     ub = self._coerce_value(upper, "index")
     st = self._coerce_value(step, "index")
@@ -1525,7 +1558,9 @@ class NetBuilder:
   def __init__(self, name: str = "net"):
     self.name = name
     self._places: List[tuple[PlaceHandle, Optional[int], Optional[int], bool]] = []
+    self._place_names = set()
     self._transitions: List[TransitionDef] = []
+    self._transition_names = set()
     self._helper_functions: Dict[str, List[str]] = {}
     self._functions: List["FunctionDef"] = []
     self._function_map: Dict[str, "FunctionDef"] = {}
@@ -1593,8 +1628,18 @@ class NetBuilder:
             capacity: Optional[int] = None,
             initial_tokens: Optional[int] = None,
             observable: bool = False) -> PlaceHandle:
+    if name in self._place_names:
+      raise ValueError(f"place '{name}' already defined")
+    if capacity is not None and capacity < 0:
+      raise ValueError("place capacity cannot be negative")
+    if initial_tokens is not None and initial_tokens < 0:
+      raise ValueError("initial token count cannot be negative")
+    if (capacity is not None and initial_tokens is not None
+        and initial_tokens > capacity):
+      raise ValueError("initial token count exceeds place capacity")
     handle = PlaceHandle(name)
     self._places.append((handle, capacity, initial_tokens, observable))
+    self._place_names.add(name)
     return handle
 
   def _run_jit_script(self,
@@ -1614,6 +1659,8 @@ class NetBuilder:
                        jit: bool
                        ) -> Callable[[Callable[[TransitionBuilder], None]], Callable[[TransitionBuilder], None]]:
     def decorator(fn: Callable[[TransitionBuilder], None]):
+      if name in self._transition_names:
+        raise ValueError(f"transition '{name}' already defined")
       builder = TransitionBuilder(name, owner=self)
       self._bind_helper_stubs(builder)
       if script:
@@ -1628,6 +1675,7 @@ class NetBuilder:
                                  script=script,
                                  jit=jit)
       self._transitions.append(definition)
+      self._transition_names.add(name)
       return fn
     return decorator
 
@@ -1801,9 +1849,6 @@ class NetBuilder:
           result_clause = f" -> ({joined})"
         lines.append(
             f"    func.func {visibility_kw}@{func.name}({arg_sig}){result_clause} {{")
-        block_sig = arg_sig
-        block_header = f"      ^bb0({block_sig}):" if block_sig else "      ^bb0:"
-        lines.append(block_header)
         for op in func.builder.render():
           lines.append(op)
         lines.append("    }")
@@ -1949,6 +1994,16 @@ class PythonRuntimeAPI:
   def take(self, place: PlaceHandle) -> RuntimeToken:
     return self._sim._transaction_take(place)
 
+  def peek(self, place: PlaceHandle) -> RuntimeToken:
+    runtime_place = self._sim._runtime_place(place)
+    if not runtime_place.tokens:
+      raise _TransitionBlocked(runtime_place.name)
+    return runtime_place.tokens[0]
+
+  def guard(self, condition: bool) -> None:
+    if not condition:
+      raise _TransitionBlocked("explicit guard")
+
   def take_handle(self, handle: PlaceHandle) -> RuntimeToken:
     return self.take(handle)
 
@@ -2075,7 +2130,28 @@ class PythonRuntimeAPI:
            *,
            typ: str = "i64",
            signed: bool = True) -> int:
-    return int(lhs) // int(rhs)
+    numerator, denominator = int(lhs), int(rhs)
+    if not signed:
+      mask = (1 << 64) - 1
+      return _to_signed_i64((numerator & mask) // (denominator & mask))
+    quotient = abs(numerator) // abs(denominator)
+    return -quotient if (numerator < 0) != (denominator < 0) else quotient
+
+  def remi(self,
+           lhs: Union[int, float],
+           rhs: Union[int, float],
+           *,
+           typ: str = "i64",
+           signed: bool = True) -> int:
+    numerator, denominator = int(lhs), int(rhs)
+    if not signed:
+      mask = (1 << 64) - 1
+      return _to_signed_i64((numerator & mask) % (denominator & mask))
+    quotient = self.divi(numerator, denominator, typ=typ)
+    return numerator - quotient * denominator
+
+  def remf(self, lhs: float, rhs: float, *, typ: str = "f64") -> float:
+    return math.fmod(float(lhs), float(rhs))
 
   def sitofp(self,
              value: Union[int, float],
@@ -2100,6 +2176,8 @@ class PythonRuntimeAPI:
     lb = int(lower)
     ub = int(upper)
     st = int(step)
+    if st <= 0:
+      raise ValueError("scf.for step must be positive")
     for idx in range(lb, ub, st):
       body(self, idx)
 
@@ -2190,9 +2268,13 @@ class PythonSimulator:
     ctx = self._require_transaction()
     runtime_place = self._runtime_place(place)
     delay_value = 0.0 if delay is None else float(delay)
+    if not math.isfinite(delay_value):
+      raise ValueError("emit delay must be finite")
     if delay_value < 0:
       delay_value = 0.0
     ready_time = self._current_time + delay_value
+    if not math.isfinite(ready_time):
+      raise ValueError("emit delay must produce a finite ready time")
     ctx.emits.append((runtime_place, token, ready_time))
 
   def _commit_transaction(self) -> None:
@@ -2219,9 +2301,13 @@ class PythonSimulator:
             delay: Optional[Union[int, float]] = None) -> None:
     runtime_place = self._runtime_place(place)
     delay_value = 0.0 if delay is None else float(delay)
+    if not math.isfinite(delay_value):
+      raise ValueError("emit delay must be finite")
     if delay_value < 0:
       delay_value = 0.0
     ready_time = self._current_time + delay_value
+    if not math.isfinite(ready_time):
+      raise ValueError("emit delay must produce a finite ready time")
     runtime_place.schedule(token, ready_time)
     self._commit_ready_tokens(self._current_time)
 

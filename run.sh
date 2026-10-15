@@ -1,58 +1,40 @@
-# PYTHONPATH=. python3 examples/network_net.py > /tmp/network_net.mlir
-# ./build/tools/lpn-opt/lpn-opt --lpn-abstract-hidden-state --lpn-retain-observables /tmp/network_net.mlir > /tmp/network_after_pass.mlir
-# PYTHONPATH=. python3 examples/cache_net.py > /tmp/cache_net.mlir
-# ./build/tools/lpn-opt/lpn-opt --lpn-abstract-hidden-state --lpn-retain-observables /tmp/cache_net.mlir > /tmp/cache_after_pass.mlir
-# cmake -S . -B build \
-#       -DLLVM_DIR=/home/jiacma/lpn_mlir/.deps/llvm-project-main/install/lib/cmake/llvm \
-#       -DMLIR_DIR=/home/jiacma/lpn_mlir/.deps/llvm-project-main/install/lib/cmake/mlir \
-#       -DCMAKE_BUILD_TYPE=RelWithDebInfo
-cmake --build build -j 8
+#!/usr/bin/env bash
+set -euo pipefail
 
-# PYTHONPATH=. python3 examples/cache_net.py > /tmp/cache_net.mlir
-# ./build/tools/lpn-opt/lpn-opt --mlir-print-ir-after-all --lpn-synthesize-guards \
-#   --lpn-prune-cyclic-guards \
-#   --lpn-normalize-delays \
-#   --lpn-retain-hypergraph --lpn-strip-hidden-values \
-#   --lpn-resolve-choices --canonicalize --cse \
-#   --lpn-dataflow-simplify /tmp/cache_net.mlir > /tmp/cache_after_pass.mlir 2> /tmp/cache_pass_debug.log
+repo_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+mode="${1:-simulate}"
+if (( $# > 0 )); then
+  shift
+fi
 
-# PYTHONPATH=. python3 examples/split_merge_net.py > /tmp/split_merge.mlir
-# ./build/tools/lpn-opt/lpn-opt --lpn-synthesize-guards \
-#  --lpn-prune-cyclic-guards \
-#  --lpn-normalize-delays \
-#   --lpn-retain-hypergraph --lpn-strip-hidden-values \
-#   --lpn-resolve-choices --canonicalize --cse \
-#   --lpn-dataflow-simplify /tmp/split_merge.mlir > /tmp/split_merge_after.mlir
-
-# ./build/tools/lpn-opt/lpn-opt --lpn-synthesize-guards \
-#  --lpn-prune-cyclic-guards \
-#  --lpn-normalize-delays \
-#   --lpn-retain-hypergraph --lpn-strip-hidden-values \
-#   --lpn-resolve-choices --canonicalize --cse \
-#   --lpn-dataflow-simplify /tmp/hyper_demo.mlir > /tmp/hyper_demo_after.mlir
-
-PYTHONPATH=. python3 examples/network_net.py > /tmp/network_net.mlir
-./build/tools/lpn-opt/lpn-opt --mlir-print-ir-after-all --lpn-synthesize-guards \
- --lpn-prune-cyclic-guards \
- --lpn-normalize-delays \
-  --lpn-retain-hypergraph --lpn-strip-hidden-values \
-  --lpn-resolve-choices --canonicalize --cse \
-  --lpn-dataflow-simplify /tmp/network_net.mlir > /tmp/network_net_after.mlir 2> /tmp/network_net_debug.log
-
-
-# PYTHONPATH=. python3 examples/strip_demo.py > /tmp/strip_demo_branch.mlir
-# ./build/tools/lpn-opt/lpn-opt --mlir-print-ir-after-all --lpn-synthesize-guards \
-#   --lpn-prune-cyclic-guards \
-#   --lpn-normalize-delays \
-#   --lpn-retain-hypergraph --lpn-strip-hidden-values \
-#   --lpn-resolve-choices --canonicalize --cse \
-#   --lpn-dataflow-simplify /tmp/strip_demo_branch.mlir > /tmp/strip_demo_after.mlir 2> /tmp/strip_demo_pass_debug.log
-
-
-# PYTHONPATH=. python3 examples/emit_take_twice_net.py > /tmp/emit_take_twice_branch.mlir
-# ./build/tools/lpn-opt/lpn-opt --mlir-print-ir-after-all --lpn-synthesize-guards \
-#   --lpn-prune-cyclic-guards \
-#   --lpn-normalize-delays \
-#   --lpn-retain-hypergraph --lpn-strip-hidden-values \
-#   --lpn-resolve-choices --canonicalize --cse \
-#   --lpn-dataflow-simplify /tmp/emit_take_twice_branch.mlir > /tmp/emit_take_twice_after.mlir 2> /tmp/emit_take_twice_pass_debug.log
+case "$mode" in
+  simulate)
+    PYTHONPATH="$repo_dir${PYTHONPATH:+:$PYTHONPATH}" \
+      python3 "$repo_dir/examples/network_net.py" --simulate "$@"
+    ;;
+  emit)
+    PYTHONPATH="$repo_dir${PYTHONPATH:+:$PYTHONPATH}" \
+      python3 "$repo_dir/examples/network_net.py" "$@"
+    ;;
+  compile)
+    if (( $# < 1 )); then
+      echo "Usage: $0 compile OUTPUT [network example options]" >&2
+      exit 2
+    fi
+    output="$1"
+    shift
+    if [[ ! -x "$repo_dir/build/tools/lpn-compile/lpn-compile" ]]; then
+      echo "Build lpn-compile first with ./build.sh" >&2
+      exit 1
+    fi
+    model_file="$(mktemp --suffix=.mlir)"
+    trap 'rm -f -- "$model_file"' EXIT
+    PYTHONPATH="$repo_dir${PYTHONPATH:+:$PYTHONPATH}" \
+      python3 "$repo_dir/examples/network_net.py" "$@" > "$model_file"
+    "$repo_dir/build/tools/lpn-compile/lpn-compile" "$model_file" -o "$output"
+    ;;
+  *)
+    echo "Usage: $0 [simulate|emit|compile] [network example options]" >&2
+    exit 2
+    ;;
+esac

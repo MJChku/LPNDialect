@@ -10,8 +10,7 @@ from typing import List, Union, Tuple, Optional
 from lpnlang_mlir import NetBuilder, PlaceHandle, Value
 from examples.protoacc_helpers import CstStr, ProtoaccWorkload, load_workload
 
-DEFAULT_WORKLOAD_PATH = Path.home(
-) / "lpn-dev" / "lpn_examples" / "protoacc" / "hyperprotobench_processed" / "bench0-ser.json"
+DEFAULT_WORKLOAD_PATH = Path(__file__).with_name("protoacc_messages.json")
 
 
 def _make_counter_token(count_value):

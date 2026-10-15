@@ -1,3 +1,42 @@
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+
+add_test(
+  NAME lpn-coralnpu-matrix
+  COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${PROJECT_SOURCE_DIR}
+          PYTHONDONTWRITEBYTECODE=1 ${Python3_EXECUTABLE}
+          ${CMAKE_CURRENT_SOURCE_DIR}/test_matrix_model.py
+)
+
+add_test(
+  NAME lpn-model-runtime
+  COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${PROJECT_SOURCE_DIR}
+          PYTHONDONTWRITEBYTECODE=1
+          ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_model_runtime.py
+)
+
+add_test(
+  NAME lpn-coralnpu-model
+  COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${PROJECT_SOURCE_DIR}
+          PYTHONDONTWRITEBYTECODE=1 ${Python3_EXECUTABLE}
+          ${CMAKE_CURRENT_SOURCE_DIR}/test_coralnpu.py
+)
+
+add_test(
+  NAME lpn-native-compiler
+  COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${PROJECT_SOURCE_DIR}
+          PYTHONDONTWRITEBYTECODE=1 ${Python3_EXECUTABLE}
+          ${CMAKE_CURRENT_SOURCE_DIR}/test_native_compiler.py
+          --tool $<TARGET_FILE:lpn-compile>
+)
+
+add_test(
+  NAME lpn-guard-rejection
+  COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${PROJECT_SOURCE_DIR}
+          PYTHONDONTWRITEBYTECODE=1 ${Python3_EXECUTABLE}
+          ${CMAKE_CURRENT_SOURCE_DIR}/test_guard_rejection.py
+          --tool $<TARGET_FILE:lpn-opt>
+)
+
 find_program(FILECHECK_EXE
   NAMES FileCheck
   HINTS ${LLVM_TOOLS_BINARY_DIR}
@@ -9,8 +48,6 @@ if (NOT FILECHECK_EXE)
   message(WARNING "FileCheck executable not found; LPN tests disabled")
   return()
 endif()
-
-find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
 set(LPN_OPT_EXE $<TARGET_FILE:lpn-opt>)
 set(LPN_TEST_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/run_filecheck.py)
@@ -38,13 +75,7 @@ add_lpn_filecheck_test(
 )
 
 add_lpn_filecheck_test(
-  lpn-fuse-private-places
-  ${CMAKE_CURRENT_SOURCE_DIR}/Transforms/fuse-private-places.mlir
-  TOOL_ARGS --tool-arg=--lpn-fuse-private-places
-)
-
-add_lpn_filecheck_test(
-  lpn-retain-observables
-  ${CMAKE_CURRENT_SOURCE_DIR}/Transforms/retain-observables.mlir
-  TOOL_ARGS --tool-arg=--lpn-retain-observables
+  lpn-synthesize-guards
+  ${CMAKE_CURRENT_SOURCE_DIR}/Transforms/synthesize-guards.mlir
+  TOOL_ARGS --tool-arg=--lpn-synthesize-guards
 )

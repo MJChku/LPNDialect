@@ -1,0 +1,272 @@
+{
+  "coral_revision": "517f4c09bd5aabb4e8a16436d8853c912a24790b",
+  "kernels": [
+    {
+      "commands": 1,
+      "macs": 1024,
+      "array_lpn_cycles": 12.0,
+      "array_rtl_cycles": 12,
+      "command_latencies": [
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        }
+      ],
+      "rtl_launch_intervals": [],
+      "kernel": "uint8_full",
+      "checked_elements": 256,
+      "rtl_wall_seconds": 2.488365639001131,
+      "native_wall_seconds": 0.003986416384577751
+    },
+    {
+      "commands": 1,
+      "macs": 1024,
+      "array_lpn_cycles": 12.0,
+      "array_rtl_cycles": 12,
+      "command_latencies": [
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        }
+      ],
+      "rtl_launch_intervals": [],
+      "kernel": "int8_full",
+      "checked_elements": 256,
+      "rtl_wall_seconds": 2.4971846994012594,
+      "native_wall_seconds": 0.0038270950317382812
+    },
+    {
+      "commands": 1,
+      "macs": 512,
+      "array_lpn_cycles": 12.0,
+      "array_rtl_cycles": 12,
+      "command_latencies": [
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        }
+      ],
+      "rtl_launch_intervals": [],
+      "kernel": "bf16_full",
+      "checked_elements": 256,
+      "rtl_wall_seconds": 2.5703378431499004,
+      "native_wall_seconds": 0.003780776634812355
+    },
+    {
+      "commands": 1,
+      "macs": 256,
+      "array_lpn_cycles": 12.0,
+      "array_rtl_cycles": 12,
+      "command_latencies": [
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        }
+      ],
+      "rtl_launch_intervals": [],
+      "kernel": "fp32_full",
+      "checked_elements": 256,
+      "rtl_wall_seconds": 2.5395213868469,
+      "native_wall_seconds": 0.0038360003381967545
+    },
+    {
+      "commands": 1,
+      "macs": 45,
+      "array_lpn_cycles": 8.0,
+      "array_rtl_cycles": 8,
+      "command_latencies": [
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        }
+      ],
+      "rtl_launch_intervals": [],
+      "kernel": "int8_tail",
+      "checked_elements": 256,
+      "rtl_wall_seconds": 2.498274926096201,
+      "native_wall_seconds": 0.003612818196415901
+    },
+    {
+      "commands": 1,
+      "macs": 198,
+      "array_lpn_cycles": 11.0,
+      "array_rtl_cycles": 11,
+      "command_latencies": [
+        {
+          "rtl_cycles": 11,
+          "lpn_cycles": 11
+        }
+      ],
+      "rtl_launch_intervals": [],
+      "kernel": "int8_quadrants",
+      "checked_elements": 256,
+      "rtl_wall_seconds": 2.5318663995712996,
+      "native_wall_seconds": 0.0033529549837112427
+    },
+    {
+      "commands": 4,
+      "macs": 4096,
+      "array_lpn_cycles": 24.0,
+      "array_rtl_cycles": 24,
+      "command_latencies": [
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        }
+      ],
+      "rtl_launch_intervals": [
+        4,
+        4,
+        4
+      ],
+      "kernel": "int8_same_accumulator",
+      "checked_elements": 256,
+      "rtl_wall_seconds": 2.540102306753397,
+      "native_wall_seconds": 0.005216468125581741
+    },
+    {
+      "commands": 4,
+      "macs": 4096,
+      "array_lpn_cycles": 24.0,
+      "array_rtl_cycles": 24,
+      "command_latencies": [
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        }
+      ],
+      "rtl_launch_intervals": [
+        4,
+        4,
+        4
+      ],
+      "kernel": "int8_independent_accumulators",
+      "checked_elements": 1024,
+      "rtl_wall_seconds": 9.522571634501219,
+      "native_wall_seconds": 0.005366159602999687
+    },
+    {
+      "commands": 4,
+      "macs": 180,
+      "array_lpn_cycles": 20.0,
+      "array_rtl_cycles": 20,
+      "command_latencies": [
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        }
+      ],
+      "rtl_launch_intervals": [
+        4,
+        4,
+        4
+      ],
+      "kernel": "int8_tail_same_accumulator",
+      "checked_elements": 256,
+      "rtl_wall_seconds": 2.566608378663659,
+      "native_wall_seconds": 0.0033531654626131058
+    },
+    {
+      "commands": 4,
+      "macs": 2048,
+      "array_lpn_cycles": 24.0,
+      "array_rtl_cycles": 24,
+      "command_latencies": [
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        }
+      ],
+      "rtl_launch_intervals": [
+        4,
+        4,
+        4
+      ],
+      "kernel": "bf16_same_accumulator",
+      "checked_elements": 256,
+      "rtl_wall_seconds": 2.5197527930140495,
+      "native_wall_seconds": 0.00569324754178524
+    },
+    {
+      "commands": 4,
+      "macs": 1024,
+      "array_lpn_cycles": 24.0,
+      "array_rtl_cycles": 24,
+      "command_latencies": [
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        }
+      ],
+      "rtl_launch_intervals": [
+        4,
+        4,
+        4
+      ],
+      "kernel": "fp32_same_accumulator",
+      "checked_elements": 256,
+      "rtl_wall_seconds": 2.492562770843506,
+      "native_wall_seconds": 0.005847914144396782
+    }
+  ]
+}

@@ -91,6 +91,23 @@ class NetDevice:
         token = token.set("id", token_id)
         emit(self.out_buf, token)
 
+  def inject_all_to_all(self, num_devices: int, count: int = 1) -> None:
+    """Launch one flow to every other device with ``count`` packets per flow."""
+    latch = self._net.place(f"{self.id}_inject_all_ctrl", initial_tokens=1)
+
+    @self._net.transition(f"{self.id}_inject_all")
+    def inject():
+      take(latch)
+      for dst in range(num_devices):
+        if dst != self.server_id:
+          for seq in range(count):
+            seed = take(self._seed_pool)
+            token = seed.set("src", self.server_id)
+            token = token.set("dst", dst)
+            token = token.set("size", PAYLOAD_BYTES)
+            token = token.set("id", muli(dst, count, typ="index") + seq)
+            emit(self.out_buf, token)
+
 
 class NetToRSwitch:
   """Simplified top-of-rack switch with per-port schedulers."""
@@ -147,8 +164,12 @@ class NetToRSwitch:
 
 def create_network_net(num_devices: int = 2,
                        messages_per_device: int = 1) -> NetBuilder:
+  if num_devices < 2:
+    raise ValueError("all-to-all needs at least two devices")
+  if messages_per_device < 1:
+    raise ValueError("messages_per_device must be positive")
   net = NetBuilder("network")
-  total_tokens = num_devices * messages_per_device
+  total_tokens = num_devices * (num_devices - 1) * messages_per_device
   seed_pool = net.place("token_seed", initial_tokens=total_tokens)
   tor = NetToRSwitch(net, "tor", range(num_devices), server_start=0)
   devices: List[NetDevice] = []
@@ -157,12 +178,8 @@ def create_network_net(num_devices: int = 2,
     device.attach(tor, dev_id)
     devices.append(device)
 
-  for dev_idx in range(len(devices)):
-    device = devices[dev_idx]
-    dst = (dev_idx + 1) % num_devices
-    device.inject_workload(dst=dst,
-                           size=PAYLOAD_BYTES,
-                           count=messages_per_device)
+  for device in devices:
+    device.inject_all_to_all(num_devices, messages_per_device)
   return net
 
 
@@ -207,7 +224,7 @@ if __name__ == "__main__":
                       help="Run the Python simulator instead of emitting MLIR")
   parser.add_argument("--max-time",
                       type=float,
-                      default=10000000.0,
+                      default=100000000.0,
                       help="Simulation time budget (ns)")
   parser.add_argument("--debug",
                       action="store_true",

@@ -18,6 +18,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cmath>
 #include <deque>
 #include <limits>
 #include <memory>
@@ -134,6 +135,12 @@ struct RuntimePlace {
     RuntimeToken token = ready.front();
     ready.pop_front();
     return token;
+  }
+
+  std::optional<RuntimeToken> peekImmediate() const {
+    if (ready.empty())
+      return std::nullopt;
+    return ready.front();
   }
 
   void restoreFront(const RuntimeToken &token) {
@@ -462,6 +469,11 @@ private:
     RuntimePlace *place = lookup(op.getPlace(), values).asPlace();
     RuntimeToken token = lookup(op.getToken(), values).asToken();
     double delay = lookup(op.getDelay(), values).asFloat();
+    if (!std::isfinite(delay) ||
+        !std::isfinite(ctx.net.currentTime + std::max(0.0, delay))) {
+      emitError(op.getLoc()) << "emit delay must produce a finite ready time";
+      return ExecStatus::Failed;
+    }
     double readyTime =
         std::max(0.0, delay) + ctx.net.currentTime;
     ctx.txn->recordEmit(place, std::move(token), readyTime);
@@ -579,6 +591,20 @@ private:
     return ExecStatus::Ok;
   }
 
+  ExecStatus handleArrayAlloc(ArrayAllocOp op,
+                              llvm::DenseMap<Value, RuntimeValue> &values) {
+    int64_t size = lookup(op.getSize(), values).asInt();
+    if (size < 0) {
+      emitError(op.getLoc()) << "array.alloc size cannot be negative";
+      return ExecStatus::Failed;
+    }
+    auto array = std::make_shared<RuntimeArray>();
+    array->elements.assign(static_cast<size_t>(size),
+                           lookup(op.getFillValue(), values));
+    store(op.getResult(), RuntimeValue::makeArray(array), values);
+    return ExecStatus::Ok;
+  }
+
   ExecStatus handleConstant(arith::ConstantOp op,
                             llvm::DenseMap<Value, RuntimeValue> &values) {
     Attribute attr = op.getValue();
@@ -674,33 +700,74 @@ private:
                          llvm::DenseMap<Value, RuntimeValue> &values) {
     int64_t lhs = lookup(op.getLhs(), values).asInt();
     int64_t rhs = lookup(op.getRhs(), values).asInt();
-    if (rhs == 0) {
-      emitError(op.getLoc()) << "division by zero";
+    if (rhs == 0 ||
+        (lhs == std::numeric_limits<int64_t>::min() && rhs == -1)) {
+      emitError(op.getLoc()) << "invalid signed division";
       return ExecStatus::Failed;
     }
     store(op.getResult(), RuntimeValue::makeInt(lhs / rhs), values);
     return ExecStatus::Ok;
   }
 
-  ExecStatus handleFor(scf::ForOp op,
-                       llvm::DenseMap<Value, RuntimeValue> &values) {
-    if (!op.getInitArgs().empty() || op.getNumResults() != 0) {
-      emitError(op.getLoc()) << "only simple scf.for loops are supported";
+  template <typename OpTy, typename FuncTy>
+  ExecStatus handleIntegerDivision(OpTy op, FuncTy fn,
+                                   llvm::DenseMap<Value, RuntimeValue> &values) {
+    uint64_t lhs = static_cast<uint64_t>(lookup(op.getLhs(), values).asInt());
+    uint64_t rhs = static_cast<uint64_t>(lookup(op.getRhs(), values).asInt());
+    if (rhs == 0) {
+      emitError(op.getLoc()) << "division by zero";
       return ExecStatus::Failed;
     }
+    store(op.getResult(),
+          RuntimeValue::makeInt(static_cast<int64_t>(fn(lhs, rhs))), values);
+    return ExecStatus::Ok;
+  }
+
+  ExecStatus handleRemSI(arith::RemSIOp op,
+                         llvm::DenseMap<Value, RuntimeValue> &values) {
+    int64_t lhs = lookup(op.getLhs(), values).asInt();
+    int64_t rhs = lookup(op.getRhs(), values).asInt();
+    if (rhs == 0 ||
+        (lhs == std::numeric_limits<int64_t>::min() && rhs == -1)) {
+      emitError(op.getLoc()) << "invalid signed remainder";
+      return ExecStatus::Failed;
+    }
+    store(op.getResult(), RuntimeValue::makeInt(lhs % rhs), values);
+    return ExecStatus::Ok;
+  }
+
+  ExecStatus handleFor(scf::ForOp op,
+                       llvm::DenseMap<Value, RuntimeValue> &values) {
     int64_t lower = lookup(op.getLowerBound(), values).asInt();
     int64_t upper = lookup(op.getUpperBound(), values).asInt();
     int64_t step = lookup(op.getStep(), values).asInt();
-    if (step == 0) {
-      emitError(op.getLoc()) << "scf.for step cannot be zero";
+    if (step <= 0) {
+      emitError(op.getLoc()) << "scf.for step must be positive";
       return ExecStatus::Failed;
     }
-    for (int64_t iv = lower; iv < upper; iv += step) {
+    SmallVector<RuntimeValue> iterValues;
+    for (Value init : op.getInitArgs())
+      iterValues.push_back(lookup(init, values));
+    for (int64_t iv = lower; iv < upper;) {
       store(op.getInductionVar(), RuntimeValue::makeInt(iv), values);
-      ExecStatus status = runBlock(*op.getBody(), values);
+      for (auto it : llvm::enumerate(op.getRegionIterArgs()))
+        store(it.value(), iterValues[it.index()], values);
+      SmallVector<RuntimeValue> yielded;
+      ExecStatus status = runBlock(*op.getBody(), values, &yielded);
       if (status != ExecStatus::Ok)
         return status;
+      if (yielded.size() != iterValues.size()) {
+        emitError(op.getLoc()) << "scf.for yielded " << yielded.size()
+                               << " values but expected " << iterValues.size();
+        return ExecStatus::Failed;
+      }
+      iterValues = std::move(yielded);
+      if (iv > std::numeric_limits<int64_t>::max() - step)
+        break;
+      iv += step;
     }
+    for (auto it : llvm::enumerate(op.getResults()))
+      store(it.value(), iterValues[it.index()], values);
     return ExecStatus::Ok;
   }
 
@@ -793,6 +860,19 @@ private:
       return handlePlaceRef(placeRef, values);
     if (auto take = dyn_cast<TakeOp>(op))
       return handleTake(take, values);
+    if (auto peek = dyn_cast<PeekOp>(op)) {
+      RuntimePlace *place = lookup(peek.getPlace(), values).asPlace();
+      auto token = place->peekImmediate();
+      if (!token) {
+        ctx.blockedPlace = place;
+        return ExecStatus::Blocked;
+      }
+      store(peek.getResult(), RuntimeValue::makeToken(*token), values);
+      return ExecStatus::Ok;
+    }
+    if (auto guard = dyn_cast<GuardOp>(op))
+      return lookup(guard.getCondition(), values).asInt()
+                 ? ExecStatus::Ok : ExecStatus::Blocked;
     if (auto emit = dyn_cast<EmitOp>(op))
       return handleEmit(emit, values);
     if (auto count = dyn_cast<CountOp>(op))
@@ -817,6 +897,8 @@ private:
       return handleArraySet(arraySet, values);
     if (auto arrayLen = dyn_cast<ArrayLenOp>(op))
       return handleArrayLen(arrayLen, values);
+    if (auto arrayAlloc = dyn_cast<ArrayAllocOp>(op))
+      return handleArrayAlloc(arrayAlloc, values);
     if (auto constant = dyn_cast<arith::ConstantOp>(op))
       return handleConstant(constant, values);
     if (auto addi = dyn_cast<arith::AddIOp>(op)) {
@@ -870,6 +952,25 @@ private:
     }
     if (auto divsi = dyn_cast<arith::DivSIOp>(op))
       return handleDivSI(divsi, values);
+    if (auto divui = dyn_cast<arith::DivUIOp>(op))
+      return handleIntegerDivision(divui,
+                                   [](uint64_t lhs, uint64_t rhs) {
+                                     return lhs / rhs;
+                                   }, values);
+    if (auto remsi = dyn_cast<arith::RemSIOp>(op))
+      return handleRemSI(remsi, values);
+    if (auto remui = dyn_cast<arith::RemUIOp>(op))
+      return handleIntegerDivision(remui,
+                                   [](uint64_t lhs, uint64_t rhs) {
+                                     return lhs % rhs;
+                                   }, values);
+    if (auto remf = dyn_cast<arith::RemFOp>(op)) {
+      return handleBinaryOp(remf,
+                            [](RuntimeValue lhs, RuntimeValue rhs) {
+                              return RuntimeValue::makeFloat(
+                                  std::fmod(lhs.asFloat(), rhs.asFloat()));
+                            }, values);
+    }
     if (auto cmpi = dyn_cast<arith::CmpIOp>(op))
       return handleCmp(cmpi, values);
     if (auto select = dyn_cast<arith::SelectOp>(op))

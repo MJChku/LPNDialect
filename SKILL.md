@@ -1,0 +1,174 @@
+---
+name: lpn-modeling
+description: Build, use, and extend LPNDialect for fast event-driven Petri-net performance models, including composable Python components, atomic token operations, guard synthesis, native MLIR-to-binary compilation, and CoralNPU/Verilator validation. Use when working on this repository or constructing LPN network, accelerator, or memory timing models.
+---
+
+# LPNDialect modeling workflow
+
+Run commands from the repository root. Read [README.md](README.md) for the
+supported dialect and [examples/coralnpu/README.md](examples/coralnpu/README.md)
+for the accelerator model and baseline setup. On `icdslab2.epfl.ch`, the
+checkouts are `~/LPNDialect` and `~/coralnpu`.
+
+## Build and run
+
+Use Python 3, CMake, a C++ compiler, and LLVM/MLIR 20 development packages.
+Native compilation also requires `llc-20` and `clang++-20` on `PATH`.
+
+```sh
+export LLVM_DIR=/usr/lib/llvm-20/lib/cmake/llvm
+export MLIR_DIR=/usr/lib/llvm-20/lib/cmake/mlir
+export PYTHONPATH="$PWD${PYTHONPATH:+:$PYTHONPATH}"
+export PYTHONDONTWRITEBYTECODE=1
+CMAKE_BUILD_TYPE=Release ./build.sh -j8
+ctest --test-dir build --output-on-failure
+```
+
+Smoke-test the all-to-all network:
+
+```sh
+./run.sh simulate --devices 4 --messages 2
+./run.sh emit --devices 4 --messages 2 > /tmp/network.mlir
+build/tools/lpn-compile/lpn-compile /tmp/network.mlir -o /tmp/network
+/tmp/network --max-time=20000000 --tokens
+```
+
+Alternatively, `./run.sh compile /tmp/network --devices 4 --messages 2`
+emits and compiles in one command. Native compilation lowers MLIR to LLVM IR,
+generates an object with `llc-20`, and links the token/event runtime. There is
+no generated C++ model or interpreted MLIR in the executable's transitions.
+Executables default to a limit of 100 million model time units; pass
+`--max-time=NUMBER` explicitly for longer workloads.
+
+## Construct models
+
+Use `NetBuilder` from `lpnlang_mlir`. Instantiate component classes with a
+shared builder; pass `PlaceHandle` objects between components and prefix names
+per instance. Classes can contain other component classes. Existing examples:
+`NetDevice`/`NetUniDirLink` in `examples/network_net.py`, and the units inside
+`examples/coralnpu/model.py` and `matrix.py`.
+
+Create places with `net.place(name, initial_tokens=N, observable=True)` as
+needed, and register transitions with `@net.transition`. Transition primitives
+such as `take`, `peek`, `count`, `guard`, `create`, and `emit` are supplied by
+the DSL. Define decorated functions in real Python files: the frontend reads
+their source using AST inspection, so stdin, `exec`, and dynamically generated
+source without a backing file are unsuitable.
+
+Use `net.build()` to obtain MLIR or `net.emit_to_file(path)` to write it.
+For the Python reference, use `sim = net.python_simulator()`,
+`sim.run(max_time=...)`, and `sim.place_dicts(place_name)`.
+The C++ reference interpreter is
+`build/tools/lpn-opt/lpn-opt --lpn-simulate model.mlir`.
+
+Represent resource capacity with initial credit tokens, acquire them at issue,
+and emit them back at the resource's initiation interval. Schedule result
+tokens at completion latency. Distinguish occupancy, initiation interval, and
+result latency; they need not be equal. Preserve event-driven execution and
+use tokens per useful work group instead of one transition per clock or MAC.
+
+### Atomic takes, peeks, and guards
+
+All operations in a firing are atomic. Takes are provisional: if a later
+take, peek, or guard blocks, the entire firing rolls back. Emits become visible
+only when the firing succeeds, after their specified delays.
+
+`peek(place)` reads the next ready FIFO token without consuming it. It blocks
+on an empty place; it does not read the most recently appended token.
+Token updates are immutable: keep the result of `token.set(key, value)`.
+Do not consume and re-emit a losing arbitration token, which changes FIFO
+order. Instead inspect with `peek`, then take the selected input.
+
+Use value-dependent `if` inside decorated transition source. Avoid Python
+`and`/`or` on DSL SSA values; express conjunction with separate `guard(...)`
+calls. Freeze per-instance loop bindings with default arguments when creating
+multiple transitions in a Python loop.
+
+Guard synthesis is automatic where its take-ID representation is sufficient:
+
+```sh
+build/tools/lpn-opt/lpn-opt --lpn-synthesize-guards model.mlir
+```
+
+It rejects token flow in data-dependent branches, repeating/dynamic loops,
+and effectful helpers. For those cases, supply explicit enabling predicates
+with `guard(...)` at transition entry, before takes, emits, and helper calls.
+Guard counts before peeking where necessary. The pass preserves these manual
+predicates and marks the transition `lpn.guard_mode = "manual"`.
+See the arbitration example in [README.md](README.md).
+
+The native compiler executes nested conditional takes directly and does not
+require the synthesis pass. Its atomic runtime remains the final check even
+with manual guards. Observable reduction currently rejects manual guards;
+do not discard the predicates to force reduction through.
+
+## CoralNPU and matrix models
+
+The model predicts timing for a dynamic instruction stream; it does not
+execute arbitrary ISA arithmetic or predict new control flow. Trace adapters
+discard observed timestamps when building the model. Use the original MLIR
+for timed validation.
+
+```sh
+python3 -m examples.coralnpu.run \
+  --trace examples/coralnpu/validation/rep32/alu_chain.csv \
+  --emit /tmp/coral.mlir
+build/tools/lpn-compile/lpn-compile /tmp/coral.mlir -o /tmp/coral
+/tmp/coral
+
+python3 -m examples.coralnpu.run \
+  --gemm 16 16 64 --dtype int8 \
+  --memory-latency 20 --memory-bandwidth 32 --emit /tmp/gemm.mlir
+build/tools/lpn-compile/lpn-compile /tmp/gemm.mlir -o /tmp/gemm
+/tmp/gemm
+```
+
+CoralNPU model units are cycles, including memory latency; bandwidth is bytes
+per cycle. The generic native output still labels time `ns`.
+`MatrixArray` models four staggered PE blocks, packed INT8/BF16/FP32 pipelines,
+and accumulator hazards. `GemmModel` adds tiled commands, operand buffers,
+accumulator ownership, and memory transfers. Memory service time is
+`ceil(bytes / bytes_per_cycle)` plus latency, with bandwidth and outstanding
+request resources. This is a simple timing endpoint, not a complete AXI/DRAM
+protocol simulator. Reject unknown runtime matrix configuration instead of
+guessing shapes or types.
+
+For fresh RTL validation, check out CoralNPU revision
+`517f4c09bd5aabb4e8a16436d8853c912a24790b`, apply
+`examples/coralnpu/verilator-observer.patch` once, and build the RVV and VME
+Verilator targets using the detailed model README. Then run:
+
+```sh
+python3 -m examples.coralnpu.validate \
+  --coral-root ../coralnpu --clang clang-20 \
+  --output /tmp/coral-validation \
+  --lpn-compiler build/tools/lpn-compile/lpn-compile
+python3 -m examples.coralnpu.validate_matrix \
+  --coral-root ../coralnpu --clang clang-20 \
+  --output /tmp/matrix-validation \
+  --lpn-compiler build/tools/lpn-compile/lpn-compile
+```
+
+Recorded CSV observations and comparison reports are under
+`examples/coralnpu/validation`. The matrix baseline checks architectural output
+elements and array timing. Matching microkernels does not establish complete
+core cycle equivalence. Compare equivalent timed regions and report startup,
+RTL numerical execution, and readback overhead when discussing speed.
+
+## Validate changes and respect current limits
+
+For runtime/compiler changes, run CTest and compare Python/native final token
+fields, counts, and completion time on affected models. Guard changes need
+coverage for nested takes, rollback, explicit predicates, and rejection cases.
+For matrix timing changes, use recorded RTL observations and rerun the actual
+baseline when pipeline assumptions or observers change.
+
+The native compiler supports one `lpn.net`, structured `scf.if`/`scf.for`,
+arrays, arithmetic, and single-block helpers/transitions. Unsupported operations
+fail explicitly. Native compilation rejects place capacities; the interpreters
+ignore them, so use credit tokens to enforce bounded resources.
+
+`--lpn-normalize-delays` sets nonzero delays to zero. Use it only for structural
+analysis. Observable reduction is experimental and can alter behavior; do not
+insert either pass into the native timing workflow without validation.
+Keep binaries, build directories, and Python caches out of commits.

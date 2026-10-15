@@ -9,7 +9,7 @@ def TokenType : TypeDef<LPN_Dialect, "Token"> {
 
   let description = [{
     Tokens are abstract values that flow through schedule functions. They can
-    only be materialized by `lpn.take` and consumed by `lpn.emit` or the other
+    be materialized by `lpn.take`, `lpn.peek`, or `lpn.create`, and consumed by `lpn.emit` or the other
     token-manipulation operations provided by this dialect.
   }];
 

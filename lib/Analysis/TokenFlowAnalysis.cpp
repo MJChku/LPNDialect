@@ -320,22 +320,31 @@ struct TokenFlowAnalysisImpl {
 private:
   LogicalResult collectTakePlaces() {
     for (TransitionOp trans : net.getOps<TransitionOp>()) {
-      for (TakeOp take : trans.getBody().getOps<TakeOp>()) {
+      WalkResult walkResult = trans.walk([&](TakeOp take) -> WalkResult {
         StringAttr place;
-        if (failed(resolvePlaceSymbol(take.getPlace(), place)))
-          return take.emitError("failed to resolve place symbol");
+        if (failed(resolvePlaceSymbol(take.getPlace(), place))) {
+          take.emitError("failed to resolve place symbol");
+          return WalkResult::interrupt();
+        }
         takePlaces[take.getResult()] = place;
-      }
+        return WalkResult::advance();
+      });
+      if (walkResult.wasInterrupted())
+        return failure();
     }
     return success();
   }
 
   LogicalResult processTransition(TransitionOp trans) {
+    if (trans->hasAttr("lpn.guard_mode"))
+      return trans.emitError("observable reduction does not support manual "
+                             "guard predicates; execute the original net");
     ControlFlowTrace trace(trans);
     llvm::DenseMap<unsigned, Value> guardIdToTake;
-    for (TakeOp take : trans.getBody().getOps<TakeOp>())
+    trans.walk([&](TakeOp take) {
       if (auto guardAttr = take->getAttrOfType<IntegerAttr>(kGuardIdAttr))
         guardIdToTake[guardAttr.getInt()] = take.getResult();
+    });
 
     WalkResult walkResult = trans->walk([&](EmitOp emit) -> WalkResult {
       if (failed(processEmit(trans, emit, trace, guardIdToTake)))

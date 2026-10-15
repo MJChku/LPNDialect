@@ -212,6 +212,19 @@ def TakeOp : LPN_Op<"take"> {
     "$place attr-dict `:` type($place) `->` type($token)";
 }
 
+def PeekOp : LPN_Op<"peek"> {
+  let summary = "Read the FIFO head without consuming it; block if empty";
+  let arguments = (ins PlaceHandleType:$place);
+  let results = (outs TokenType:$token);
+  let assemblyFormat = "$place attr-dict `:` type($place) `->` type($token)";
+}
+
+def GuardOp : LPN_Op<"guard"> {
+  let summary = "Explicit enabling predicate; block the firing when false";
+  let arguments = (ins I1:$condition);
+  let assemblyFormat = "$condition attr-dict `:` type($condition)";
+}
+
 def EmitOp : LPN_Op<"emit"> {
   let summary = "Schedule a token into a place after a delay";
 
