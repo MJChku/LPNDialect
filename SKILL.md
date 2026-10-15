@@ -132,6 +132,15 @@ that only read state can do the same; transition-body peeks retain snapshots
 so a later take cannot invalidate an earlier peek. Empty predicate peeks
 disable the transition before its body runs.
 
+Native predicates cache both true and false results using per-place heartbeats.
+Visible token arrivals, takes and replacements invalidate observed dependencies;
+unchanged token counts do not imply unchanged state. Actual runtime reads track
+helper and dynamic-place dependencies, including empty reads. `--stats` counts
+actual evaluations separately from cache hits; `--no-guard-cache` disables this
+optimization for differential checks. Preserve firing order and event times
+when changing the cache. It does not provide parallel execution or safe bounds
+for components to advance independently in simulated time.
+
 Native empty-only queues use counters. Data-bearing tokens have immutable,
 reference-counted payloads: movement, clone and peek share handles; `.set()`
 copies the payload for an independent update. Mixed queues and rollback keep

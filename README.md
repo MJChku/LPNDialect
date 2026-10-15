@@ -70,7 +70,18 @@ tokens, including repeated takes in statically evaluable loops and branches.
 Peeks require a token without consuming it. Data-dependent token flow and
 helper calls currently require an explicit enabling annotation; compilation
 fails with a diagnostic when inference cannot establish the requirements.
-`--stats` reports guard checks, body executions, and rollback counts.
+The runtime caches each predicate's true or false result against per-place
+heartbeats. Takes and visible token arrivals increment the heartbeat; replacing
+a token invalidates the cache even when its place's count is unchanged. Token
+payloads are immutable, so `.set()` changes place state when the returned token
+is installed. Reads through helpers and dynamically selected places are tracked
+at runtime, including empty peeks and short-circuited predicates. If none of the
+observed places changed, the cached result is reused; a cached true result still
+allows the body to run. Delayed arrivals invalidate predicates when they become
+visible. The scheduler's firing order and event timestamps are unchanged.
+
+`--stats` reports actual guard evaluations, cache hits, dependency reads, body
+executions, and rollback counts. Use `--no-guard-cache` for comparison/debugging.
 `--trace` reports successful transition firings with model timestamps.
 
 For observable reduction, `--lpn-synthesize-guards` computes separate take-ID

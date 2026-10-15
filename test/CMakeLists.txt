@@ -92,6 +92,14 @@ add_test(
           --tool $<TARGET_FILE:lpn-opt>
 )
 
+add_test(
+  NAME lpn-guard-heartbeats
+  COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${PROJECT_SOURCE_DIR}
+          PYTHONDONTWRITEBYTECODE=1 ${Python3_EXECUTABLE}
+          ${CMAKE_CURRENT_SOURCE_DIR}/test_guard_heartbeats.py
+          --tool $<TARGET_FILE:lpn-compile>
+)
+
 find_program(FILECHECK_EXE
   NAMES FileCheck
   HINTS ${LLVM_TOOLS_BINARY_DIR}

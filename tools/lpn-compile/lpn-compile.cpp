@@ -162,6 +162,7 @@ private:
     guardFn = runtime("lpn_guard", llvm::Type::getVoidTy(context), {i1});
     emitFn = runtime("lpn_emit", llvm::Type::getVoidTy(context), {ptr, ptr, f64});
     countFn = runtime("lpn_count", i64, {ptr});
+    observedCountFn = runtime("lpn_count_observed", i64, {ptr});
     createFn = runtime("lpn_token_create", ptr, {});
     cloneFn = runtime("lpn_token_clone", ptr, {ptr});
     setFn = runtime("lpn_token_set", ptr, {ptr, i64, i64, i64});
@@ -325,7 +326,7 @@ private:
     if (auto peek = dyn_cast<PeekOp>(&op)) {
       if (checkingGuard)
         emitGuardTest(ir.CreateICmpSGT(
-            ir.CreateCall(countFn, {value(peek.getPlace())}), integer(0)));
+            ir.CreateCall(observedCountFn, {value(peek.getPlace())}), integer(0)));
       put(peek.getResult(), ir.CreateCall(checkingGuard || borrowingPeeks ? peekReadOnlyFn : peekFn,
                                         {value(peek.getPlace())}));
       return;
@@ -353,7 +354,8 @@ private:
       return;
     }
     if (auto count = dyn_cast<CountOp>(&op)) {
-      put(count.getResult(), ir.CreateCall(countFn, {value(count.getPlace())}));
+      put(count.getResult(), ir.CreateCall(checkingGuard || borrowingPeeks ? observedCountFn : countFn,
+                                          {value(count.getPlace())}));
       return;
     }
     if (auto create = dyn_cast<TokenCreateOp>(&op)) {
@@ -661,7 +663,7 @@ private:
         if (it == placeIds.end())
           fail("unknown guard place: " + name);
         auto *place = ir.CreateCall(placeFn, {integer(it->second)});
-        emitGuardTest(ir.CreateICmpSGE(ir.CreateCall(countFn, {place}), integer(required)));
+        emitGuardTest(ir.CreateICmpSGE(ir.CreateCall(observedCountFn, {place}), integer(required)));
       }
     }
     ir.CreateRet(llvm::ConstantInt::getTrue(context));
@@ -784,7 +786,7 @@ private:
   llvm::IRBuilder<> ir;
   std::unique_ptr<llvm::Module> module;
   llvm::Type *i1, *i32, *i64, *f64, *ptr, *keyType;
-  llvm::FunctionCallee placeFn, takeFn, emitFn, countFn, createFn, cloneFn;
+  llvm::FunctionCallee placeFn, takeFn, emitFn, countFn, observedCountFn, createFn, cloneFn;
   llvm::FunctionCallee peekFn, peekReadOnlyFn, guardFn;
   llvm::FunctionCallee setFn, getFn, arrayCreateFn, arrayAllocFn, arrayGetFn;
   llvm::FunctionCallee arrayStaticFn, arrayPlacesStaticFn, inputArrayFn;

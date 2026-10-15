@@ -1,0 +1,299 @@
+{
+  "scope": "Native timing execution on one saved real SmolLM2-135M prefill step, reusable capacity-8192 timing net; functional frontend/preparation/compilation excluded",
+  "method": "One warmup per mode, seven alternating samples with rotating mode order; run alongside the existing long RTL validation, after CTest completes",
+  "input_tables_sha256": "aaa95e97840e2da8533948f9f5b8279d673751f07a736c42ea3cb970db020030",
+  "timing_mlir_sha256": "e5d2eeb3a9d539c43d5bea2205fbe2c4c8513a04b24f35f44548f2ef7f785b2d",
+  "validation": {
+    "previous": {
+      "cycles": 2238884.0,
+      "guard_evaluations": 5762428,
+      "body_executions": 182248,
+      "rollbacks": 0,
+      "final_marking_sha256": "d0862559aae6d5851674c7a18f123f0be2f457f342af97d4998508841bfbdba0",
+      "process_seconds": 1.5443375129252672,
+      "firing_trace_sha256": "d3bb1d266977558c1eddbbb367b0fd772f9ec07556006a4469fd6151ebbf1b99"
+    },
+    "heartbeat_disabled": {
+      "cycles": 2238884.0,
+      "guard_evaluations": 5762428,
+      "body_executions": 182248,
+      "rollbacks": 0,
+      "final_marking_sha256": "d0862559aae6d5851674c7a18f123f0be2f457f342af97d4998508841bfbdba0",
+      "process_seconds": 1.637556940317154,
+      "firing_trace_sha256": "d3bb1d266977558c1eddbbb367b0fd772f9ec07556006a4469fd6151ebbf1b99",
+      "cache_hits": 0,
+      "dependency_reads": 0
+    },
+    "heartbeat": {
+      "cycles": 2238884.0,
+      "guard_evaluations": 478020,
+      "body_executions": 182248,
+      "rollbacks": 0,
+      "final_marking_sha256": "d0862559aae6d5851674c7a18f123f0be2f457f342af97d4998508841bfbdba0",
+      "process_seconds": 0.5291862469166517,
+      "firing_trace_sha256": "d3bb1d266977558c1eddbbb367b0fd772f9ec07556006a4469fd6151ebbf1b99",
+      "cache_hits": 5284408,
+      "dependency_reads": 1932745
+    }
+  },
+  "samples": {
+    "previous": [
+      {
+        "cycles": 2238884.0,
+        "guard_evaluations": 5762428,
+        "body_executions": 182248,
+        "rollbacks": 0,
+        "final_marking_sha256": "d0862559aae6d5851674c7a18f123f0be2f457f342af97d4998508841bfbdba0",
+        "process_seconds": 1.4205051753669977,
+        "core_seconds": 1.410011258
+      },
+      {
+        "cycles": 2238884.0,
+        "guard_evaluations": 5762428,
+        "body_executions": 182248,
+        "rollbacks": 0,
+        "final_marking_sha256": "d0862559aae6d5851674c7a18f123f0be2f457f342af97d4998508841bfbdba0",
+        "process_seconds": 1.4221976026892662,
+        "core_seconds": 1.412303872
+      },
+      {
+        "cycles": 2238884.0,
+        "guard_evaluations": 5762428,
+        "body_executions": 182248,
+        "rollbacks": 0,
+        "final_marking_sha256": "d0862559aae6d5851674c7a18f123f0be2f457f342af97d4998508841bfbdba0",
+        "process_seconds": 1.4223164767026901,
+        "core_seconds": 1.412678752
+      },
+      {
+        "cycles": 2238884.0,
+        "guard_evaluations": 5762428,
+        "body_executions": 182248,
+        "rollbacks": 0,
+        "final_marking_sha256": "d0862559aae6d5851674c7a18f123f0be2f457f342af97d4998508841bfbdba0",
+        "process_seconds": 1.4256258998066187,
+        "core_seconds": 1.415333643
+      },
+      {
+        "cycles": 2238884.0,
+        "guard_evaluations": 5762428,
+        "body_executions": 182248,
+        "rollbacks": 0,
+        "final_marking_sha256": "d0862559aae6d5851674c7a18f123f0be2f457f342af97d4998508841bfbdba0",
+        "process_seconds": 1.4234707932919264,
+        "core_seconds": 1.412887746
+      },
+      {
+        "cycles": 2238884.0,
+        "guard_evaluations": 5762428,
+        "body_executions": 182248,
+        "rollbacks": 0,
+        "final_marking_sha256": "d0862559aae6d5851674c7a18f123f0be2f457f342af97d4998508841bfbdba0",
+        "process_seconds": 1.4363082740455866,
+        "core_seconds": 1.425849482
+      },
+      {
+        "cycles": 2238884.0,
+        "guard_evaluations": 5762428,
+        "body_executions": 182248,
+        "rollbacks": 0,
+        "final_marking_sha256": "d0862559aae6d5851674c7a18f123f0be2f457f342af97d4998508841bfbdba0",
+        "process_seconds": 1.422991907224059,
+        "core_seconds": 1.413782673
+      }
+    ],
+    "heartbeat_disabled": [
+      {
+        "cycles": 2238884.0,
+        "guard_evaluations": 5762428,
+        "body_executions": 182248,
+        "rollbacks": 0,
+        "final_marking_sha256": "d0862559aae6d5851674c7a18f123f0be2f457f342af97d4998508841bfbdba0",
+        "process_seconds": 1.5204550474882126,
+        "core_seconds": 1.510346482,
+        "cache_hits": 0,
+        "dependency_reads": 0
+      },
+      {
+        "cycles": 2238884.0,
+        "guard_evaluations": 5762428,
+        "body_executions": 182248,
+        "rollbacks": 0,
+        "final_marking_sha256": "d0862559aae6d5851674c7a18f123f0be2f457f342af97d4998508841bfbdba0",
+        "process_seconds": 1.521305039525032,
+        "core_seconds": 1.512161532,
+        "cache_hits": 0,
+        "dependency_reads": 0
+      },
+      {
+        "cycles": 2238884.0,
+        "guard_evaluations": 5762428,
+        "body_executions": 182248,
+        "rollbacks": 0,
+        "final_marking_sha256": "d0862559aae6d5851674c7a18f123f0be2f457f342af97d4998508841bfbdba0",
+        "process_seconds": 1.5369823724031448,
+        "core_seconds": 1.526712727,
+        "cache_hits": 0,
+        "dependency_reads": 0
+      },
+      {
+        "cycles": 2238884.0,
+        "guard_evaluations": 5762428,
+        "body_executions": 182248,
+        "rollbacks": 0,
+        "final_marking_sha256": "d0862559aae6d5851674c7a18f123f0be2f457f342af97d4998508841bfbdba0",
+        "process_seconds": 1.5252908412367105,
+        "core_seconds": 1.515196191,
+        "cache_hits": 0,
+        "dependency_reads": 0
+      },
+      {
+        "cycles": 2238884.0,
+        "guard_evaluations": 5762428,
+        "body_executions": 182248,
+        "rollbacks": 0,
+        "final_marking_sha256": "d0862559aae6d5851674c7a18f123f0be2f457f342af97d4998508841bfbdba0",
+        "process_seconds": 1.5215026121586561,
+        "core_seconds": 1.512073913,
+        "cache_hits": 0,
+        "dependency_reads": 0
+      },
+      {
+        "cycles": 2238884.0,
+        "guard_evaluations": 5762428,
+        "body_executions": 182248,
+        "rollbacks": 0,
+        "final_marking_sha256": "d0862559aae6d5851674c7a18f123f0be2f457f342af97d4998508841bfbdba0",
+        "process_seconds": 1.519464235752821,
+        "core_seconds": 1.51041008,
+        "cache_hits": 0,
+        "dependency_reads": 0
+      },
+      {
+        "cycles": 2238884.0,
+        "guard_evaluations": 5762428,
+        "body_executions": 182248,
+        "rollbacks": 0,
+        "final_marking_sha256": "d0862559aae6d5851674c7a18f123f0be2f457f342af97d4998508841bfbdba0",
+        "process_seconds": 1.5296636167913675,
+        "core_seconds": 1.52070557,
+        "cache_hits": 0,
+        "dependency_reads": 0
+      }
+    ],
+    "heartbeat": [
+      {
+        "cycles": 2238884.0,
+        "guard_evaluations": 478020,
+        "body_executions": 182248,
+        "rollbacks": 0,
+        "final_marking_sha256": "d0862559aae6d5851674c7a18f123f0be2f457f342af97d4998508841bfbdba0",
+        "process_seconds": 0.41481885127723217,
+        "core_seconds": 0.404604271,
+        "cache_hits": 5284408,
+        "dependency_reads": 1932745
+      },
+      {
+        "cycles": 2238884.0,
+        "guard_evaluations": 478020,
+        "body_executions": 182248,
+        "rollbacks": 0,
+        "final_marking_sha256": "d0862559aae6d5851674c7a18f123f0be2f457f342af97d4998508841bfbdba0",
+        "process_seconds": 0.416262524202466,
+        "core_seconds": 0.40613902,
+        "cache_hits": 5284408,
+        "dependency_reads": 1932745
+      },
+      {
+        "cycles": 2238884.0,
+        "guard_evaluations": 478020,
+        "body_executions": 182248,
+        "rollbacks": 0,
+        "final_marking_sha256": "d0862559aae6d5851674c7a18f123f0be2f457f342af97d4998508841bfbdba0",
+        "process_seconds": 0.41307004541158676,
+        "core_seconds": 0.403113236,
+        "cache_hits": 5284408,
+        "dependency_reads": 1932745
+      },
+      {
+        "cycles": 2238884.0,
+        "guard_evaluations": 478020,
+        "body_executions": 182248,
+        "rollbacks": 0,
+        "final_marking_sha256": "d0862559aae6d5851674c7a18f123f0be2f457f342af97d4998508841bfbdba0",
+        "process_seconds": 0.41257790103554726,
+        "core_seconds": 0.403044936,
+        "cache_hits": 5284408,
+        "dependency_reads": 1932745
+      },
+      {
+        "cycles": 2238884.0,
+        "guard_evaluations": 478020,
+        "body_executions": 182248,
+        "rollbacks": 0,
+        "final_marking_sha256": "d0862559aae6d5851674c7a18f123f0be2f457f342af97d4998508841bfbdba0",
+        "process_seconds": 0.4044668599963188,
+        "core_seconds": 0.398653053,
+        "cache_hits": 5284408,
+        "dependency_reads": 1932745
+      },
+      {
+        "cycles": 2238884.0,
+        "guard_evaluations": 478020,
+        "body_executions": 182248,
+        "rollbacks": 0,
+        "final_marking_sha256": "d0862559aae6d5851674c7a18f123f0be2f457f342af97d4998508841bfbdba0",
+        "process_seconds": 0.4151019863784313,
+        "core_seconds": 0.404979732,
+        "cache_hits": 5284408,
+        "dependency_reads": 1932745
+      },
+      {
+        "cycles": 2238884.0,
+        "guard_evaluations": 478020,
+        "body_executions": 182248,
+        "rollbacks": 0,
+        "final_marking_sha256": "d0862559aae6d5851674c7a18f123f0be2f457f342af97d4998508841bfbdba0",
+        "process_seconds": 0.4150163047015667,
+        "core_seconds": 0.404761268,
+        "cache_hits": 5284408,
+        "dependency_reads": 1932745
+      }
+    ]
+  },
+  "medians": {
+    "previous": {
+      "core_seconds": 1.412887746,
+      "process_seconds": 1.422991907224059
+    },
+    "heartbeat_disabled": {
+      "core_seconds": 1.512161532,
+      "process_seconds": 1.5215026121586561
+    },
+    "heartbeat": {
+      "core_seconds": 0.404604271,
+      "process_seconds": 0.41481885127723217
+    }
+  },
+  "core_speedup_vs_previous": 3.49202380515652,
+  "guard_evaluations_reduction_percent": 91.70453843414617,
+  "net": {
+    "places": 190,
+    "transitions": 15,
+    "input_capacity": 8192,
+    "matrix_engines": 1,
+    "commands": 5811
+  },
+  "source_base_commit": "eb86d78",
+  "source_sha256": {
+    "tools/lpn-compile/NativeRuntime.cpp": "b4797963740e1063a0fde7682561712cb43d2e4a25781f08c718c640772d47c5",
+    "tools/lpn-compile/lpn-compile.cpp": "cba792d608775d80f3116492e09d00638ee7f0c1990afc3491c208e8924e809e"
+  },
+  "tests": {
+    "ctest_suites": 15,
+    "passed": 15,
+    "real_seconds": 99.84,
+    "heartbeat_cases": 5
+  },
+  "note": "The reusable net has one extra initialization transition compared with the 14-transition static model in the earlier manual parallelism probe. This report measures timing execution only, not end-to-end trained inference."
+}

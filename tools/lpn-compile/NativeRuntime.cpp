@@ -88,6 +88,9 @@ struct Place {
   std::deque<Batch> ready;
   std::priority_queue<Scheduled, std::vector<Scheduled>, LaterFirst> scheduled;
   uint64_t nextOrder = 0;
+  // Visible queue changes invalidate predicates even if the token count ends
+  // up unchanged (for example replacing a completion bitmap latch).
+  uint64_t heartbeat = 0, guardReadEpoch = 0;
 
   ~Place() {
     for (const Batch &batch : ready)
@@ -106,6 +109,7 @@ struct Place {
   }
 
   void pushBack(Token *token) {
+    ++heartbeat;
     ++readyCount;
     if (token == &emptyToken && ready.empty()) {
       ++emptyReady;
@@ -119,6 +123,7 @@ struct Place {
   }
 
   void pushFront(Token *token) {
+    ++heartbeat;
     ++readyCount;
     if (token == &emptyToken && ready.empty()) {
       ++emptyReady;
@@ -137,6 +142,7 @@ struct Place {
 
   // Transfer one owned handle out of the queue.
   Token *popFront() {
+    ++heartbeat;
     --readyCount;
     if (emptyReady) {
       --emptyReady;
@@ -204,6 +210,30 @@ bool inRun = false;
 Transaction *active = nullptr;
 double currentTime = 0.0;
 uint64_t guardChecks = 0, bodyExecutions = 0, rollbacks = 0;
+uint64_t guardCacheHits = 0, guardDependencyReads = 0, guardReadEpoch = 0;
+
+struct GuardCache {
+  std::vector<std::pair<Place *, uint64_t>> dependencies;
+  bool valid = false, ready = false;
+  bool unchanged() const {
+    if (!valid) return false;
+    for (const auto &entry : dependencies)
+      if (entry.first->heartbeat != entry.second) return false;
+    return true;
+  }
+};
+GuardCache *observingGuard = nullptr;
+
+// Observe actual reads, including helper calls and dynamically chosen places.
+// A failed/short-circuited predicate needs only the reads that led to failure:
+// its path cannot change until one of those dependencies changes.
+void observeGuardRead(Place *place) {
+  if (observingGuard && place->guardReadEpoch != guardReadEpoch) {
+    place->guardReadEpoch = guardReadEpoch;
+    observingGuard->dependencies.emplace_back(place,place->heartbeat);
+    ++guardDependencyReads;
+  }
+}
 
 [[noreturn]] void invalid(const char *message) {
   std::fprintf(stderr, "lpn native runtime: %s\n", message);
@@ -269,20 +299,28 @@ void loadInputArrays(const char *path) {
   if (remaining) invalid("trailing bytes in input-table file");
 }
 
-bool tryFire(void (*transition)(), bool (*enabled)()) {
-  ++guardChecks;
-  {
+bool tryFire(void (*transition)(), bool (*enabled)(), GuardCache &cache,
+             bool useGuardCache) {
+  if (useGuardCache && cache.unchanged()) {
+    ++guardCacheHits;
+  } else {
+    ++guardChecks;
     // Count-only predicates allocate no transaction on the heap. A scratch
     // arena supports immutable token/array expressions in manual predicates.
     Transaction scratch;
     active = &scratch;
+    cache.dependencies.clear();
+    ++guardReadEpoch;
+    observingGuard = useGuardCache ? &cache : nullptr;
     volatile bool ready = false;
     if (setjmp(scratch.blocked) == 0)
       ready = enabled();
     active = nullptr;
-    if (!ready)
-      return false;
+    observingGuard = nullptr;
+    cache.ready = ready;
+    cache.valid = true;
   }
+  if (!cache.ready) return false;
   ++bodyExecutions;
   auto *txn = new Transaction();
   active = txn;
@@ -373,6 +411,7 @@ void *lpn_peek(void *rawPlace) {
 // semantics, including when a later take removes the original queue entry.
 void *lpn_peek_readonly(void *rawPlace) {
   auto *place = static_cast<Place *>(rawPlace);
+  observeGuardRead(place);
   if (!place->readyCount)
     longjmp(transaction().blocked, 1);
   return place->front();
@@ -394,6 +433,14 @@ void lpn_emit(void *rawPlace, void *rawToken, double delay) {
 
 int64_t lpn_count(void *rawPlace) {
   return static_cast<int64_t>(static_cast<Place *>(rawPlace)->readyCount);
+}
+
+// Separate from the pure count ABI so LLVM cannot reorder or delete the
+// dependency-observation side effect in predicates/read-only helpers.
+int64_t lpn_count_observed(void *rawPlace) {
+  auto *place = static_cast<Place *>(rawPlace);
+  observeGuardRead(place);
+  return static_cast<int64_t>(place->readyCount);
 }
 
 void *lpn_token_create() { return transaction().makeToken(); }
@@ -493,6 +540,7 @@ int lpn_run(int argc, char **argv, int64_t placeCount, const char **placeNames,
   bool printTokens = false;
   bool printStats = false;
   bool trace = false;
+  bool useGuardCache = true;
   const char *inputPath = nullptr;
   std::string wallStartName,wallEndName;
   for (int idx = 1; idx < argc; ++idx) {
@@ -507,6 +555,8 @@ int lpn_run(int argc, char **argv, int64_t placeCount, const char **placeNames,
       printStats = true;
     } else if (std::strcmp(argv[idx], "--trace") == 0) {
       trace = true;
+    } else if (std::strcmp(argv[idx], "--no-guard-cache") == 0) {
+      useGuardCache = false;
     } else if (std::strncmp(argv[idx], "--inputs=", 9) == 0) {
       if (inputPath) invalid("duplicate --inputs option");
       inputPath = argv[idx]+9;
@@ -517,7 +567,8 @@ int lpn_run(int argc, char **argv, int64_t placeCount, const char **placeNames,
     } else {
       std::fprintf(stderr,
                    "Usage: %s [--max-time=NUMBER] [--tokens] [--stats] [--trace] "
-                   "[--wall-start=TRANSITION --wall-end=TRANSITION] [--inputs=FILE]\n", argv[0]);
+                   "[--wall-start=TRANSITION --wall-end=TRANSITION] [--inputs=FILE] "
+                   "[--no-guard-cache]\n", argv[0]);
       return 2;
     }
   }
@@ -548,10 +599,13 @@ int lpn_run(int argc, char **argv, int64_t placeCount, const char **placeNames,
   if ((!wallStartName.empty() || !wallEndName.empty()) && (wallStart < 0 || wallEnd < 0))
     invalid("wall-time profiling needs valid --wall-start and --wall-end transitions");
   guardChecks = bodyExecutions = rollbacks = 0;
+  guardCacheHits = guardDependencyReads = guardReadEpoch = 0;
+  observingGuard = nullptr;
+  std::vector<GuardCache> guardCaches(static_cast<size_t>(transitionCount));
   while (currentTime <= maxTime) {
     bool progress = false;
     for (int64_t idx = 0; idx < transitionCount; ++idx)
-      while (tryFire(transitions[idx], enabled[idx])) {
+      while (tryFire(transitions[idx], enabled[idx], guardCaches[idx], useGuardCache)) {
         if (idx == wallStart && !wallStarted) {
           wallClock = std::chrono::steady_clock::now();
           wallStarted = true;
@@ -575,6 +629,10 @@ int lpn_run(int argc, char **argv, int64_t placeCount, const char **placeNames,
     commitReady();
   }
   std::printf("Simulation finished at t=%.3f ns\n", currentTime);
+  if (printStats)
+    std::printf("Guard cache hits: %llu; dependency reads: %llu\n",
+        static_cast<unsigned long long>(guardCacheHits),
+        static_cast<unsigned long long>(guardDependencyReads));
   if (printStats)
     std::printf("Guard checks: %llu; body executions: %llu; rollbacks: %llu\n",
         static_cast<unsigned long long>(guardChecks),
