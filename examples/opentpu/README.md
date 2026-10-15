@@ -1,5 +1,8 @@
 # FeSens/openTPU LPN model
 
+See [ARCHITECTURE.md](ARCHITECTURE.md) for component boundaries, explicit
+dependencies, matrix-engine experiments and net-size/CPU-parallelism details.
+
 This is the active accelerator modeling target. The upstream is
 [FeSens/openTPU](https://github.com/FeSens/openTPU), pinned at
 `f237dab2f196855a59a083b1454786df8f01291f`. It is distinct from the older

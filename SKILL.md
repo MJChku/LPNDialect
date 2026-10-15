@@ -49,6 +49,15 @@ per instance. Classes can contain other component classes. Existing examples:
 `NetDevice`/`NetUniDirLink` in `examples/network_net.py`, and the units inside
 `examples/coralnpu/model.py` and `matrix.py`.
 
+For openTPU architecture changes, follow
+[examples/opentpu/ARCHITECTURE.md](examples/opentpu/ARCHITECTURE.md).
+`CompactOpenTPU` composes independent execution components; use
+`Timing(matrix_engines=N)` for existing-ISA matrix-engine experiments. Keep
+shared-memory hazards explicit across engines and retain FIFO command
+admission to avoid dependency deadlocks. Use `model.statistics()` to count net
+objects. Hardware concurrency does not imply that host transition functions
+can run concurrently without scheduler synchronization.
+
 Create places with `net.place(name, initial_tokens=N, observable=True)` as
 needed, and register transitions with `@net.transition`. Transition primitives
 such as `take`, `peek`, `count`, `guard`, `create`, and `emit` are supplied by

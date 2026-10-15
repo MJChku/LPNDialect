@@ -20,11 +20,14 @@ class Timing:
   epilogue_lanes: int = 2
   quant_buffer_chunks: int = 1024
   batch_rows: int = 1
+  matrix_engines: int = 1
 
   def __post_init__(self):
     if min(self.dram_latency,self.dram_bytes_per_cycle,self.window,self.fifo_chunks,
-           self.chain_length,self.epilogue_lanes,self.batch_rows)<1:
+           self.chain_length,self.epilogue_lanes,self.batch_rows,self.matrix_engines)<1:
       raise ValueError("timing parameters must be positive")
+    if not isinstance(self.matrix_engines,int):
+      raise ValueError("matrix_engines must be an integer")
     if self.quant_buffer_chunks<0:
       raise ValueError("quant buffer size must be nonnegative")
 
@@ -46,9 +49,13 @@ class SystolicArray:
 
 
 class OpenTPU:
+  supports_multiple_matrix_engines = False
+
   def __init__(self,workload,timing=None):
     from opentpu import isa as I, waits as W
     self.workload,self.timing = workload,timing or Timing()
+    if self.timing.matrix_engines!=1 and not self.supports_multiple_matrix_engines:
+      raise ValueError("multiple matrix engines require CompactOpenTPU")
     self.matrix_batch_sizes = []
     cfg,t = workload.config,self.timing
     if cfg.SEQ_WC:

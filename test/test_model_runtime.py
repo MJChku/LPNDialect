@@ -6,9 +6,27 @@ from examples.network_net import build_network_example, create_network_net
 from examples.protoacc_components import DEFAULT_WORKLOAD_PATH
 from examples.protoacc_helpers import load_workload
 from lpnlang_mlir import NetBuilder, PythonRuntimeAPI, TransitionBuilder
+from helper_component import connect_helper
 
 
 class ModelRuntimeTest(unittest.TestCase):
+  def test_component_can_call_helper_from_another_module(self):
+    import helper_component as component
+    net = NetBuilder("cross_module_helper")
+    source = net.place("source",initial_tokens=1)
+    destination = net.place("destination")
+
+    @net.func(args=("i64",),results=("i64",))
+    def next_value(value):
+      func_return(addi(value,1))
+
+    connect_helper(net,source,destination,next_value)
+    sim = net.python_simulator()
+    sim.run()
+    self.assertEqual(sim.place_dicts("destination"),[{"value":1}])
+    self.assertNotIn("take",component.__dict__)
+    self.assertNotIn("func_return",globals())
+
   def test_all_to_all_delivers_every_flow(self):
     net = create_network_net(3, 2)
     sim = net.python_simulator()

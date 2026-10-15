@@ -1,0 +1,40 @@
+{
+  "scope": "same frozen real SmolLM2-135M prefill step; native timing execution only",
+  "cycles": {
+    "original": 2238884.0,
+    "refactored": 2238884.0
+  },
+  "wall_seconds_samples": {
+    "original": [
+      2.366628761,
+      2.384296181,
+      2.365870382
+    ],
+    "refactored": [
+      1.252179862,
+      1.214650603,
+      1.244218214
+    ]
+  },
+  "wall_seconds_median": {
+    "original": 2.366628761,
+    "refactored": 1.244218214
+  },
+  "speedup": 1.9021010417389694,
+  "input_sha256": {
+    "prog_0.hex": "8a244a9950e557b297eff5f9570b0a52de994a0c1a766ffa87c45101decba7bf",
+    "dram_0.bin": "d3897558526084b43581bfabb602632cd3859f9d872ac679daaec537449d1a10",
+    "input.json": "34d49c16a372df1ddf453c93ce23bff3228dbecf30264dec1bacd948695aa171",
+    "model.native": "b297d9af319d4c657db845a5b5573779c87d64ca24d1a24c2695db624380d884",
+    "lpn.log": "86fa7f59b853d51478d4035640287651d4876bba0296d3b05d5f907a5dda7a0d"
+  },
+  "baseline_net": {
+    "transitions": 14,
+    "places": 186
+  },
+  "refactored_net": {
+    "transitions": 14,
+    "places": 151
+  },
+  "note": "three alternating samples after warmup, alongside the existing RTL validation"
+}

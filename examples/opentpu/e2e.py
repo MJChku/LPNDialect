@@ -231,7 +231,7 @@ def main():
       config=asdict(cfg),prompt=a.prompt,prompt_ids=prompt,cap=a.cap,batch_rows=a.batch_rows,
       model_directory=str(a.model_dir),verilator=rtlsim.verilator_version(),verilator_flags=rtlsim.VFLAGS)
   identity["lpn_source_sha256"] = {name:digest(Path(__file__).with_name(name))
-                                  for name in ("e2e.py","compact.py","model.py","workload.py")}
+                                  for name in ("e2e.py","compact.py","components.py","model.py","workload.py")}
   identity["lpn_compiler_sha256"] = digest(a.lpn_compiler)
   identity["lpn_runtime_sha256"] = digest(a.lpn_compiler.parent/"libLPNNativeRuntime.a")
   identity["lpn_frontend_sha256"] = digest(Path(__file__).resolve().parents[2]/"lpnlang_mlir/__init__.py")

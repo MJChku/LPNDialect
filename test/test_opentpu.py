@@ -9,12 +9,104 @@ import unittest
 
 from examples.opentpu.benchmark import gemm, mlp, native_observation, write_inputs
 from examples.opentpu.model import OpenTPU, Timing
-from examples.opentpu.compact import CompactOpenTPU
+from examples.opentpu.compact import CompactOpenTPU,dependencies
 from examples.opentpu.workload import load, use_checkout
 
 
 class OpenTPUTest(unittest.TestCase):
   tool = None
+
+  def test_multiple_engines_overlap_independent_commands_and_keep_write_hazards(self):
+    import copy
+    from examples.opentpu.workload import execute
+    from opentpu import isa as I
+    with tempfile.TemporaryDirectory() as directory:
+      out = Path(directory)
+      gemm(out,n=128,kb=8,jobs=1,m=16)
+      baseline = load(out)
+      first = baseline.programs[0][3]
+      independent_times = []
+      for conflicting in (False,True):
+        second = copy.deepcopy(first)
+        if not conflicting:
+          second.w[2] += 16*128
+        program = baseline.programs[0][:2]+[first,second,I.halt()]
+        workload = execute(baseline.config,[program],baseline.images)
+        predictions = []
+        for engines in (1,2):
+          model = CompactOpenTPU(workload,Timing(matrix_engines=engines,batch_rows=8))
+          sim = model.net.python_simulator()
+          cycles = sim.run(max_time=100000)
+          self.assertEqual(sim.place_dicts("program_completed"),[{}])
+          self.assertEqual(model.statistics()["transitions"],14+3*(engines-1))
+          self.assertEqual(len(model.components[0]["matrix_engines"]),engines)
+          if self.tool:
+            ir,binary = out/"multi.mlir",out/"multi.native"
+            ir.write_text(model.build())
+            subprocess.run([self.tool,str(ir),"-o",str(binary)],check=True,capture_output=True,text=True)
+            self.assertEqual(native_observation(binary)[0],cycles)
+          predictions.append(cycles)
+        if conflicting:
+          self.assertGreaterEqual(predictions[1],predictions[0])
+          self.assertGreater(predictions[1],independent_times[1])
+        else:
+          self.assertLess(predictions[1],0.75*predictions[0])
+          independent_times = predictions
+
+  def test_parallel_matrix_dependencies_preserve_raw_war_waw_and_barriers(self):
+    from examples.opentpu.workload import Command
+    from opentpu import isa as I,waits as W
+    matrix = I.mm(0,0,0,1,1,128,1,1,0,4,unit=True)
+    for space in (W.SP_DRAM,W.SP_TMEM,W.SP_ACT):
+      for hazard in ("RAW","WAR","WAW"):
+        rd = ((space,0,8),)
+        a = W.Fp(rd=rd) if hazard=="WAR" else W.Fp(wr=rd)
+        b = W.Fp(rd=rd) if hazard=="RAW" else W.Fp(wr=rd)
+        commands = [Command(0,matrix,a),Command(1,matrix,b),Command(2,I.halt(),W.Fp())]
+        compute,dram = dependencies(commands,I,W,matrix_engines=2)
+        self.assertEqual(compute[1],[0],(space,hazard))
+        self.assertEqual(dram[1],[0] if space==W.SP_DRAM else [])
+        self.assertEqual(compute[2],[1])
+    commands = [Command(0,matrix,W.Fp()),Command(1,I.bar(),W.Fp(all=True)),
+                Command(2,matrix,W.Fp()),Command(3,I.halt(),W.Fp())]
+    compute,dram = dependencies(commands,I,W,matrix_engines=2)
+    self.assertEqual(compute[2],[1])
+    self.assertEqual(dram[2],[1])
+
+  def test_matrix_admission_cannot_overtake_an_older_blocked_command(self):
+    from examples.opentpu.workload import Command,Workload
+    from opentpu import Config,isa as I,waits as W
+    cfg = Config(D=128,MCOLS=4)
+    program = [I.st(0,0,16),I.mm(0,0,128,8,1,128,8,1,0,4,unit=True),
+        I.mm(1<<20,0,128,8,1,128,8,1,0,4,unit=True),I.halt()]
+    commands = [Command(i,ins,W.footprint(ins,[(0,0)]*16,cfg.D,cfg.S))
+                for i,ins in enumerate(program)]
+    workload = Workload(cfg,[program],[],[commands],None,{},[])
+    for engines in (1,2):
+      model = CompactOpenTPU(workload,Timing(matrix_engines=engines))
+      sim = model.net.python_simulator()
+      original = sim._invoke
+      admitted = []
+      def observe(definition,*args,**kwargs):
+        fired = original(definition,*args,**kwargs)
+        if fired and definition.name.endswith("_start"):
+          prefix = definition.name[:-len("_start")]
+          admitted.append(sim.place_dicts(prefix+"_request")[-1]["id"])
+        return fired
+      sim._invoke = observe
+      sim.run(max_time=10000)
+      self.assertEqual(admitted,[1,2])
+      self.assertEqual(sim.place_dicts("program_completed"),[{}])
+
+  def test_multi_engine_configuration_requires_compact_model(self):
+    with self.assertRaises(ValueError):
+      Timing(matrix_engines=0)
+    with self.assertRaises(ValueError):
+      Timing(matrix_engines=1.5)
+    with tempfile.TemporaryDirectory() as directory:
+      gemm(directory,n=8,kb=1,jobs=1)
+      with self.assertRaisesRegex(ValueError,"CompactOpenTPU"):
+        OpenTPU(load(directory),Timing(matrix_engines=2))
 
   def test_compact_completion_banks_match_expanded_dataflow(self):
     for jobs in (2,70):

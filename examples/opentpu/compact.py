@@ -7,10 +7,11 @@ than transition code. The existing event-driven LPN scheduler is unchanged.
 from bisect import bisect_left
 from math import ceil, gcd
 
-from .model import OpenTPU, DRAM, SystolicArray
+from .model import OpenTPU, DRAM
+from .components import CommandInterface, CommandTiming, ExecutionUnit, MatrixEngine
 
 
-def dependencies(commands,I,W):
+def dependencies(commands,I,W,matrix_engines=1):
   """Exact footprint conflicts, indexed by intervals; remove transitive edges.
 
   Completion ancestry only contains completion dependencies. Matrix prefetch/
@@ -58,8 +59,10 @@ def dependencies(commands,I,W):
         conflicts.add(barrier)
         dc.add(barrier)
     if c.instruction.op!=I.HALT:
+      # A single in-order unit enforces its own hazards. Multiple MM engines
+      # share ACT/TMEM, so all RAW/WAR/WAW hazards between them must be explicit.
       conflicts = {j for j in conflicts if unit!=W.UNIT.get(commands[j].instruction.op,-2)
-                   or unit==W.U_VPU}
+                   or unit==W.U_VPU or (unit==W.U_MXU and matrix_engines>1)}
     if unit in last_unit and unit not in (W.U_MXU,W.U_VPU):
       conflicts.add(last_unit[unit])
     compute.append(reduce_edges(conflicts))
@@ -83,6 +86,21 @@ def dependencies(commands,I,W):
 
 
 class CompactOpenTPU(OpenTPU):
+  supports_multiple_matrix_engines = True
+
+  def __init__(self,workload,timing=None):
+    self.components = {}
+    super().__init__(workload,timing)
+
+  def statistics(self):
+    """Counts of declared net objects; helpers and instructions are not transitions."""
+    names = [p.name for p,*_ in self.net._places]
+    return {"transitions":len(self.net._transitions),"places":len(names),
+        "completion_flag_banks":sum("_flags_" in n for n in names),
+        "command_slots":sum("_slot_" in n for n in names),
+        "matrix_engines_per_slice":self.timing.matrix_engines,
+        "instructions_per_slice":[len(c) for c in self.workload.commands]}
+
   def _slice(self,sid,commands,I,W):
     cfg,t,net = self.workload.config,self.timing,self.net
     prefix = f"s{sid}"
@@ -90,10 +108,7 @@ class CompactOpenTPU(OpenTPU):
     if not ncommands:
       raise ValueError("empty command trace")
     memory = DRAM(net,prefix+"_dram",t)
-    units = [net.place(prefix+f"_unit_{u}",initial_tokens=1) for u in range(5)]
-    matrix_ids = [i for i,c in enumerate(commands) if c.instruction.op==I.MM]
-    matrix_index = {idx:rank for rank,idx in enumerate(matrix_ids)}
-    nsig = ncommands+2*len(matrix_ids)
+    nsig = ncommands
     # Immutable flag banks replace thousands of individual completion places.
     # A bank latch is always present; delayed completion messages update it
     # atomically. This keeps the scheduler's place scans bounded and retains
@@ -101,10 +116,6 @@ class CompactOpenTPU(OpenTPU):
     banks = [net.place(prefix+f"_flags_{b}",initial_tokens=1) for b in range(nsig//64+1)]
     signals = net.place(prefix+"_signals")
     finished = net.place(prefix+"_halted")
-    control_resource = net.place(prefix+"_control_resource",initial_tokens=1)
-    prefetched = [ncommands+r for r in range(len(matrix_ids))]+[nsig]
-    issued = [ncommands+len(matrix_ids)+r for r in range(len(matrix_ids))]+[nsig]
-
     @net.func(name=prefix+"_is_done",args=("i64",),results=("i1",))
     def is_done(idx):
       token = peek(array(banks)[divi(idx,64)])
@@ -123,20 +134,17 @@ class CompactOpenTPU(OpenTPU):
     cursor = net.place(prefix+"_cursor",initial_tokens=1)
     pipeline = net.place(prefix+"_pipeline")
     pending = [net.place(prefix+f"_pending_{u}") for u in range(6)]
-    request,ready = net.place(prefix+"_request"),net.place(prefix+"_ready")
     ports = [memory.b,memory.sw]
-    deps,dram_deps = dependencies(commands,I,W)
+    deps,dram_deps = dependencies(commands,I,W,t.matrix_engines)
     kinds,latencies,services,port_ids = [],[],[],[]
     batches,chunkses,scale_flags,kbs,ns,row_services,tails = [],[],[],[],[],[],[]
-    barriers,prev_matrices,dispatch_delays,pipeline_delays = [],[],[],[]
-    last_register,last_matrix = ncommands,len(matrix_ids)
-    matrix_ranks = [matrix_index.get(i,0) for i in range(ncommands)]
+    barriers,dispatch_delays,pipeline_delays = [],[],[]
+    last_register = ncommands
     for idx,c in enumerate(commands):
       ins,w = c.instruction,c.instruction.w
       u = W.UNIT.get(ins.op,5)
       kinds.append(u)
       barriers.append(last_register)
-      prev_matrices.append(last_matrix)
       dispatch_delays.append(2 if ins.op==I.LOOP else 1)
       pipeline_delays.append(5 if ins.op>=I.LD else 0)
       if ins.op==I.RLD:
@@ -147,7 +155,6 @@ class CompactOpenTPU(OpenTPU):
       services.append(service)
       batch,chunks,scaled,kb,n,row_service,tail = 1,1,0,1,1,1,0
       if ins.op==I.MM:
-        last_matrix = matrix_index[idx]
         n,kb,m = w[3]&65535,(w[3]>>16)&255,(w[5]>>16)&255
         wf,pair = (ins.flags>>I.WF_SHIFT)&3,bool(ins.flags&I.F_PAIR)
         chunks = kb if wf==I.W8 else ceil(kb/2)
@@ -166,7 +173,8 @@ class CompactOpenTPU(OpenTPU):
       ns.append(n)
       row_services.append(row_service)
       tails.append(tail)
-    array_unit = SystolicArray(net,prefix+"_mxu",t,max(b*c for b,c in zip(batches,chunkses)))
+    parameters = CommandTiming(latencies,services,port_ids,batches,chunkses,
+        scale_flags,kbs,ns,row_services,tails)
 
     def csr(rows):
       offsets,flat = [0],[]
@@ -176,7 +184,7 @@ class CompactOpenTPU(OpenTPU):
       return offsets,flat or [ncommands]
 
     # MM starts on DRAM dependencies; TMEM/ACT dependencies gate its compute.
-    # Previous MM prefetch has its own signal, handled separately below.
+    # Prefetch and compute ordering belong to each MatrixEngine, not this interface.
     starts = [dram_deps[i] if kinds[i]==W.U_MXU else deps[i] for i in range(ncommands)]
     offsets,indices = csr(starts)
     compute_offsets,compute_indices = csr(deps)
@@ -186,19 +194,24 @@ class CompactOpenTPU(OpenTPU):
       slot_places = array(slots)
       kind,begin,end = array(kinds),array(offsets[:-1]),array(offsets[1:])
       dep_indices = array(indices)
-      previous,pre = array(prev_matrices),array(prefetched)
       selected,oldest = subi(0,1),addi(ncommands,1)
+      selected_enabled = const_i64(0)==0
       for s in range(t.window):
         token = peek(slot_places[s])
         idx = token.get("id")
-        enabled = select(token.get("active")==1,kind[idx]==unit,False,typ="i1")
+        active = select(token.get("active")==1,kind[idx]==unit,False,typ="i1")
+        enabled = active
         for d in range(select(enabled,begin[idx],0),select(enabled,end[idx],0)):
           enabled = select(enabled,is_done(dep_indices[d]),False,typ="i1")
-        matrix_ready = select(unit==W.U_MXU,is_done(pre[previous[idx]]),True,typ="i1")
-        eligible = select(enabled,select(matrix_ready,idx<oldest,False,typ="i1"),False,typ="i1")
+        # Matrix admission is FIFO across its engine pool. An engine must not
+        # fill its input FIFO with a younger command waiting for an older,
+        # still-unadmitted command. Engines execute admitted work independently.
+        candidate = select(unit==W.U_MXU,active,enabled,typ="i1")
+        eligible = select(candidate,idx<oldest,False,typ="i1")
         selected = select(eligible,s,selected,typ="i64")
         oldest = select(eligible,idx,oldest)
-      func_return(selected)
+        selected_enabled = select(eligible,enabled,selected_enabled,typ="i1")
+      func_return(select(selected_enabled,selected,subi(0,1),typ="i64"))
 
     @net.transition(prefix+"_initialize_window")
     def initialize_window():
@@ -229,94 +242,14 @@ class CompactOpenTPU(OpenTPU):
       emit(place,token)
       emit(array(pending)[array(kinds)[token.get("id")]],create())
 
-    for u in (W.U_DMA,W.U_Q,W.U_VPU,W.U_COLL,5):
-      resource = units[u] if u<5 else control_resource
+    interface = CommandInterface(slots,pending,window,select_ready,is_done,publish,
+        compute_offsets,compute_indices)
+    units = [ExecutionUnit(net,prefix+f"_unit_{u}",u,interface,parameters,memory)
+             for u in (W.U_DMA,W.U_Q,W.U_VPU,W.U_COLL,5)]
+    matrices = [MatrixEngine(net,prefix+f"_mxu_{engine}",cfg,t,interface,
+        parameters,memory,W.U_MXU) for engine in range(t.matrix_engines)]
+    self.components[sid] = {"memory":memory,"units":units,"matrix_engines":matrices}
 
-      @net.transition(prefix+f"_execute_{u}")
-      def execute(u=u,resource=resource):
-        guard(count(resource)>0)
-        guard(count(pending[u])>0)
-        chosen = select_ready(const_i64(u))
-        guard(chosen>=0)
-        slot_places = array(slots)
-        observed = peek(slot_places[chosen])
-        idx = observed.get("id")
-        bus_id = array(port_ids)[idx]
-        buses = array(ports)
-        guard(select(bus_id>=0,count(buses[select(bus_id>=0,bus_id,0)])>0,True,typ="i1"))
-        token = take(slot_places[chosen])
-        take(pending[u])
-        emit(slot_places[chosen],create())
-        latency = sitofp(array(latencies)[idx])
-        if u<5:
-          credit = take(resource)
-          emit(resource,credit,delay=latency)
-        if bus_id>=0:
-          bus = take(buses[bus_id])
-          emit(buses[bus_id],bus,delay=sitofp(array(services)[idx]))
-        publish(idx,latency)
-        emit(window,token,delay=latency)
-
-    @net.transition(prefix+"_matrix_start")
-    def matrix_start():
-      guard(count(array_unit.commands)>0)
-      guard(count(pending[W.U_MXU])>0)
-      chosen = select_ready(const_i64(W.U_MXU))
-      guard(chosen>=0)
-      place = array(slots)[chosen]
-      token = take(place)
-      take(pending[W.U_MXU])
-      emit(place,create())
-      take(array_unit.commands)
-      emit(request,token.set("row",0))
-
-    @net.transition(prefix+"_prefetch")
-    def prefetch():
-      guard(count(request)>0)
-      guard(count(array_unit.buffers)>0)
-      guard(count(memory.b)>0)
-      idx = peek(request).get("id")
-      scaled = array(scale_flags)[idx]
-      guard(count(memory.a)>=scaled)
-      token = take(request)
-      row = token.get("row")
-      n,batch,chunks = array(ns)[idx],array(batches)[idx],array(chunkses)[idx]
-      width = select(row+batch<n,batch,n-row)
-      take(array_unit.buffers)
-      bus = take(memory.b)
-      service = sitofp(divi(muli(muli(width,chunks),cfg.D)+t.dram_bytes_per_cycle-1,t.dram_bytes_per_cycle))
-      emit(memory.b,bus,delay=service)
-      if scaled>0:
-        scales = take(memory.a)
-        emit(memory.a,scales,delay=sitofp(muli(width,array(kbs)[idx])))
-      emit(ready,token.set("width",width),delay=service+float(t.dram_latency+4))
-      if row+batch<n:
-        emit(request,token.set("row",row+batch),delay=service)
-      else:
-        publish(array(prefetched)[array(matrix_ranks)[idx]],service)
-
-    @net.transition(prefix+"_compute")
-    def compute():
-      guard(count(ready)>0)
-      guard(count(array_unit.compute)>0)
-      idx = peek(ready).get("id")
-      ci = array(compute_indices)
-      enabled = const_i64(0)==0
-      for d in range(array(compute_offsets)[idx],array(compute_offsets)[idx+1]):
-        enabled = select(enabled,is_done(ci[d]),False,typ="i1")
-      guard(enabled)
-      guard(is_done(array(issued)[array(prev_matrices)[idx]]))
-      token = take(ready)
-      port = take(array_unit.compute)
-      service = sitofp(muli(token.get("width"),array(row_services)[idx]))
-      emit(array_unit.compute,port,delay=service)
-      emit(array_unit.buffers,create())
-      if token.get("row")+array(batches)[idx]>=array(ns)[idx]:
-        publish(array(issued)[array(matrix_ranks)[idx]],service)
-        latency = service+sitofp(array(tails)[idx])
-        publish(idx,latency)
-        emit(array_unit.commands,create(),delay=latency)
-        emit(window,token,delay=latency)
     @net.transition(prefix+"_mark_done")
     def mark_done():
       guard(count(signals)>0)

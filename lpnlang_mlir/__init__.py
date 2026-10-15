@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+from contextvars import ContextVar
 import hashlib
 import heapq
 import inspect
@@ -1802,6 +1803,12 @@ class NetBuilder:
           return builder._call_helper(function_def, args)
 
         try:
+          symbols = _python_runtime_symbols.get()
+          if symbols is not None:
+            # Components and their helpers may be defined in different
+            # modules. Inject the active runtime in the callee's globals too.
+            with _GlobalNameInjector(fn.__globals__, symbols):
+              return fn(*args, **kwargs)
           return fn(*args, **kwargs)
         except FunctionReturn as e:
           return e.value
@@ -2257,6 +2264,9 @@ class PythonRuntimeAPI:
     return mapping
 
 
+_python_runtime_symbols = ContextVar("lpn_python_runtime_symbols", default=None)
+
+
 class PythonSimulator:
   """Event-driven interpreter that replays transitions directly in Python."""
 
@@ -2447,10 +2457,12 @@ class PythonSimulator:
     self._begin_transaction()
     blocked_reason: Optional[_TransitionBlocked] = None
     injector: Optional[_GlobalNameInjector] = None
+    symbols = api.exported_symbols()
+    runtime_context = _python_runtime_symbols.set(symbols)
     try:
       if definition.jit:
         injector = _GlobalNameInjector(
-            definition.fn.__globals__, api.exported_symbols())
+            definition.fn.__globals__, symbols)
         injector.__enter__()
         definition.fn(*args, **kwargs)
       else:
@@ -2466,6 +2478,7 @@ class PythonSimulator:
     finally:
       if injector:
         injector.__exit__(None, None, None)
+      _python_runtime_symbols.reset(runtime_context)
     self._rollback_transaction()
     if allow_block:
       return False
