@@ -7,6 +7,7 @@ python -m examples.coralnpu.validate --coral-root ../coralnpu --output results
 import argparse
 import csv
 import json
+import math
 import os
 import re
 import subprocess
@@ -70,7 +71,10 @@ def main():
   parser.add_argument("--clang", default="clang-18")
   parser.add_argument("--lpn-compiler", type=Path)
   parser.add_argument("--repeats", type=int, default=32)
+  parser.add_argument("--max-relative-error", type=float, default=0.05)
   args = parser.parse_args()
+  if not math.isfinite(args.max_relative_error) or args.max_relative_error < 0:
+    parser.error("--max-relative-error must be finite and nonnegative")
   root, out = args.coral_root.resolve(), args.output.resolve()
   out.mkdir(parents=True, exist_ok=True)
   sim = root / "bazel-bin/tests/verilator_sim/rvv_core_mini_axi_sim"
@@ -120,6 +124,9 @@ def main():
     # span includes its single execution cycle. This provides a consistent
     # comparison window without including program loading or reset cycles.
     report["relative_cycle_error"] = (prediction["cycles"] / baseline["dispatch_span"] - 1)
+    report["accuracy_target_relative_error"] = args.max_relative_error
+    if abs(report["relative_cycle_error"]) > args.max_relative_error:
+      raise RuntimeError(f"{name}: timing error exceeds {args.max_relative_error:.1%}")
     if args.lpn_compiler:
       binary = out / f"{name}.native"
       subprocess.run([str(args.lpn_compiler.resolve()), str(ir), "-o", str(binary)],

@@ -87,6 +87,7 @@ struct Transaction {
 std::vector<std::unique_ptr<Place>> places;
 Transaction *active = nullptr;
 double currentTime = 0.0;
+uint64_t guardChecks = 0, bodyExecutions = 0, rollbacks = 0;
 
 [[noreturn]] void invalid(const char *message) {
   std::fprintf(stderr, "lpn native runtime: %s\n", message);
@@ -110,7 +111,19 @@ void commitReady() {
     place->commit(currentTime);
 }
 
-bool tryFire(void (*transition)()) {
+bool tryFire(void (*transition)(), bool (*enabled)()) {
+  ++guardChecks;
+  {
+    // Count-only predicates allocate no transaction on the heap. A scratch
+    // arena supports immutable token/array expressions in manual predicates.
+    Transaction scratch;
+    active = &scratch;
+    bool ready = enabled();
+    active = nullptr;
+    if (!ready)
+      return false;
+  }
+  ++bodyExecutions;
   auto *txn = new Transaction();
   active = txn;
   bool fired = setjmp(txn->blocked) == 0;
@@ -123,6 +136,7 @@ bool tryFire(void (*transition)()) {
                                              std::move(std::get<1>(entry))});
     }
   } else {
+    ++rollbacks;
     for (auto it = txn->taken.rbegin(); it != txn->taken.rend(); ++it)
       it->first->ready.push_front(std::move(it->second));
   }
@@ -248,10 +262,13 @@ int64_t lpn_array_len(void *rawArray) {
 
 int lpn_run(int argc, char **argv, int64_t placeCount, const char **placeNames,
             const int64_t *initialCounts, int64_t transitionCount,
-            void (**transitions)(), int64_t literalCount,
+            void (**transitions)(), bool (**enabled)(), const char **transitionNames,
+            int64_t literalCount,
             const char **literalNames) {
   double maxTime = 100000000.0;
   bool printTokens = false;
+  bool printStats = false;
+  bool trace = false;
   for (int idx = 1; idx < argc; ++idx) {
     if (std::strncmp(argv[idx], "--max-time=", 11) == 0) {
       char *end = nullptr;
@@ -260,9 +277,13 @@ int lpn_run(int argc, char **argv, int64_t placeCount, const char **placeNames,
         invalid("invalid --max-time value");
     } else if (std::strcmp(argv[idx], "--tokens") == 0) {
       printTokens = true;
+    } else if (std::strcmp(argv[idx], "--stats") == 0) {
+      printStats = true;
+    } else if (std::strcmp(argv[idx], "--trace") == 0) {
+      trace = true;
     } else {
       std::fprintf(stderr,
-                   "Usage: %s [--max-time=NUMBER] [--tokens]\n", argv[0]);
+                   "Usage: %s [--max-time=NUMBER] [--tokens] [--stats] [--trace]\n", argv[0]);
       return 2;
     }
   }
@@ -278,11 +299,15 @@ int lpn_run(int argc, char **argv, int64_t placeCount, const char **placeNames,
     places.push_back(std::move(place));
   }
   currentTime = 0.0;
+  guardChecks = bodyExecutions = rollbacks = 0;
   while (currentTime <= maxTime) {
     bool progress = false;
     for (int64_t idx = 0; idx < transitionCount; ++idx)
-      while (tryFire(transitions[idx]))
+      while (tryFire(transitions[idx], enabled[idx])) {
+        if (trace)
+          std::printf("[t=%.3f] fired %s\n", currentTime, transitionNames[idx]);
         progress = true;
+      }
     if (progress)
       continue;
     double next = nextScheduledTime();
@@ -292,6 +317,11 @@ int lpn_run(int argc, char **argv, int64_t placeCount, const char **placeNames,
     commitReady();
   }
   std::printf("Simulation finished at t=%.3f ns\n", currentTime);
+  if (printStats)
+    std::printf("Guard checks: %llu; body executions: %llu; rollbacks: %llu\n",
+        static_cast<unsigned long long>(guardChecks),
+        static_cast<unsigned long long>(bodyExecutions),
+        static_cast<unsigned long long>(rollbacks));
   for (const auto &place : places) {
     std::printf("  place %s: %zu token(s)\n", place->name.c_str(),
                 place->ready.size());

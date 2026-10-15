@@ -34,7 +34,7 @@ class CoralNPUTest(unittest.TestCase):
 
   def test_recorded_verilator_microkernels(self):
     root = Path(__file__).resolve().parents[1] / "examples/coralnpu/validation"
-    for repetitions in (8, 32):
+    for repetitions in (8, 16, 32):
       directory = root / f"rep{repetitions}"
       report = json.loads((directory / "comparison.json").read_text())
       for kernel in report["kernels"]:

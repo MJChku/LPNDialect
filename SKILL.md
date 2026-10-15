@@ -13,7 +13,7 @@ checkouts are `~/LPNDialect` and `~/coralnpu`.
 ## Build and run
 
 Use Python 3, CMake, a C++ compiler, and LLVM/MLIR 20 development packages.
-Native compilation also requires `llc-20` and `clang++-20` on `PATH`.
+Native compilation also requires `opt-20`, `llc-20`, and `clang++-20` on `PATH`.
 
 ```sh
 export LLVM_DIR=/usr/lib/llvm-20/lib/cmake/llvm
@@ -35,7 +35,7 @@ build/tools/lpn-compile/lpn-compile /tmp/network.mlir -o /tmp/network
 
 Alternatively, `./run.sh compile /tmp/network --devices 4 --messages 2`
 emits and compiles in one command. Native compilation lowers MLIR to LLVM IR,
-generates an object with `llc-20`, and links the token/event runtime. There is
+optimizes with `opt-20 -O3`, generates an object with `llc-20`, and links the token/event runtime. There is
 no generated C++ model or interpreted MLIR in the executable's transitions.
 Executables default to a limit of 100 million model time units; pass
 `--max-time=NUMBER` explicitly for longer workloads.
@@ -97,9 +97,14 @@ Guard counts before peeking where necessary. The pass preserves these manual
 predicates and marks the transition `lpn.guard_mode = "manual"`.
 See the arbitration example in [README.md](README.md).
 
-The native compiler executes nested conditional takes directly and does not
-require the synthesis pass. Its atomic runtime remains the final check even
-with manual guards. Observable reduction currently rejects manual guards;
+Native compilation always synthesizes a separate executable enabling function,
+automatically counting token requirements for static control flow. It supports
+static repeated takes beyond the reduction pass's take-ID representation.
+Dynamic token flow and helper calls require manual entry predicates; otherwise
+compilation fails. Enabling functions run before firing transactions are
+allocated and before bodies execute. Use `--stats` to check for unexpected
+rollbacks. The atomic runtime remains a safeguard for incomplete annotations.
+Observable reduction currently rejects manual guards;
 do not discard the predicates to force reduction through.
 
 ## CoralNPU and matrix models
@@ -154,6 +159,21 @@ Recorded CSV observations and comparison reports are under
 elements and array timing. Matching microkernels does not establish complete
 core cycle equivalence. Compare equivalent timed regions and report startup,
 RTL numerical execution, and readback overhead when discussing speed.
+
+For Llama 3.2 3B, follow [examples/coralnpu/LLAMA.md](examples/coralnpu/LLAMA.md).
+Run:
+
+```sh
+python3 -m examples.coralnpu.llama --prompt-tokens 128 --generate-tokens 4 \
+  --emit /tmp/llama.mlir --lpn-compiler build/tools/lpn-compile/lpn-compile
+```
+
+The model reuses layer graphs through feedback tokens. Keep residual fanout
+edges and decode-pass counter resets when modifying it. Check compact versus
+expanded dataflow on a small shape. Full-size execution is native; Python is a
+reference for small regressions. Numerical inference and whole-model 5%
+accuracy are not established. Validate representative kernels in Verilator
+before claiming that target; AXI beat-level modeling is outside this scope.
 
 ## Validate changes and respect current limits
 

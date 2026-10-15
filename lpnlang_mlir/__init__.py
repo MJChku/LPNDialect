@@ -7,11 +7,13 @@ import inspect
 import itertools
 import math
 import operator
+import os
 import re
 import sys
 import textwrap
 from collections import deque
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union, get_args, get_origin
 
 
@@ -167,6 +169,26 @@ class ForStatement(Statement):
     return "\n".join(lines)
 
 
+@lru_cache(maxsize=32)
+def _script_functions(filename: str, modified_ns: int, size: int):
+  # File metadata is part of the key so edits invalidate the parsed source.
+  # AST nodes contain source only; builder values and closures stay per call.
+  with open(filename, "r", encoding="utf-8") as source:
+    module = ast.parse(source.read(), filename=filename)
+  functions = {}
+  for node in ast.walk(module):
+    if isinstance(node, ast.FunctionDef):
+      functions.setdefault(node.name, []).append(node)
+  return functions
+
+
+@lru_cache(maxsize=4096)
+def _script_code(node: ast.AST, filename: str, mode: str):
+  wrapper = (ast.Module(body=[node], type_ignores=[]) if mode == "exec"
+             else ast.Expression(node))
+  return compile(ast.fix_missing_locations(wrapper), filename, mode)
+
+
 class TransitionScriptExecutor:
   """Very small AST executor that rewrites Python if-statements to scf.if."""
 
@@ -180,12 +202,11 @@ class TransitionScriptExecutor:
     if not self.filename:
       raise ValueError("unable to locate source file for transition script")
     try:
-      with open(self.filename, "r", encoding="utf-8") as f:
-        file_source = f.read()
+      metadata = os.stat(self.filename)
+      functions = _script_functions(self.filename, metadata.st_mtime_ns, metadata.st_size)
     except OSError as exc:
       raise ValueError("unable to read transition source") from exc
 
-    module = ast.parse(file_source, filename=self.filename)
     first_line = fn.__code__.co_firstlineno
 
     def matches_function(node: ast.FunctionDef) -> bool:
@@ -194,15 +215,10 @@ class TransitionScriptExecutor:
       return start_line <= first_line <= node.lineno
 
     func_defs = [
-        node for node in ast.walk(module)
-        if isinstance(node, ast.FunctionDef) and node.name == fn.__name__
-        and matches_function(node)
+        node for node in functions.get(fn.__name__, []) if matches_function(node)
     ]
     if not func_defs:
-      func_defs = [
-          node for node in ast.walk(module)
-          if isinstance(node, ast.FunctionDef) and node.name == fn.__name__
-      ]
+      func_defs = functions.get(fn.__name__, [])
     if not func_defs:
       raise ValueError("transition script could not find the function body")
     self.func_def = func_defs[0]
@@ -288,9 +304,7 @@ class TransitionScriptExecutor:
     if isinstance(stmt, ast.AugAssign) and self._try_exec_aug_assign(stmt):
       return
 
-    mod = ast.Module(body=[stmt], type_ignores=[])
-    ast.fix_missing_locations(mod)
-    code = compile(mod, self.filename, "exec")
+    code = _script_code(stmt, self.filename, "exec")
     exec(code, self.globals, self.locals)
 
   def _try_unroll_loop(self, node: ast.For) -> bool:
@@ -403,9 +417,7 @@ class TransitionScriptExecutor:
     return True
 
   def _eval_expr(self, expr: ast.expr) -> Any:
-    node = ast.Expression(expr)
-    ast.fix_missing_locations(node)
-    code = compile(node, self.filename, "eval")
+    code = _script_code(expr, self.filename, "eval")
     return eval(code, self.globals, self.locals)
 
   def _exec_branch(self, statements: List[ast.stmt]) -> None:

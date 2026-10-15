@@ -40,7 +40,7 @@ ctest --test-dir build --output-on-failure
 
 For an existing MLIR file, run
 `build/tools/lpn-compile/lpn-compile model.mlir -o model-native`. The native
-executable accepts `--max-time=NUMBER` and `--tokens`. Its default time limit is
+executable accepts `--max-time=NUMBER`, `--tokens`, `--stats`, and `--trace`. Its default time limit is
 100 million model time units; `--tokens` prints token fields as well as place
 counts. `lpn-opt --lpn-simulate model.mlir` remains available as an interpreting
 C++ reference implementation.
@@ -54,17 +54,21 @@ C++ interpreters still ignore capacities.
 
 ## Guard synthesis
 
-`take` operations themselves determine whether a native transition can fire;
-the native compiler needs no separate guard pass. For observable-reduction
-passes, `--lpn-synthesize-guards` infers guard metadata automatically. It
-handles nested one-shot takes under compile-time constant conditions. It
-rejects token flow in repeating or dynamic loops and inside helper functions:
-the current guard ID format cannot represent those operations' execution
-counts. The all-to-all example uses repeated takes, so compile its original
-MLIR directly.
-It also rejects token flow inside data-dependent `scf.if` branches because
-take IDs alone cannot encode a branch predicate derived from a token field.
-The native compiler executes such branches and their nested takes directly.
+The native compiler synthesizes a separate enabling function for each
+transition. The runtime checks it before allocating a firing transaction or
+running the transition body. Automatic inference counts required ready FIFO
+tokens, including repeated takes in statically evaluable loops and branches.
+Peeks require a token without consuming it. Data-dependent token flow and
+helper calls currently require an explicit enabling annotation; compilation
+fails with a diagnostic when inference cannot establish the requirements.
+`--stats` reports guard checks, body executions, and rollback counts.
+`--trace` reports successful transition firings with model timestamps.
+
+For observable reduction, `--lpn-synthesize-guards` computes separate take-ID
+metadata. Its representation is more restrictive: it rejects repeating or
+dynamic token-flow loops, effectful helpers, and data-dependent branches.
+Compile the original all-to-all MLIR directly for timed simulation; the native
+guard inference handles its static repeated takes.
 
 For transitions the analysis cannot infer, annotate enabling conditions with
 `guard(...)` before consuming tokens. For example:
@@ -88,11 +92,16 @@ def arbitrate():
 empty place. Token field updates return new token values. `guard` blocks a
 firing when false. The Python simulator, C++ interpreter, and native executable
 all implement these operations with the existing atomic firing semantics.
+In native executables, manual predicates are compiled into the enabling
+function and run before the body. Predicates must precede takes, emits, and
+helper calls; earlier peeks are checked for availability before they execute.
 The synthesis pass preserves explicit predicates as `lpn.guard` and marks
 the transition with `lpn.guard_mode = "manual"`. It does not invent take-ID
 paths for these predicates. Observable reduction rejects manual predicates
 because it cannot yet preserve their value dependencies. These annotations
-are trusted enabling conditions; failed takes still roll back the firing.
+are trusted enabling conditions; incomplete annotations can still cause a
+failed take, which rolls back as a correctness safeguard. Such rollbacks should
+be investigated rather than relied on in a performance model.
 
 ## CoralNPU model
 
@@ -107,8 +116,14 @@ INT8/BF16/FP32 multiply-accumulate pipelines, accumulator reuse, and a tiled
 GEMM model with operand buffers and latency/bandwidth memory transfers. Emit
 a native-compilable GEMM with
 `python3 -m examples.coralnpu.run --gemm 16 16 64 --dtype int8 --emit gemm.mlir`.
-Eleven full-core Verilator matrix kernels check array timing and 3,584 output
+Thirteen full-core Verilator matrix kernels check array timing and 4,096 output
 elements; recorded observations are under `examples/coralnpu/validation/matrix`.
+
+The [Llama 3.2 3B timing workload](examples/coralnpu/LLAMA.md) includes all 28
+layers, prefill/decode dataflow, KV-cache traffic, and shared execution/memory
+resources. Repeated layers reuse the graph through feedback tokens. Whole-model
+timing accuracy remains unmeasured; the target is at most 5% error against
+representative Verilator workloads.
 
 `--lpn-normalize-delays` replaces every nonzero emit delay with zero. It is for
 timing-insensitive structural analysis; do not apply it to IR used for a timed

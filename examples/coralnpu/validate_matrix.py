@@ -114,6 +114,8 @@ def cases():
       "int8_tail_same_accumulator": [MatrixCommand(m=3, n=5, k=3) for _ in range(4)],
       "bf16_same_accumulator": [MatrixCommand(dtype="bf16", k=2) for _ in range(4)],
       "fp32_same_accumulator": [MatrixCommand(dtype="fp32", k=1) for _ in range(4)],
+      "bf16_decode_long": [MatrixCommand(m=1,n=16,k=2,dtype="bf16") for _ in range(64)],
+      "bf16_prefill_long": [MatrixCommand(dtype="bf16",k=2) for _ in range(64)],
   }
 
 
@@ -122,7 +124,7 @@ def load_events(path):
     return list(csv.DictReader(source))
 
 
-def compare_array(commands, events):
+def compare_array(commands, events, simulate=True):
   launches = [event for event in events if event["event"] == "launch"]
   if len(launches) != len(commands):
     raise RuntimeError(f"RTL launched {len(launches)} of {len(commands)} commands")
@@ -137,8 +139,18 @@ def compare_array(commands, events):
     if measured != spec.latency(command):
       raise RuntimeError(f"PE latency mismatch: RTL {measured}, LPN {spec.latency(command)}")
     latencies.append({"rtl_cycles": measured, "lpn_cycles": spec.latency(command)})
-  model = MatrixArray(commands)
-  result = model.simulate()
+  if simulate:
+    result = MatrixArray(commands).simulate()
+  else:
+    # Recorded long, identical streams were also run through the native LPN
+    # at capture time. Check their max-plus recurrence without replaying the
+    # much slower Python interpreter in every unit-test run.
+    if not commands or any(command != commands[0] for command in commands):
+      raise ValueError("the compact sequence check requires identical commands")
+    command = commands[0]
+    result = {"cycles": (len(commands)-1)*max(spec.issue_cycles(command),
+               spec.reuse_cycles(command))+spec.latency(command),
+              "macs": sum(c.macs for c in commands)}
   origin = int(launches[0]["cycle"])
   rtl_cycles = max(int(event["cycle"]) for event in events if event["event"] == "write") - origin
   if rtl_cycles != result["cycles"]:

@@ -13,18 +13,30 @@ from examples.simple_array_net import build_demo_net
 from lpnlang_mlir import NetBuilder
 
 
-def build_conditional_take_net(route_value: int, branch_tokens: int):
+def build_conditional_take_net(route_value: int, branch_tokens: int, manual_guard=False):
   net = NetBuilder("conditional_take")
   source = net.place("source", initial_tokens=1)
   branch = net.place("branch", initial_tokens=branch_tokens)
   sink = net.place("sink", observable=True)
 
-  @net.transition
-  def route():
-    token = take(source).set("route", route_value)
-    if token.get("route") == 1:
-      take(branch)
-    emit(sink, token)
+  if manual_guard:
+    required = int(route_value == 1)
+
+    @net.transition
+    def route():
+      guard(count(source) > 0)
+      guard(count(branch) >= required)
+      token = take(source).set("route", route_value)
+      if token.get("route") == 1:
+        take(branch)
+      emit(sink, token)
+  else:
+    @net.transition
+    def route():
+      token = take(source).set("route", route_value)
+      if token.get("route") == 1:
+        take(branch)
+      emit(sink, token)
 
   return net
 
@@ -68,6 +80,33 @@ def build_blocked_guard_net():
   def blocked():
     guard(False)
     emit(sink, take(source))
+
+  return net
+
+
+def build_blocked_inferred_net():
+  net = NetBuilder("inferred_blocked")
+  source = net.place("source", initial_tokens=1)
+  sink = net.place("sink")
+
+  @net.transition
+  def needs_two():
+    for _ in range(2):
+      emit(sink, take(source))
+
+  return net
+
+
+def build_peek_after_take_net(tokens):
+  net = NetBuilder("peek_after_take")
+  source = net.place("source", initial_tokens=tokens)
+  sink = net.place("sink")
+
+  @net.transition
+  def read_next():
+    first = take(source)
+    second = peek(source)
+    emit(sink, first.set("next", second.get("value")))
 
   return net
 
@@ -122,7 +161,7 @@ class NativeCompilerTest(unittest.TestCase):
     for route_value, branch_tokens in ((0, 0), (1, 0), (1, 1)):
       with self.subTest(route_value=route_value, branch_tokens=branch_tokens):
         places = self.check_net(
-            build_conditional_take_net(route_value, branch_tokens), 1_000)
+            build_conditional_take_net(route_value, branch_tokens, manual_guard=True), 1_000)
         should_fire = route_value == 0 or branch_tokens > 0
         self.assertEqual(places["sink"],
                          [{"route": route_value}] if should_fire else [])
@@ -140,6 +179,33 @@ class NativeCompilerTest(unittest.TestCase):
     places = self.check_net(build_blocked_guard_net(), 1_000)
     self.assertEqual(places["source"], [{}])
     self.assertEqual(places["sink"], [])
+
+  def test_disabled_guards_skip_transition_bodies(self):
+    for net in (build_blocked_guard_net(), build_blocked_inferred_net(),
+                build_peek_after_take_net(1),
+                build_conditional_take_net(1, 0, manual_guard=True)):
+      with self.subTest(net=net.name), tempfile.TemporaryDirectory() as directory:
+        source, binary = Path(directory) / "model.mlir", Path(directory) / "model"
+        source.write_text(net.build())
+        subprocess.run([self.tool, str(source), "-o", str(binary)],
+                       check=True, capture_output=True, text=True)
+        result = subprocess.run([str(binary), "--stats"], check=True,
+                                capture_output=True, text=True)
+        self.assertIn("body executions: 0; rollbacks: 0", result.stdout)
+
+  def test_inferred_peek_requires_remaining_fifo_token(self):
+    places = self.check_net(build_peek_after_take_net(2), 1_000)
+    self.assertEqual(len(places["source"]), 1)
+    self.assertEqual(places["sink"], [{"next": 0}])
+
+  def test_uninferable_guard_requires_manual_annotation(self):
+    with tempfile.TemporaryDirectory() as directory:
+      source, binary = Path(directory) / "model.mlir", Path(directory) / "model"
+      source.write_text(build_conditional_take_net(1, 1).build())
+      result = subprocess.run([self.tool, str(source), "-o", str(binary)],
+                              capture_output=True, text=True)
+      self.assertNotEqual(result.returncode, 0)
+      self.assertIn("add an explicit guard(...)", result.stderr)
 
   def test_coralnpu_resource_model(self):
     from examples.coralnpu.model import CoralNPU, Instruction

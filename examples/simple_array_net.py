@@ -59,6 +59,9 @@ def build_demo_net(num_tokens: int = 3, name: str = "array_demo") -> NetBuilder:
 
   @net.transition
   def consume():
+    guard(count(p_ctrl) > 0)
+    next_ctrl = peek(p_ctrl)
+    guard(count(p_src) >= next_ctrl.get("count"))
     ctrl = take(p_ctrl)
     n = ctrl.get("count")
     arr = helpers.take_n_tokens(p_src, n)

@@ -267,6 +267,672 @@
       "checked_elements": 256,
       "rtl_wall_seconds": 2.492562770843506,
       "native_wall_seconds": 0.005847914144396782
+    },
+    {
+      "commands": 64,
+      "macs": 2048,
+      "array_lpn_cycles": 260.0,
+      "array_rtl_cycles": 260,
+      "command_latencies": [
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        },
+        {
+          "rtl_cycles": 8,
+          "lpn_cycles": 8
+        }
+      ],
+      "rtl_launch_intervals": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "kernel": "bf16_decode_long",
+      "checked_elements": 256,
+      "rtl_wall_seconds": 2.8363326229155064,
+      "native_wall_seconds": 0.015802990645170212
+    },
+    {
+      "commands": 64,
+      "macs": 32768,
+      "array_lpn_cycles": 264.0,
+      "array_rtl_cycles": 264,
+      "command_latencies": [
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        },
+        {
+          "rtl_cycles": 12,
+          "lpn_cycles": 12
+        }
+      ],
+      "rtl_launch_intervals": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "kernel": "bf16_prefill_long",
+      "checked_elements": 256,
+      "rtl_wall_seconds": 2.8730711452662945,
+      "native_wall_seconds": 0.08292599208652973
     }
   ]
 }

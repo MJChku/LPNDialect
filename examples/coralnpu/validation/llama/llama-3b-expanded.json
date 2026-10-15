@@ -1,0 +1,65 @@
+{
+  "model": "meta-llama/Llama-3.2-3B",
+  "architecture_source": "https://github.com/meta-llama/llama-models/blob/0e0b8c519242d5833d8c11bffc1232b77ad7f301/models/sku_list.py",
+  "configuration": {
+    "hidden": 3072,
+    "intermediate": 8192,
+    "layers": 28,
+    "heads": 24,
+    "kv_heads": 8,
+    "vocabulary": 128256,
+    "max_context": 131072
+  },
+  "parameters": 3212749824,
+  "dtype": "bf16",
+  "prompt_tokens": 128,
+  "generated_tokens": 4,
+  "operators": 2144,
+  "macs": 373694644224,
+  "matrix_commands": 1025854464,
+  "dram_bytes": 112410123792,
+  "kv_cache_bytes": 15024128,
+  "dram": {
+    "latency": 64,
+    "bytes_per_cycle": 16,
+    "outstanding": 16
+  },
+  "local_bytes_per_cycle": 16,
+  "stream_panel_bytes": 4096,
+  "stream_buffers": 2,
+  "phase_completion_cycles": [
+    5898212233.0,
+    6329437614.0,
+    6760676015.0,
+    7191927436.0
+  ],
+  "time_to_first_token_cycles": 5898212233.0,
+  "total_cycles": 7191927436.0,
+  "decode_cycles": [
+    431225381.0,
+    431238401.0,
+    431251421.0
+  ],
+  "numerical_inference": false,
+  "accuracy_target_relative_error": 0.05,
+  "end_to_end_verilator_validated": false,
+  "accuracy": {
+    "status": "unmeasured",
+    "passed": false
+  },
+  "assumptions": [
+    "operator streams reserve the shared DRAM bandwidth until drained",
+    "finite stream credits represent in-flight panels, not whole tensors resident in SRAM",
+    "M-major BF16 matrix tiling with repeated panel traffic; no full weight caching",
+    "GQA shares streamed KV panels across query-head groups; attention materializes masked scores",
+    "vector pass counts and whole-operator streaming overlap are not RTL-calibrated",
+    "sampling uses argmax; checkpoint weights, tokenizer, and numerical arithmetic are not executed"
+  ],
+  "compile_wall_seconds": 16.420593393966556,
+  "native_wall_seconds": 7.161757817491889,
+  "native_stats": {
+    "guard_checks": 118982332,
+    "body_executions": 6436,
+    "rollbacks": 0
+  }
+}

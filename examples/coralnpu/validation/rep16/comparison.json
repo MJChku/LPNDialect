@@ -1,0 +1,65 @@
+{
+  "coral_revision": "517f4c09bd5aabb4e8a16436d8853c912a24790b",
+  "kernels": [
+    {
+      "kernel": "alu_chain",
+      "instructions": 17,
+      "verilator_dispatch_cycles": 17,
+      "lpn_completion_cycles": 17.0,
+      "rtl_wall_seconds": 0.11320888623595238,
+      "python_wall_seconds": 0.09396596811711788,
+      "rtl_result_checked": true,
+      "relative_cycle_error": 0.0,
+      "accuracy_target_relative_error": 0.05,
+      "native_wall_seconds": 0.003916412591934204
+    },
+    {
+      "kernel": "alu_independent",
+      "instructions": 20,
+      "verilator_dispatch_cycles": 8,
+      "lpn_completion_cycles": 8.0,
+      "rtl_wall_seconds": 0.09703069739043713,
+      "python_wall_seconds": 0.07111053355038166,
+      "rtl_result_checked": true,
+      "relative_cycle_error": 0.0,
+      "accuracy_target_relative_error": 0.05,
+      "native_wall_seconds": 0.0037854835391044617
+    },
+    {
+      "kernel": "mul_chain",
+      "instructions": 17,
+      "verilator_dispatch_cycles": 33,
+      "lpn_completion_cycles": 33.0,
+      "rtl_wall_seconds": 0.11262506805360317,
+      "python_wall_seconds": 0.13229926489293575,
+      "rtl_result_checked": true,
+      "relative_cycle_error": 0.0,
+      "accuracy_target_relative_error": 0.05,
+      "native_wall_seconds": 0.003995068371295929
+    },
+    {
+      "kernel": "dtcm_loads",
+      "instructions": 17,
+      "verilator_dispatch_cycles": 65,
+      "lpn_completion_cycles": 65.0,
+      "rtl_wall_seconds": 0.14634081721305847,
+      "python_wall_seconds": 0.12509881146252155,
+      "rtl_result_checked": true,
+      "relative_cycle_error": 0.0,
+      "accuracy_target_relative_error": 0.05,
+      "native_wall_seconds": 0.0038360673934221268
+    },
+    {
+      "kernel": "vector_add",
+      "instructions": 19,
+      "verilator_dispatch_cycles": 76,
+      "lpn_completion_cycles": 76.0,
+      "rtl_wall_seconds": 0.16574260592460632,
+      "python_wall_seconds": 0.25122247636318207,
+      "rtl_result_checked": true,
+      "relative_cycle_error": 0.0,
+      "accuracy_target_relative_error": 0.05,
+      "native_wall_seconds": 0.003012547269463539
+    }
+  ]
+}

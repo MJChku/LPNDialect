@@ -25,6 +25,8 @@
 #include <array>
 #include <map>
 #include <memory>
+#include <limits>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -33,6 +35,8 @@
 
 using namespace mlir;
 using namespace mlir::lpn;
+
+#include "GuardSynthesis.h"
 
 namespace {
 
@@ -89,6 +93,7 @@ public:
       if (!transition.getBody().hasOneBlock())
         fail("native compilation requires single-block transitions");
       std::string name = transition.getSymName().str();
+      transitionNames.push_back(name);
       auto *type = llvm::FunctionType::get(llvm::Type::getVoidTy(context), false);
       transitions.push_back(llvm::Function::Create(
           type, llvm::GlobalValue::InternalLinkage,
@@ -97,8 +102,11 @@ public:
     }
     source.walk([&](func::FuncOp function) { emitHelper(function); });
     unsigned index = 0;
-    for (TransitionOp transition : net.getOps<TransitionOp>())
+    for (TransitionOp transition : net.getOps<TransitionOp>()) {
+      GuardPlan plan = GuardInference().analyze(transition);
+      emitEnabled(transition, plan, index);
       emitTransition(transition, transitions[index++]);
+    }
     emitMain();
     if (llvm::verifyModule(*module, &llvm::errs()))
       fail("generated LLVM IR failed verification");
@@ -157,6 +165,13 @@ private:
     cloneFn = runtime("lpn_token_clone", ptr, {ptr});
     setFn = runtime("lpn_token_set", ptr, {ptr, i64, i64, i64});
     getFn = runtime("lpn_token_get", i64, {ptr, i64, i64});
+    // Let LLVM remove unused predicate calculations from transition bodies.
+    for (auto callee : {placeFn, countFn, getFn}) {
+      auto *function = llvm::cast<llvm::Function>(callee.getCallee());
+      function->setOnlyReadsMemory();
+      function->setDoesNotThrow();
+      function->addFnAttr(llvm::Attribute::WillReturn);
+    }
     arrayCreateFn = runtime("lpn_array_create", ptr, {i64, ptr});
     arrayAllocFn = runtime("lpn_array_alloc", ptr, {i64, i64});
     arrayGetFn = runtime("lpn_array_get", i64, {ptr, i64});
@@ -165,7 +180,7 @@ private:
     checkStepFn = runtime("lpn_check_step", llvm::Type::getVoidTy(context),
                           {i64});
     runFn = runtime("lpn_run", i32,
-                    {i32, ptr, i64, ptr, ptr, i64, ptr, i64, ptr});
+                    {i32, ptr, i64, ptr, ptr, i64, ptr, ptr, ptr, i64, ptr});
   }
 
   int64_t literalId(StringRef name) {
@@ -300,11 +315,17 @@ private:
 
   void emitOperation(Operation &op) {
     if (auto peek = dyn_cast<PeekOp>(&op)) {
+      if (checkingGuard)
+        emitGuardTest(ir.CreateICmpSGT(
+            ir.CreateCall(countFn, {value(peek.getPlace())}), integer(0)));
       put(peek.getResult(), ir.CreateCall(peekFn, {value(peek.getPlace())}));
       return;
     }
     if (auto guard = dyn_cast<GuardOp>(&op)) {
-      ir.CreateCall(guardFn, {value(guard.getCondition())});
+      if (checkingGuard)
+        emitGuardTest(value(guard.getCondition()));
+      else if (!skipManualGuardChecks)
+        ir.CreateCall(guardFn, {value(guard.getCondition())});
       return;
     }
     if (auto ref = dyn_cast<PlaceRefOp>(&op)) {
@@ -543,11 +564,54 @@ private:
       put(source, &target);
     emitBlock(function.front());
   }
+  void emitGuardTest(llvm::Value *condition) {
+    auto *next = llvm::BasicBlock::Create(context, "guard.next",
+                                         ir.GetInsertBlock()->getParent());
+    ir.CreateCondBr(condition, next, guardDisabled);
+    ir.SetInsertPoint(next);
+  }
+
+  void emitEnabled(TransitionOp transition, const GuardPlan &plan, unsigned index) {
+    auto *type = llvm::FunctionType::get(i1, false);
+    auto *function = llvm::Function::Create(type, llvm::GlobalValue::InternalLinkage,
+        "enabled_" + std::to_string(index) + "_" + transition.getSymName().str(),
+        module.get());
+    enabled.push_back(function);
+    ir.SetInsertPoint(llvm::BasicBlock::Create(context, "entry", function));
+    guardDisabled = llvm::BasicBlock::Create(context, "guard.disabled", function);
+    values.clear();
+    checkingGuard = true;
+    if (plan.lastManualGuard) {
+      for (Operation &op : transition.getBody().front()) {
+        emitOperation(op);
+        if (&op == plan.lastManualGuard)
+          break;
+      }
+    } else {
+      for (const auto &[name, required] : plan.required) {
+        auto it = placeIds.find(name);
+        if (it == placeIds.end())
+          fail("unknown guard place: " + name);
+        auto *place = ir.CreateCall(placeFn, {integer(it->second)});
+        emitGuardTest(ir.CreateICmpSGE(ir.CreateCall(countFn, {place}), integer(required)));
+      }
+    }
+    ir.CreateRet(llvm::ConstantInt::getTrue(context));
+    ir.SetInsertPoint(guardDisabled);
+    ir.CreateRet(llvm::ConstantInt::getFalse(context));
+    checkingGuard = false;
+    guardDisabled = nullptr;
+  }
+
   void emitTransition(TransitionOp transition, llvm::Function *lowered) {
     auto *entry = llvm::BasicBlock::Create(context, "entry", lowered);
     ir.SetInsertPoint(entry);
     values.clear();
+    // Retain prefix SSA definitions needed by the body; the explicit
+    // predicates themselves were checked before entering this function.
+    skipManualGuardChecks = true;
     emitBlock(transition.getBody().front());
+    skipManualGuardChecks = false;
   }
 
   llvm::Constant *stringPointer(StringRef text) {
@@ -568,6 +632,8 @@ private:
     std::vector<llvm::Constant *> nameConstants;
     std::vector<llvm::Constant *> initConstants;
     std::vector<llvm::Constant *> transitionConstants;
+    std::vector<llvm::Constant *> enabledConstants;
+    std::vector<llvm::Constant *> transitionNameConstants;
     std::vector<llvm::Constant *> literalConstants(literalIds.size());
     for (const PlaceSpec &place : places) {
       nameConstants.push_back(stringPointer(place.name));
@@ -575,6 +641,10 @@ private:
     }
     for (llvm::Function *transition : transitions)
       transitionConstants.push_back(transition);
+    for (llvm::Function *predicate : enabled)
+      enabledConstants.push_back(predicate);
+    for (const auto &name : transitionNames)
+      transitionNameConstants.push_back(stringPointer(name));
     for (const auto &[name, id] : literalIds)
       literalConstants[id] = stringPointer(name);
     auto makeArray = [&](llvm::Type *elementType,
@@ -593,6 +663,8 @@ private:
     llvm::Value *initArray = makeArray(i64, initConstants, "lpn.place.initial");
     llvm::Value *transitionArray =
         makeArray(ptr, transitionConstants, "lpn.transitions");
+    llvm::Value *enabledArray = makeArray(ptr, enabledConstants, "lpn.enabled");
+    llvm::Value *transitionNameArray = makeArray(ptr, transitionNameConstants, "lpn.transition.names");
     llvm::Value *literalArray =
         makeArray(ptr, literalConstants, "lpn.literal.names");
     auto arguments = main->arg_begin();
@@ -600,7 +672,7 @@ private:
     llvm::Value *argv = &*arguments;
     auto *status = ir.CreateCall(runFn,
         {argc, argv, integer(places.size()), nameArray, initArray,
-         integer(transitions.size()), transitionArray,
+         integer(transitions.size()), transitionArray, enabledArray, transitionNameArray,
          integer(literalConstants.size()), literalArray});
     ir.CreateRet(status);
   }
@@ -619,6 +691,11 @@ private:
   std::map<std::string, llvm::Function *> helpers;
   std::vector<PlaceSpec> places;
   std::vector<llvm::Function *> transitions;
+  std::vector<llvm::Function *> enabled;
+  std::vector<std::string> transitionNames;
+  bool checkingGuard = false;
+  bool skipManualGuardChecks = false;
+  llvm::BasicBlock *guardDisabled = nullptr;
 };
 
 } // namespace
@@ -659,10 +736,15 @@ int main(int argc, char **argv) {
                                error.message());
     close(objectFd);
 
+    auto optimizer = llvm::sys::findProgramByName("opt-20");
     auto llc = llvm::sys::findProgramByName("llc-20");
     auto linker = llvm::sys::findProgramByName("clang++-20");
-    if (!llc || !linker)
-      throw std::runtime_error("llc-20 and clang++-20 are required");
+    if (!optimizer || !llc || !linker)
+      throw std::runtime_error("opt-20, llc-20 and clang++-20 are required");
+    llvm::SmallVector<llvm::StringRef> optimizeArgs{
+        *optimizer, "-O3", "-S", llvmPath, "-o", llvmPath};
+    if (llvm::sys::ExecuteAndWait(*optimizer, optimizeArgs) != 0)
+      throw std::runtime_error("LLVM optimization failed");
     llvm::SmallVector<llvm::StringRef> codegenArgs{
         *llc, "-O3", "-filetype=obj", llvmPath, "-o", objectPath};
     int codegenStatus = llvm::sys::ExecuteAndWait(*llc, codegenArgs);

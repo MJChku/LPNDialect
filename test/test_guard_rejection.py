@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 
 from examples.network_net import create_network_net
-from examples.simple_array_net import build_demo_net
+from lpnlang_mlir import NetBuilder
 from test_native_compiler import (build_conditional_take_net, build_priority_net,
                                  build_blocked_guard_net)
 
@@ -28,7 +28,21 @@ class GuardRejectionTest(unittest.TestCase):
     self.assertIn("repeating or dynamic scf.for loop", result.stderr)
 
   def test_token_flow_in_helper_is_rejected(self):
-    result = self.synthesize(build_demo_net(3))
+    net = NetBuilder("helper_guard")
+    source = net.place("source", initial_tokens=1)
+    sink = net.place("sink")
+
+    @net.func(args=("Place",), results=())
+    def consume_token(place):
+      take(place)
+      func_return()
+
+    @net.transition
+    def consume():
+      builder.consume_token(source)
+      emit(sink, create())
+
+    result = self.synthesize(net)
     self.assertNotEqual(result.returncode, 0)
     self.assertIn("token flow inside a helper function", result.stderr)
 

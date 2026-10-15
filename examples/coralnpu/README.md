@@ -45,7 +45,7 @@ dispatch span from predicted completion time. Errors are reported rather than
 hidden by replaying baseline delays. Wall times include process startup and
 trace output; they are not steady-state simulator-throughput measurements.
 
-Recorded observations are in `validation/rep8` and `validation/rep32`, captured
+Recorded observations are in `validation/rep8`, `validation/rep16`, and `validation/rep32`, captured
 on 2026-10-15. The final 32-repeat run on `icdslab2` produced:
 
 | Kernel | Verilator window (cycles) | LPN (cycles) |
@@ -63,6 +63,8 @@ used Bazel's default fastbuild configuration and debug ports. These are
 microkernel checks, not an accuracy or speed guarantee for arbitrary programs.
 Model latency parameters were refined against the 32-repeat kernels; the
 8-repeat cases check those parameters at another workload size.
+The subsequent held-out 16-repeat run also matches all five windows exactly
+(17, 8, 33, 65, and 76 cycles), passing the CLI's 5% error threshold.
 
 ## Compile a recorded workload
 
@@ -98,7 +100,9 @@ the external endpoint. This is the extension point for the requested simple
 DRAM latency/bandwidth model. Real AXI address mapping and overlapping
 independent requests still need address-bearing workload records.
 
-Each issue transition has explicit resource guards. Dependency tokens represent
+Each issue transition has explicit resource guards, compiled into a separate
+enabling function that runs before its body. `--stats` reports body executions
+and rollbacks, allowing incomplete annotations to be identified. Dependency tokens represent
 ready register results, while execution-port tokens are released at the
 initiation interval. Retire transitions release ROB credits in program order.
 The instruction-stream model has two transitions per scalar instruction and
@@ -176,7 +180,7 @@ reads every tile row back through vector stores, and checks every scalar
 readback against a separate reference calculation. PE observations compare
 array launch-to-write timing, excluding setup/readback overhead.
 
-Recorded observations in `validation/matrix` cover 11 kernels and 3,584
+Recorded observations in `validation/matrix` cover 13 kernels and 4,096
 checked elements: UINT8, signed INT8, BF16, FP32, masked tails, multiple active
 quadrants, repeated accumulator use, and independent accumulators. Single
 full-tile operations take 12 cycles; four full-tile accumulations take 24;
@@ -189,3 +193,22 @@ these kernels. It does not establish cycle equivalence of the entire frontend,
 tile controller, exceptions, arbitrary FP values, or memory backpressure.
 The complete instruction-stream model can decode these workloads, while the
 array and GEMM APIs avoid replaying scalar setup and verification instructions.
+
+## Llama workload
+
+[LLAMA.md](LLAMA.md) describes the full Llama 3.2 3B operator timing workload,
+including prefill, decode, KV-cache traffic, repeated-layer feedback, native
+execution, and the remaining accuracy assumptions. The target is 5% timing
+error; whole-model Verilator accuracy has not yet been measured.
+
+## Guard execution benchmark
+
+`PYTHONPATH=. python3 tools/benchmark-guards.py --output /tmp/guards.json`
+compares guard-first native execution with a temporary transactional variant.
+Both use the same LLVM `-O3` optimization. On `icdslab2`, nine-run medians
+showed 3.28x speedup for disabled inferred transitions, 2.29x for manual ones,
+2.26x for a 32-device all-to-all, and 2.05x for a 16x16x256 GEMM. Final
+markings and model times matched; guard-first runs had zero rollbacks.
+Startup and observation output are included. This compares LPN execution
+approaches, not LPN against Verilator. Raw samples are in
+`validation/guards/benchmark.json`.

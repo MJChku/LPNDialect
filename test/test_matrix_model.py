@@ -49,7 +49,9 @@ class MatrixModelTest(unittest.TestCase):
     for record in report["kernels"]:
       name = record["kernel"]
       with self.subTest(kernel=name):
-        comparison = compare_array(cases()[name], load_events(root / f"{name}.matrix.csv"))
+        commands = cases()[name]
+        comparison = compare_array(commands, load_events(root / f"{name}.matrix.csv"),
+                                   simulate=len(commands)<=4)
         self.assertEqual(comparison["array_lpn_cycles"], record["array_rtl_cycles"])
         instructions, _ = load_dispatch_trace(root / f"{name}.dispatch.csv")
         self.assertEqual([instruction.matrix for instruction in instructions if instruction.matrix], cases()[name])
