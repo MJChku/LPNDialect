@@ -98,7 +98,8 @@ firing when false. The Python simulator, C++ interpreter, and native executable
 all implement these operations with the existing atomic firing semantics.
 In native executables, manual predicates are compiled into the enabling
 function and run before the body. Predicates must precede takes, emits, and
-helper calls; earlier peeks are checked for availability before they execute.
+effectful helper calls; helpers that only read state may participate in the
+predicate. Earlier peeks are checked for availability before they execute.
 The synthesis pass preserves explicit predicates as `lpn.guard` and marks
 the transition with `lpn.guard_mode = "manual"`. It does not invent take-ID
 paths for these predicates. Observable reduction rejects manual predicates
@@ -119,6 +120,12 @@ The validation command checks real quantized GEMM and an upstream-compiled
 SwiGLU MLP, compares complete numerical memory state, and reports absolute
 cycles/second as well as speedup and timing error. See the model README for
 the pinned upstream revision, reproduction commands, and current limits.
+
+The model also includes a compact representation and a resumable trained-model
+generation runner. Real checkpoint inputs traverse all transformer layers and
+update the KV cache, with LPN/RTL memory and timing checks after every token.
+The public SmolLM2 bring-up fixture and hour-scale run commands are documented
+in the model README. Real Llama 3.2 3B inference remains unvalidated.
 
 ## Previous CoralNPU model
 

@@ -22,27 +22,28 @@ def gemm(out,n=512,kb=32,jobs=7,m=4):
   if not (1<=m<=16 and 1<=kb<=64 and 1<=n<=2048 and jobs>=1):
     raise ValueError("GEMM dimensions exceed the benchmark configuration")
   k = 128*kb
-  if m*k+m*n>65536 or n*k>0x2f0000:
+  if m*k+m*n>65536:
     raise ValueError("GEMM does not fit the benchmark memories")
+  weight_base = max(0x10000,((4*m*k+127)//128)*128)
+  output_base = max(0x300000,((weight_base+n*k+127)//128)*128)
+  dram_bytes = 1<<max(22,(output_base+4*m*n-1).bit_length())
   cfg = Config(S=1,D=128,MCOLS=4,ACT_ROWS=16,ACT_BLOCKS=64,LANES=8,
-               DRAM_BYTES=4<<20,IMEM_WORDS=4096)
+               DRAM_BYTES=dram_bytes,IMEM_WORDS=4096)
   rng = np.random.default_rng(47)
   x = rng.standard_normal((m,k)).astype(np.float32)
   weights = rng.integers(-127,128,(n,k),dtype=np.int8)
   image = np.zeros(cfg.DRAM_BYTES,np.uint8)
   image[:x.nbytes] = x.view(np.uint8).reshape(-1)
-  if x.nbytes>0x10000:
-    raise ValueError("input overlaps the weight region")
-  image[0x10000:0x10000+weights.nbytes] = weights.view(np.uint8).reshape(-1)
+  image[weight_base:weight_base+weights.nbytes] = weights.view(np.uint8).reshape(-1)
   output = m*k
   program = [I.ld(0,0,x.size),I.qact(0,m,0,kb,k),I.loop(1,jobs),
-      I.mm(0x10000,0,output,n,kb,k,n,m,0,4,unit=True),
-      I.st(0x300000,output,m*n),I.halt()]
+      I.mm(weight_base,0,output,n,kb,k,n,m,0,4,unit=True),
+      I.st(output_base,output,m*n),I.halt()]
   write_inputs(out,cfg,[program],[image])
   np.save(Path(out)/"float_reference.npy",x@weights.astype(np.float32).T)
   return {"name":"repeated quantized GEMM","m":m,"n":n,"k":k,"jobs":jobs,
           "macs":m*n*k*jobs,"checked_output_elements":m*n,
-          "seed":47,"output_tmem_word":output,"output_dram_byte":0x300000}
+          "seed":47,"output_tmem_word":output,"output_dram_byte":output_base}
 
 
 def write_inputs(out,cfg,programs,images,args=None):
@@ -62,15 +63,20 @@ def write_inputs(out,cfg,programs,images,args=None):
     images[s].view("<u4").astype(">u4").tofile(out/f"dram_{s}.bin")
 
 
-def mlp(out):
+def mlp(out,m=4,h=1024,f=1024,tmem_words=65536):
   import numpy as np
-  from opentpu import Config, reference
+  from opentpu import Config, reference, quant as Q
   from opentpu.kernels import mlp as kernel
   from opentpu.runtime import Input,Output,Weight,compile_kernel,collect
   from opentpu.isasim import Machine
-  m,h,f = 4,1024,1024
+  if min(m,h,f,tmem_words)<1 or h%128 or f%128:
+    raise ValueError("MLP dimensions must be positive and hidden widths multiples of 128")
+  allocations = [4*m*h,4*h]+2*[f*Q.row_bytes(h,"int8"),f*Q.scale_bytes(h,"int8")]+[
+      h*Q.row_bytes(f,"int8"),h*Q.scale_bytes(f,"int8"),4*m*h]
+  needed = sum(((n+127)//128)*128 for n in allocations)
   cfg = Config(S=1,D=128,MCOLS=4,ACT_ROWS=16,ACT_BLOCKS=64,LANES=8,
-               DRAM_BYTES=4<<20,IMEM_WORDS=4096)
+               DRAM_BYTES=1<<max(22,(needed-1).bit_length()),IMEM_WORDS=4096,
+               TMEM_WORDS=tmem_words)
   rng = np.random.default_rng(47)
   x = rng.standard_normal((m,h)).astype(np.float32)
   gamma = (1+0.1*rng.standard_normal(h)).astype(np.float32)
@@ -93,7 +99,7 @@ def mlp(out):
 
 
 def native_observation(binary,trace=False):
-  args = [str(binary),"--stats","--wall-start=begin","--wall-end=complete"]
+  args = [str(binary),"--stats","--wall-start=begin","--wall-end=complete","--max-time=1000000000000"]
   if trace:
     args.append("--trace")
   before = time.perf_counter()
@@ -115,7 +121,12 @@ def main():
   p.add_argument("--kb",type=int,default=32)
   p.add_argument("--jobs",type=int,default=7)
   p.add_argument("--m",type=int,default=4)
+  p.add_argument("--hidden",type=int,default=1024)
+  p.add_argument("--intermediate",type=int,default=1024)
+  p.add_argument("--tmem-words",type=int,default=65536)
+  p.add_argument("--rtl-timeout",type=float,default=3600)
   p.add_argument("--batch-rows",type=int,default=1)
+  p.add_argument("--compact",action="store_true",help="reuse a fixed set of transitions for long traces")
   p.add_argument("--workload",choices=("gemm","mlp"),default="gemm")
   p.add_argument("--runs",type=int,default=5)
   p.add_argument("--build-jobs",type=int,default=16)
@@ -135,7 +146,8 @@ def main():
   out = a.output.resolve()
   out.mkdir(parents=True,exist_ok=True)
   inputs = a.input.resolve() if a.input else out/"input"
-  report = {} if a.input else (mlp(inputs) if a.workload=="mlp" else gemm(inputs,a.n,a.kb,a.jobs,a.m))
+  report = {} if a.input else (mlp(inputs,a.m,a.hidden,a.intermediate,a.tmem_words)
+      if a.workload=="mlp" else gemm(inputs,a.n,a.kb,a.jobs,a.m))
   before = time.perf_counter()
   workload = load(inputs)
   report["functional_frontend_seconds"] = time.perf_counter()-before
@@ -147,9 +159,13 @@ def main():
     report["float_reference_relative_error"] = relative
     if relative>0.02:
       raise RuntimeError("GEMM numerical error exceeds the quantization tolerance")
-  timing = Timing(batch_rows=a.batch_rows)
+  timing = Timing(batch_rows=a.batch_rows,dram_bytes_per_cycle=min(128,workload.config.D))
   before = time.perf_counter()
-  model = OpenTPU(workload,timing)
+  if a.compact:
+    from .compact import CompactOpenTPU
+    model = CompactOpenTPU(workload,timing)
+  else:
+    model = OpenTPU(workload,timing)
   report["matrix_batch_rows"] = model.matrix_batch_sizes
   ir,binary = out/"model.mlir",out/"model.native"
   ir.write_text(model.build())
@@ -202,7 +218,7 @@ def main():
         before = time.perf_counter()
         r = subprocess.run([str(exe),f"+dir={out/'rtl-observed'}","+lpn_wall"]+
             [f"+arg{k}={int(v)&0xffffffff}" for k,v in enumerate(workload.args)],
-            check=True,capture_output=True,text=True,timeout=300)
+            check=True,capture_output=True,text=True,timeout=a.rtl_timeout)
         total = time.perf_counter()-before
         wall = re.search(r"LPN_WALL seconds=([0-9.]+) cycles=(\d+)",r.stdout)
         if not wall or int(wall[2])!=stats["cycles"] or "halted=1 error=0" not in r.stdout:

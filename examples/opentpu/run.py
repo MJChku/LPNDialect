@@ -17,13 +17,16 @@ def main():
   p.add_argument("--lpn-compiler",type=Path)
   p.add_argument("--output",type=Path)
   p.add_argument("--batch-rows",type=int,default=1)
+  p.add_argument("--compact",action="store_true")
   a = p.parse_args()
   if bool(a.lpn_compiler)!=bool(a.output):
     p.error("--lpn-compiler and --output must be supplied together")
   use_checkout(a.opentpu_root)
   before = time.perf_counter()
   workload = load(a.input)
-  model = OpenTPU(workload,Timing(batch_rows=a.batch_rows))
+  from .compact import CompactOpenTPU
+  cls = CompactOpenTPU if a.compact else OpenTPU
+  model = cls(workload,Timing(batch_rows=a.batch_rows,dram_bytes_per_cycle=min(workload.config.D,128)))
   a.emit.write_text(model.build())
   print(f"Loaded and emitted in {time.perf_counter()-before:.3f}s; "
         f"instructions per slice: {[len(c) for c in workload.commands]}")

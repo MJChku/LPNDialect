@@ -87,6 +87,8 @@ Verilator 5.052 baseline (`--batch-rows 8`, bounded as described below):
 | [Seven 4×4096×512 GEMMs](validation/gemm_100k/comparison.json) | 119,723 | 119,674 | −0.041% | 5.458 s | 21.44 ms | 5.58 M |
 | [Compiled SwiGLU MLP](validation/mlp/comparison.json) | 27,673 | 27,629 | −0.159% | 1.319 s | 24.71 ms | 1.12 M |
 | [Held-out 8×2048×128 GEMMs, three repeats](validation/replay_m8/comparison.json) | 16,939 | 16,894 | −0.266% | 0.781 s | 2.04 ms | 8.29 M |
+| [Eight 8×4096×2048 GEMMs](validation/gemm_million/comparison.json) | 1,059,504 | 1,059,454 | −0.00472% | 49.974 s | 71.66 ms | 14.78 M |
+| [MLP, H=3072 F=8192 M=4](validation/mlp_3072_8192/comparison.json) | 610,507 | 598,253 | −2.007% | 30.053 s | 374.26 ms | 1.60 M |
 
 Core speedups are **254.5×** for the large GEMM and **53.4×** for the MLP.
 Including numerical preprocessing, graph construction, compilation, and the
@@ -110,9 +112,114 @@ RTL image initialization and memory dumps; the complete process times are
 also recorded. Native timing excludes its prior numerical execution and
 compilation, which are reported separately and included in
 `single_use_lpn_seconds`. One warmup precedes alternating engine order and
-five measured runs. Input generation, upstream kernel compilation, reference
+five measured runs (three for the million-cycle GEMM and larger MLP). Input generation, upstream kernel compilation, reference
 calculations, and building the RTL simulator are setup costs shared by the
 comparison, outside these runtime totals.
+
+The million-cycle GEMM performs 536,870,912 MACs and uses row replay on the
+four-column array. Its core speedup is **697.4×**, with **2.770 s** for numerical
+preprocessing, model construction, compilation and one native process (**18.3×**
+versus the complete RTL process). The larger MLP uses the hidden/intermediate
+dimensions of Llama 3.2 3B, with generated operands: it is a kernel test, not
+Llama inference. It performs 301,989,888 MACs, uses 128 MiB DRAM and 131,072 TMEM
+words, and gives **80.3×** core / **15.6×** single-use speedup. Both new cases
+check every DRAM byte and TMEM word. Reproduce them with:
+
+```sh
+python -m examples.opentpu.benchmark --opentpu-root ../FeSens-openTPU \
+  --lpn-compiler build/tools/lpn-compile/lpn-compile --output /tmp/opentpu-million \
+  --n 2048 --kb 32 --jobs 8 --m 8 --batch-rows 8 --runs 3
+python -m examples.opentpu.benchmark --opentpu-root ../FeSens-openTPU \
+  --lpn-compiler build/tools/lpn-compile/lpn-compile --output /tmp/opentpu-large-mlp \
+  --workload mlp --hidden 3072 --intermediate 8192 --tmem-words 131072 \
+  --batch-rows 8 --runs 3
+```
+
+## Long trained-model runs
+
+`e2e.py` runs the upstream model compiler and Engine with real checkpoint
+weights and tokenizer. Every prompt/decode token executes all layers,
+attention, SwiGLU, KV-cache writes/reads and the vocabulary head. Host greedy
+selection feeds the predicted token into the next execution. Prefill is
+token-by-token; this does not yet benchmark tiled multi-token prefill.
+
+The current bring-up checkpoint is
+[HuggingFaceTB/SmolLM2-135M](https://huggingface.co/HuggingFaceTB/SmolLM2-135M),
+revision `93efa2f097d58c2a74874c7e644dbc9b0cee75a2`, a trained Llama-family model.
+Download its safetensors, configuration and tokenizer files at that revision
+into `../FeSens-openTPU/models/SmolLM2-135M`. This is an additional public
+validation fixture. Real Llama 3.2 3B execution is still unvalidated: access to
+the official checkpoint returned HTTP 401, and upstream also currently rejects
+its `llama3` RoPE scaling. Do not describe shape-only MLP tests or SmolLM2 as
+successful Llama 3.2 inference.
+
+```sh
+../FeSens-openTPU/.venv/bin/pip install safetensors tokenizers
+../FeSens-openTPU/.venv/bin/pip install torch --index-url https://download.pytorch.org/whl/cpu
+export OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1
+../FeSens-openTPU/.venv/bin/python -m examples.opentpu.e2e \
+  --opentpu-root ../FeSens-openTPU --model-dir ../FeSens-openTPU/models/SmolLM2-135M \
+  --lpn-compiler build/tools/lpn-compile/lpn-compile \
+  --output "$HOME/lpn-runs/smollm2-135m-long" \
+  --depth 64 --cap 512 --prompt Once --tokens 64
+```
+
+Depth 64 matches SmolLM2's 64-dimensional heads; LPN and RTL use exactly the
+same array/configuration. One first-position pilot executed 5,811 instructions
+and roughly 2.18 million RTL cycles, took about 83–85 seconds of RTL core time,
+and passed full memory checks with approximately **1.25%** timing error.
+At that measured rate, 64 decoded tokens plus the one-token prompt is expected
+to take **about 1.5 hours** of RTL core time. This is an estimate, not a completed
+hour-scale accuracy result. Generation stops at EOS; choose a larger
+`--tokens`/`--cap` for longer runs, within the checkpoint's supported context.
+For example, `--tokens 256 --cap 512` targets roughly six hours at the pilot's
+rate, subject to EOS and changing attention cost as context grows.
+
+The [four-step pilot](validation/smollm2_pilot/report.json) includes one prompt
+token and three actual decode steps, the fourth executed after exiting and
+resuming from the snapshot. It generates `Once you have a`, checks **8,725,620
+RTL cycles** in total, and stays within **1.251%** on every step. RTL core time
+totals **327.18 s**, native LPN core time **10.90 s** (about **30×**, **0.81 M
+LPN cycles/s**), and numerical execution plus model construction/compilation
+and native processes **28.68 s**. These full-model numbers differ substantially
+from GEMM throughput. The three untraced decode steps give about 30× core
+speedup too. The pilot is a validation sample, not a completed long generation.
+Its compiler/runtime hashes are retained in the report; a later cache-isolation
+fix distinguishes identical integer and place-index arrays in other nets.
+
+An additional [whole-sequence FP32 check](validation/smollm2_pilot/float-reference.json)
+at position three obtains the same next-token argmax (253), cosine similarity
+0.99992 and 2.54% relative logit error against the quantized device result.
+This uses upstream's independent NumPy transformer reference and the trained
+weights. It is one numerical quality sample, not a quality guarantee over the
+checkpoint or the long generation.
+
+The longer workload uses [this 72-token story prompt](prompts/story.txt) and
+up to 64 decode tokens. Use the same command with
+`--prompt "$(cat examples/opentpu/prompts/story.txt)"` and a new output path
+such as `$HOME/lpn-runs/smollm2-135m-story`. At the pilot rate, prefill alone
+takes about 1.6 hours of RTL core execution and a complete 64-token continuation
+about three hours; an early EOS reduces only the decode portion.
+
+`report.json` is updated after each checked token. `state.json` selects one of
+two alternating snapshots containing DRAM (including KV cache) and logits.
+The input/program/native executable for the current token is retained in
+`current/`; memory dumps and snapshots are replaced rather than accumulated.
+Restart with the same arguments plus `--resume`. `--max-steps 3` deliberately
+checkpoints after three input tokens for a short bring-up/resume check; omit it
+for the full generation. A process lock prevents concurrent writers. Resume
+checks checkpoint, tokenizer, prompt, model/compiler/runtime source hashes,
+configuration and snapshot hash, so changes cannot silently mix measurements.
+
+Every token checks all DRAM/TMEM, instruction counts, identical input file
+hashes and zero native rollbacks; the first token also checks the RTL command
+PC path. Timing error over 5% stops the run and writes `failed-step.json`.
+The first token is traced for validation; later tokens are untraced. Token
+records identify tracing and separately report RTL build/process/core time,
+functional execution, LPN graph construction, compilation and core time.
+These are individual real generation steps, not repeated timing samples of
+one fixed input. The numerical check establishes ISA/RTL equivalence for the
+quantized execution, not independent FP32 Hugging Face quality equivalence.
 
 ## Dataflow and current scope
 
@@ -124,6 +231,39 @@ Matrix prefetch may start before ACT operands become ready. A bounded FIFO
 feeds row groups to the array, whose initiation interval is separate from its
 chain/skew, epilogue, and accumulation latency. The final row group publishes
 command completion; unused intermediate output events are omitted.
+
+For long traces, `--compact` in `run`/`benchmark` selects `compact.py`, which
+`e2e` uses by default. It indexes footprint ranges and removes transitive
+completion dependencies, reuses a fixed set of transitions and 32 command
+slots, and stores out-of-order completion flags in immutable 64-bit token
+banks. Delayed messages update those banks atomically. Guard checks run first;
+slot/flag latches remain present while read-only predicates inspect them.
+Immutable place-handle arrays are resolved once by the native compiler/runtime.
+This changes the net representation and avoids guard token copies; the
+event-driven scheduler and its event ordering implementation are unchanged.
+The expanded model remains a reference, with matching predictions checked on
+the three original RTL fixtures and across completion-bank boundaries.
+
+The native runtime represents empty-only ready queues with counters and a
+shared empty-token sentinel. Queues containing data preserve FIFO with runs
+of identical immutable handles. Take/emit/clone/peek retain or transfer payload
+pointers instead of copying field maps; `.set()` creates a new payload. A
+peek remains valid after its original token is taken. Failed firings restore
+the same handles and queue order. `--stats` exposes payload allocations,
+field copies on `.set()` and empty-token takes. Tests cover a billion empty
+credits with zero payload allocations, mixed empty/data queues, delayed ties,
+rollback, fan-out and signed bit 63. AddressSanitizer/UndefinedBehaviorSanitizer
+also checked the ownership paths. The frontend/native compiler/C++ interpreter
+support `andi`, `ori`, and `shli` for packed state (shift counts must fit the
+integer width).
+
+Guard-only helper calculations are removed from native bodies after the
+separate enabling predicate has checked them. Prefix values still used by
+the body are retained. The [same-MLIR native experiment](validation/gemm_million/native-optimization.json)
+records the saved original executable versus the updated compiler/runtime,
+including repeated samples and both binary hashes. The allocation changes
+give a modest gain on this already grouped GEMM; their larger benefit is
+avoiding token-object growth and copies in more heavily populated nets.
 
 `--batch-rows 1` keeps one event per streamed row. Higher values group rows,
 bounded by the shape and FIFO space for two packets. Small commands stay at

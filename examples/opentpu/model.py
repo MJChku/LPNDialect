@@ -148,8 +148,8 @@ class OpenTPU:
       emit(following,create(),delay=float(delay))
       emit(trigger,create(),delay=float(pipeline))
 
-  def _simple(self,prefix,idx,ins,trigger,result,window,unit,memory,deps,I):
-    cfg,t,net = self.workload.config,self.timing,self.net
+  def _simple_timing(self,ins,memory,I):
+    cfg,t = self.workload.config,self.timing
     w = ins.w
     if ins.op in (I.LD,I.ST):
       service = max(ceil(w[2]/min(cfg.LANES,cfg.D//4)),ceil(4*w[2]/t.dram_bytes_per_cycle))
@@ -194,6 +194,11 @@ class OpenTPU:
       port,service = None,0
     else:
       raise ValueError(f"unsupported timing opcode {ins.op:#x}")
+    return latency,port,service
+
+  def _simple(self,prefix,idx,ins,trigger,result,window,unit,memory,deps,I):
+    net = self.net
+    latency,port,service = self._simple_timing(ins,memory,I)
 
     @net.transition(prefix+f"_execute_{idx}")
     def execute():

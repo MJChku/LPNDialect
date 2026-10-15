@@ -93,7 +93,9 @@ build/tools/lpn-opt/lpn-opt --lpn-synthesize-guards model.mlir
 
 It rejects token flow in data-dependent branches, repeating/dynamic loops,
 and effectful helpers. For those cases, supply explicit enabling predicates
-with `guard(...)` at transition entry, before takes, emits, and helper calls.
+with `guard(...)` at transition entry, before takes, emits, and effectful helper calls.
+Helpers that only read state and compute immutable values can participate in
+manual predicates. Unknown or recursive helpers remain conservatively effectful.
 Guard counts before peeking where necessary. The pass preserves these manual
 predicates and marks the transition `lpn.guard_mode = "manual"`.
 See the arbitration example in [README.md](README.md).
@@ -107,6 +109,18 @@ allocated and before bodies execute. Use `--stats` to check for unexpected
 rollbacks. The atomic runtime remains a safeguard for incomplete annotations.
 Observable reduction currently rejects manual guards;
 do not discard the predicates to force reduction through.
+
+Native predicates borrow peeked tokens while checking state. Scalar helpers
+that only read state can do the same; transition-body peeks retain snapshots
+so a later take cannot invalidate an earlier peek. Empty predicate peeks
+disable the transition before its body runs.
+
+Native empty-only queues use counters. Data-bearing tokens have immutable,
+reference-counted payloads: movement, clone and peek share handles; `.set()`
+copies the payload for an independent update. Mixed queues and rollback keep
+FIFO order. Use `--stats` to inspect payload allocations and field copies on
+updates. For compact completion state, use `andi`/`ori`/`shli` and 64-bit masks;
+keep shift counts in [0,63] and account for the signed high bit.
 
 ## FeSens/openTPU
 
@@ -132,6 +146,23 @@ latencies, early matrix prefetch, and dependency tokens. Compare actual cycles
 and numerical memory state against RTL after changing those assumptions.
 Report cycles/second, core wall medians, and preparation/compilation costs
 separately. Do not extrapolate kernel accuracy to whole Llama inference.
+
+Use `examples.opentpu.e2e` for real trained-model generation with persistent
+KV state and per-token RTL checks. Follow the pinned public-checkpoint command
+in the openTPU README; install its additional CPU Torch/safetensors/tokenizer
+dependencies. `--max-steps 3` provides a bring-up checkpoint and `--resume`
+continues with identical sources/configuration and verified snapshot hashes.
+Keep long-run artifacts under `~/lpn-runs`, not the source tree. The runner
+keeps two bounded snapshots and one current input/output bundle. Do not change
+hashed model/compiler sources while a resumable validation is running.
+
+Use the compact model for long traces: reusable transitions, immutable flag
+banks and precomputed dependency metadata. Compare against the expanded model
+when changing the compact representation. Do not replace the event-driven
+scheduler. Full trained inference speedups include functional preprocessing
+and native preparation separately; GEMM throughput is not representative of
+the whole transformer. The checkpoint's real EOS can end a requested long run
+early. Report completed tokens/time separately from the estimated full run.
 
 Optional integration checks need the NumPy environment:
 

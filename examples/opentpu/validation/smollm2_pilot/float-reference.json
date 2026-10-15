@@ -1,0 +1,15 @@
+{
+  "position": 3,
+  "input_tokens": [
+    6403,
+    346,
+    457
+  ],
+  "fp32_argmax": 253,
+  "int8_argmax": 253,
+  "relative_l2": 0.02537924237549305,
+  "cosine": 0.9999186396598816,
+  "reference_seconds": 0.5794490352272987,
+  "fp32_logits_sha256": "7e8ebb635298ef7e30cad7a4509c815e9d7d44fa29eeee0bb5d8dc910399a551",
+  "int8_logits_sha256": "281518cd22dd58d94b0f304b74844e8bc2376852407d9d048ec34b753948e9cc"
+}

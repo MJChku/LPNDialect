@@ -9,11 +9,31 @@ import unittest
 
 from examples.opentpu.benchmark import gemm, mlp, native_observation, write_inputs
 from examples.opentpu.model import OpenTPU, Timing
+from examples.opentpu.compact import CompactOpenTPU
 from examples.opentpu.workload import load, use_checkout
 
 
 class OpenTPUTest(unittest.TestCase):
   tool = None
+
+  def test_compact_completion_banks_match_expanded_dataflow(self):
+    for jobs in (2,70):
+      with self.subTest(jobs=jobs),tempfile.TemporaryDirectory() as directory:
+        out = Path(directory)
+        gemm(out,n=8,kb=1,jobs=jobs)
+        workload = load(out)
+        expanded = OpenTPU(workload).net.python_simulator()
+        expected = expanded.run(max_time=100000)
+        model = CompactOpenTPU(workload)
+        sim = model.net.python_simulator()
+        self.assertEqual(sim.run(max_time=100000),expected)
+        self.assertEqual(sim.place_dicts("program_completed"),[{}])
+        self.assertLess(len(model.net._transitions),20)
+        if self.tool:
+          ir,binary = out/"compact.mlir",out/"compact.native"
+          ir.write_text(model.build())
+          subprocess.run([self.tool,str(ir),"-o",str(binary)],check=True,capture_output=True,text=True)
+          self.assertEqual(native_observation(binary)[0],expected)
 
   def test_real_program_native_matches_python_dataflow(self):
     with tempfile.TemporaryDirectory() as directory:
@@ -109,12 +129,16 @@ class OpenTPUTest(unittest.TestCase):
           gemm(out,n=report["n"],kb=report["k"]//128,jobs=report["jobs"],m=report["m"])
         workload = load(out)
         self.assertEqual(workload.hashes,report["input_sha256"])
-        model = OpenTPU(workload,Timing(**report["timing"]))
-        ir,binary = out/"model.mlir",out/"model.native"
-        ir.write_text(model.build())
-        subprocess.run([self.tool,str(ir),"-o",str(binary)],check=True,capture_output=True,text=True)
-        cycles,_,_,_ = native_observation(binary)
-        self.assertLess(abs(cycles/report["rtl_cycles"]-1),0.05)
+        predictions = []
+        for cls in (OpenTPU,CompactOpenTPU):
+          model = cls(workload,Timing(**report["timing"]))
+          ir,binary = out/"model.mlir",out/"model.native"
+          ir.write_text(model.build())
+          subprocess.run([self.tool,str(ir),"-o",str(binary)],check=True,capture_output=True,text=True)
+          cycles,_,_,_ = native_observation(binary)
+          predictions.append(cycles)
+          self.assertLess(abs(cycles/report["rtl_cycles"]-1),0.05)
+        self.assertEqual(predictions[0],predictions[1])
 
 
 if __name__=="__main__":

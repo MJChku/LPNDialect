@@ -1,0 +1,31 @@
+{
+  "same_ir_sha256": "c468d96cb82450a7a665e84ae3b2b867658a8db7e65a2a6c1d9ddda14e6843b7",
+  "cycles": 1059454.0,
+  "core_samples_seconds": {
+    "before": [
+      0.071741158,
+      0.071503478,
+      0.071136733,
+      0.071759984,
+      0.071172321
+    ],
+    "after": [
+      0.068160423,
+      0.057368086,
+      0.067776556,
+      0.068468277,
+      0.068394086
+    ]
+  },
+  "core_median_seconds": {
+    "before": 0.071503478,
+    "after": 0.068160423
+  },
+  "allocation_stats": "Token payload allocations: 16376; field copies on set: 16360; empty-token takes: 32830",
+  "binary_sha256": {
+    "before": "15aafd3675886868c32aeb4b4bf5467fe0a1be51f093e0a673c3a31fa7c18315",
+    "after": "6cbf496f9d176ede4a2ac85d56f85be623ff7755fc37dd438a0e475152183c2c"
+  },
+  "method": "identical existing MLIR; saved original executable versus recompiled compiler/runtime; one warmup, five samples, alternating order; RTL not rerun for this native optimization experiment",
+  "native_speedup": 1.0490468640430826
+}

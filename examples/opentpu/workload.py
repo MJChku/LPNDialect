@@ -72,6 +72,15 @@ def load(directory):
     for path in (program,memory):
       hashes[path.name] = hashlib.sha256(path.read_bytes()).hexdigest()
   args = metadata.get("args",[])
+  return execute(cfg,programs,images,args,hashes)
+
+
+def execute(cfg,programs,images,args=None,hashes=None):
+  """Numerical execution and concrete control/address trace from shared inputs."""
+  from opentpu import isa as I, waits as W
+  from opentpu.isasim import Machine
+
+  args = list(args or [])
   machine = Machine(cfg,programs,images,args=args)
   commands = [[] for _ in range(cfg.S)]
 
@@ -87,5 +96,5 @@ def load(directory):
   original = [s.step for s in machine.slices]
   for s in machine.slices:
     s.step = MethodType(record_step,s)
-  machine.run()
-  return Workload(cfg,programs,images,commands,machine,hashes,args)
+  machine.run(max_steps=1<<40)
+  return Workload(cfg,programs,images,commands,machine,hashes or {},args)
