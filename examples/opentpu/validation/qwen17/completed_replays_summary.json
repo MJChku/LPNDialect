@@ -1,0 +1,67 @@
+{
+  "captured_utc": "2026-10-16T04:08:44.080847+00:00",
+  "status": "partial_batch",
+  "scope": "Completed generation replays only. The driver measured whole LPN processes one at a time alongside concurrent RTL cases. Complete process time includes numerical execution, initialization, compilation, input serialization, hashing and process cleanup. RTL-equivalent throughput divides recorded RTL cycles by measured LPN seconds. Totals sum per-case processing times, not concurrent batch wall time. The whole batch remains unfinished.",
+  "model": "Qwen/Qwen3-1.7B",
+  "checkpoint_revision": "70d244cc86ccca08cf5af4e1e306ecf908b1ad5e",
+  "cases": {
+    "once": {
+      "steps": 9,
+      "generated_tokens": 8,
+      "rtl_cycles": 122626193,
+      "rtl_core_seconds": 6634.795353848,
+      "rtl_process_seconds": 7410.823243545368,
+      "lpn_core_seconds": 16.669555925,
+      "external_process_seconds": 140.73965553939342,
+      "complete_process_speedup_vs_rtl_core": 47.14233048546081,
+      "artifact_sha256": "4ee0d53235ff104fdbc42b0d24aa3c5c256baa98338a1e456edcacbbf58c1652"
+    },
+    "france": {
+      "steps": 13,
+      "generated_tokens": 8,
+      "rtl_cycles": 177130637,
+      "rtl_core_seconds": 9541.933803911,
+      "rtl_process_seconds": 10668.594820402563,
+      "lpn_core_seconds": 23.97291539,
+      "external_process_seconds": 183.9699830710888,
+      "complete_process_speedup_vs_rtl_core": 51.86679720584555,
+      "artifact_sha256": "005ad138123f61642be4d9c2d89fc6ab39bd4098f45e4b35be7320a996a3d5de"
+    },
+    "sky": {
+      "steps": 13,
+      "generated_tokens": 8,
+      "rtl_cycles": 177130637,
+      "rtl_core_seconds": 9529.142470784,
+      "rtl_process_seconds": 10661.143260978162,
+      "lpn_core_seconds": 23.97265167,
+      "external_process_seconds": 183.9543474689126,
+      "complete_process_speedup_vs_rtl_core": 51.801670370385665,
+      "artifact_sha256": "156b1d5e3d4c98a45dcc951a773b539874ab5cf365c522241195d28b977dd38a"
+    },
+    "robot": {
+      "steps": 15,
+      "generated_tokens": 8,
+      "rtl_cycles": 204383027,
+      "rtl_core_seconds": 11077.294352915,
+      "rtl_process_seconds": 12379.873702198267,
+      "lpn_core_seconds": 27.744608121,
+      "external_process_seconds": 211.38464573584497,
+      "complete_process_speedup_vs_rtl_core": 52.40349560089452,
+      "artifact_sha256": "c4b11e0f37cec70d4ee8a309a7b9807e7fff0a82c59002e2538e12d2bf9d997a"
+    }
+  },
+  "aggregate": {
+    "steps": 50,
+    "generated_tokens": 32,
+    "rtl_cycles": 681270494,
+    "rtl_core_seconds": 36783.165981458,
+    "rtl_process_seconds": 41120.43502712436,
+    "lpn_core_seconds": 92.359731106,
+    "external_process_seconds": 720.0486318152398,
+    "native_speedup_vs_rtl_core": 398.25977772978206,
+    "complete_process_speedup_vs_rtl_core": 51.08428008359349,
+    "complete_process_speedup_vs_rtl_process": 57.10785801156222,
+    "rtl_equivalent_cycles_per_second_native": 7376271.951442942,
+    "rtl_equivalent_cycles_per_second_complete_process": 946145.1128412253
+  }
+}
