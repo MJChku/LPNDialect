@@ -164,7 +164,8 @@ generation validation is still in progress. It uses D=128, a 2 GiB memory, the s
 behavioral memory latency/ports as the earlier runs, and a larger command-table
 capacity of 32768. Real Llama 3.2 remains unvalidated.
 
-Seven Qwen generation cases have completed all eight requested new tokens.
+Nine Qwen generation cases have completed their requested output tokens:
+seven cases generated eight tokens each, and two generated twelve each.
 Each full LPN-only regeneration matches every input hash, logit result,
 generated token and predicted cycle count. All baseline steps passed bit-exact
 DRAM/TMEM validation. Complete LPN process time includes real numerical
@@ -181,13 +182,15 @@ measurements ran alongside other baseline cases.
 | [Mountain village](validation/qwen17/completed_mountain.json) | 13 | 9516.14 s | 24.08 s | 182.42 s | 52.17x |
 | [Translation prompt](validation/qwen17/completed_translation.json) | 15 | 11144.52 s | 27.68 s | 213.33 s | 52.24x |
 | [Arithmetic prompt](validation/qwen17/completed_arithmetic.json) | 13 | 9632.62 s | 24.01 s | 182.87 s | 52.68x |
+| [Why (12 tokens)](validation/qwen17/completed_why12.json) | 13 | 9606.72 s | 23.87 s | 184.21 s | 52.15x |
+| [Hello (12 tokens)](validation/qwen17/completed_hello12.json) | 13 | 9708.61 s | 23.94 s | 181.84 s | 53.39x |
 
 The [batch observations](validation/qwen17/overnight_progress.json) now contain
-131 passing token comparisons; three generation cases are still running.
+141 passing token comparisons; the longest generation case is still running.
 The [completed replay summary](validation/qwen17/completed_replays_summary.json)
-covers 1,239,914,795 RTL cycles across 91 token steps and 56 generated tokens.
-Native timing throughput is 7.37 million RTL-equivalent cycles/s; whole LPN
-process throughput, including functional work and I/O, is 0.955 million/s.
+covers 1,594,176,069 RTL cycles across 117 token steps and 80 generated tokens.
+Native timing throughput is 7.38 million RTL-equivalent cycles/s; whole LPN
+process throughput, including functional work and I/O, is 0.958 million/s.
 These rates use summed per-case processing times, not concurrent batch wall time.
 
 The [Qwen guard-cache comparison](validation/qwen17/guard_cache_ablation.json)
