@@ -1,20 +1,21 @@
 {
-  "captured_utc": "2026-10-16T01:03:09.604834+00:00",
+  "captured_utc": "2026-10-16T01:31:15.606623+00:00",
   "status": "running",
-  "scope": "First two completed token simulations of each of four concurrent real Qwen3-1.7B cases; includes one generated-token decode with persistent KV state. Generation cases and four queued cases remain unfinished.",
+  "scope": "Latest completed token observations from four concurrent real Qwen3-1.7B generation cases. All generation cases remain in progress; four additional cases are queued.",
   "model": "Qwen/Qwen3-1.7B",
   "checkpoint_revision": "70d244cc86ccca08cf5af4e1e306ecf908b1ad5e",
   "aggregate": {
-    "validated_token_steps": 8,
-    "decode_steps": 1,
-    "rtl_cycles": 108999480,
-    "lpn_cycles": 109578824.0,
-    "rtl_core_seconds": 5867.494895398,
-    "lpn_core_seconds": 14.663435626,
-    "full_lpn_seconds": 76.69348039105535,
-    "core_speedup": 400.144621291496,
-    "full_lpn_speedup_vs_rtl_core": 76.50578465705304,
-    "max_absolute_relative_cycle_error": 0.005315113386712422
+    "validated_token_steps": 16,
+    "prefill_steps": 13,
+    "decode_steps": 3,
+    "rtl_cycles": 217999408,
+    "lpn_cycles": 219158432.0,
+    "rtl_core_seconds": 11711.252499198,
+    "lpn_core_seconds": 29.390027017,
+    "full_lpn_seconds": 153.2094670664519,
+    "core_speedup": 398.4770919885133,
+    "full_lpn_speedup_vs_rtl_core": 76.43948329980452,
+    "max_absolute_relative_cycle_error": 0.0053192016397531905
   },
   "all_dram_and_tmem_bit_exact": true,
   "identical_input_files": true,
@@ -134,11 +135,13 @@
           "opentpu/rtlsim.py": "214fb48abe5168e8c9b61ea84b5d95d993b57ff1ddfe53a23866928f7da01a84"
         }
       },
-      "position": 2,
+      "position": 4,
       "generated_tokens": [
-        25
+        25,
+        362,
+        1532
       ],
-      "generated_text": ":",
+      "generated_text": ": A New",
       "records": [
         {
           "step": 0,
@@ -259,16 +262,136 @@
           "next_token": 362,
           "logits_sha256": "30f35d5fade1f72aa030e83ceb768144d30ecfb731111b11a629d68c25915900",
           "total_step_seconds": 844.8253716286272
+        },
+        {
+          "step": 2,
+          "rtl_cycles": 13624977,
+          "lpn_cycles": 13697451.0,
+          "relative_cycle_error": 0.0053192016397531905,
+          "accuracy_within_5_percent": true,
+          "all_dram_and_tmem_bit_exact": true,
+          "identical_input_files": true,
+          "observed_command_path_checked": false,
+          "zero_rollbacks": true,
+          "rtl_traced": false,
+          "instructions": [
+            11055
+          ],
+          "input_sha256": {
+            "prog_0.hex": "1d188bb1a019f198188c7fd0c59d6c2c8225ffe0eeaf2fb12e76affe035e361d",
+            "dram_0.bin": "3ffcc4acc8bf3ba21b4100e15725a0bfc190643c7104c967c23e3b18544df3f1"
+          },
+          "functional_frontend_seconds": 6.010897247120738,
+          "model_build_seconds": 1.3559543639421463,
+          "native_compile_seconds": 7.521174848079681e-05,
+          "lpn_core_seconds": 1.837444898,
+          "lpn_process_seconds": 1.8539539501070976,
+          "rtl_core_seconds": 736.666206161,
+          "rtl_process_seconds": 823.3564346786588,
+          "rtl_build_seconds": 0.004026960581541061,
+          "baseline_binary_sha256": "7d69512175034f8a6d9a8001b2509b8007f51ea9a1d61c97155e0bfc6d4928ca",
+          "timing": {
+            "dram_latency": 8,
+            "dram_bytes_per_cycle": 128,
+            "window": 32,
+            "fifo_chunks": 128,
+            "chain_length": 16,
+            "epilogue_lanes": 2,
+            "quant_buffer_chunks": 1024,
+            "batch_rows": 8,
+            "matrix_engines": 1
+          },
+          "numerical_validation": "independent ISA versus RTL; INT8 checkpoint execution",
+          "core_speedup": 400.91880140886815,
+          "timing_cache_hit": true,
+          "timing_net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          },
+          "timing_ir_bytes": 175256,
+          "single_use_lpn_seconds": 9.220880772918463,
+          "phase": "decode",
+          "input_token": 362,
+          "position": 2,
+          "next_token": 1532,
+          "logits_sha256": "c721e0a973321b9c878c5d203f48040a23e0e0e2329d995be8dea6af75f12b97",
+          "total_step_seconds": 837.7032360732555
+        },
+        {
+          "step": 3,
+          "rtl_cycles": 13625005,
+          "lpn_cycles": 13697451.0,
+          "relative_cycle_error": 0.005317135663436501,
+          "accuracy_within_5_percent": true,
+          "all_dram_and_tmem_bit_exact": true,
+          "identical_input_files": true,
+          "observed_command_path_checked": false,
+          "zero_rollbacks": true,
+          "rtl_traced": false,
+          "instructions": [
+            11055
+          ],
+          "input_sha256": {
+            "prog_0.hex": "6833d4f52b0ecc48adbb8e64463588f3b25c13db01287fd959c27e97a880d3eb",
+            "dram_0.bin": "b673b0b7b4708b8f13ee768ca3017d63c20bc2109d0bfca3e06a841c205f2fe5"
+          },
+          "functional_frontend_seconds": 5.882196709513664,
+          "model_build_seconds": 1.4323761630803347,
+          "native_compile_seconds": 7.531233131885529e-05,
+          "lpn_core_seconds": 1.839012887,
+          "lpn_process_seconds": 1.8551161624491215,
+          "rtl_core_seconds": 745.822675496,
+          "rtl_process_seconds": 831.3739061821252,
+          "rtl_build_seconds": 0.0038128774613142014,
+          "baseline_binary_sha256": "7d69512175034f8a6d9a8001b2509b8007f51ea9a1d61c97155e0bfc6d4928ca",
+          "timing": {
+            "dram_latency": 8,
+            "dram_bytes_per_cycle": 128,
+            "window": 32,
+            "fifo_chunks": 128,
+            "chain_length": 16,
+            "epilogue_lanes": 2,
+            "quant_buffer_chunks": 1024,
+            "batch_rows": 8,
+            "matrix_engines": 1
+          },
+          "numerical_validation": "independent ISA versus RTL; INT8 checkpoint execution",
+          "core_speedup": 405.5559810201591,
+          "timing_cache_hit": true,
+          "timing_net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          },
+          "timing_ir_bytes": 175256,
+          "single_use_lpn_seconds": 9.16976434737444,
+          "phase": "decode",
+          "input_token": 1532,
+          "position": 3,
+          "next_token": 12149,
+          "logits_sha256": "ca1b1a4f94b17bfd43d32183011866605a54918b940391d0e5887ae5b06638f0",
+          "total_step_seconds": 845.7314236406237
         }
       ],
       "status": "running",
-      "rtl_core_seconds": 1498.61731211,
-      "rtl_cycles": 27249870,
-      "lpn_cycles": 27394706.0,
-      "lpn_core_seconds": 3.666206694,
-      "single_use_lpn_seconds": 18.674497036263347,
+      "rtl_core_seconds": 2981.106193767,
+      "rtl_cycles": 54499852,
+      "lpn_cycles": 54789608.0,
+      "lpn_core_seconds": 7.342664479,
+      "single_use_lpn_seconds": 37.06514215655625,
       "all_steps_within_5_percent": true,
-      "core_speedup": 408.76509078514056
+      "core_speedup": 405.9978775133953
     },
     "france": {
       "identity": {
@@ -386,7 +509,7 @@
           "opentpu/rtlsim.py": "214fb48abe5168e8c9b61ea84b5d95d993b57ff1ddfe53a23866928f7da01a84"
         }
       },
-      "position": 2,
+      "position": 4,
       "generated_tokens": [],
       "generated_text": "",
       "records": [
@@ -509,16 +632,136 @@
           "next_token": 315,
           "logits_sha256": "98cef559c0e1dc33eb8afb129062ea56b0ea98c69c7b2acb92154c41ba141b84",
           "total_step_seconds": 808.609606815502
+        },
+        {
+          "step": 2,
+          "rtl_cycles": 13624977,
+          "lpn_cycles": 13697451.0,
+          "relative_cycle_error": 0.0053192016397531905,
+          "accuracy_within_5_percent": true,
+          "all_dram_and_tmem_bit_exact": true,
+          "identical_input_files": true,
+          "observed_command_path_checked": false,
+          "zero_rollbacks": true,
+          "rtl_traced": false,
+          "instructions": [
+            11055
+          ],
+          "input_sha256": {
+            "prog_0.hex": "1d188bb1a019f198188c7fd0c59d6c2c8225ffe0eeaf2fb12e76affe035e361d",
+            "dram_0.bin": "28491f72954211527b9db6fad937558a99297ef8f044ae2908d9bab35e336576"
+          },
+          "functional_frontend_seconds": 6.911522252485156,
+          "model_build_seconds": 1.3589848037809134,
+          "native_compile_seconds": 7.463060319423676e-05,
+          "lpn_core_seconds": 1.839286624,
+          "lpn_process_seconds": 1.854989878833294,
+          "rtl_core_seconds": 742.415286709,
+          "rtl_process_seconds": 828.4022084735334,
+          "rtl_build_seconds": 0.003908615559339523,
+          "baseline_binary_sha256": "7d69512175034f8a6d9a8001b2509b8007f51ea9a1d61c97155e0bfc6d4928ca",
+          "timing": {
+            "dram_latency": 8,
+            "dram_bytes_per_cycle": 128,
+            "window": 32,
+            "fifo_chunks": 128,
+            "chain_length": 16,
+            "epilogue_lanes": 2,
+            "quant_buffer_chunks": 1024,
+            "batch_rows": 8,
+            "matrix_engines": 1
+          },
+          "numerical_validation": "independent ISA versus RTL; INT8 checkpoint execution",
+          "core_speedup": 403.6430630340951,
+          "timing_cache_hit": true,
+          "timing_net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          },
+          "timing_ir_bytes": 175256,
+          "single_use_lpn_seconds": 10.125571565702558,
+          "phase": "prefill",
+          "input_token": 315,
+          "position": 2,
+          "next_token": 279,
+          "logits_sha256": "d28e47d857d88db6aa8b80876ab78c2c545ed15ac8bb7da31255378243ea795e",
+          "total_step_seconds": 843.6362754721195
+        },
+        {
+          "step": 3,
+          "rtl_cycles": 13625005,
+          "lpn_cycles": 13697451.0,
+          "relative_cycle_error": 0.005317135663436501,
+          "accuracy_within_5_percent": true,
+          "all_dram_and_tmem_bit_exact": true,
+          "identical_input_files": true,
+          "observed_command_path_checked": false,
+          "zero_rollbacks": true,
+          "rtl_traced": false,
+          "instructions": [
+            11055
+          ],
+          "input_sha256": {
+            "prog_0.hex": "6833d4f52b0ecc48adbb8e64463588f3b25c13db01287fd959c27e97a880d3eb",
+            "dram_0.bin": "1c33ab5d68686b86ccf4634816de715bccc3a8a746f01b4475ee59f6434c5a3c"
+          },
+          "functional_frontend_seconds": 6.810400292277336,
+          "model_build_seconds": 1.4346786364912987,
+          "native_compile_seconds": 7.537193596363068e-05,
+          "lpn_core_seconds": 1.836438136,
+          "lpn_process_seconds": 1.8525809310376644,
+          "rtl_core_seconds": 699.304287486,
+          "rtl_process_seconds": 785.2981939651072,
+          "rtl_build_seconds": 0.0038345251232385635,
+          "baseline_binary_sha256": "7d69512175034f8a6d9a8001b2509b8007f51ea9a1d61c97155e0bfc6d4928ca",
+          "timing": {
+            "dram_latency": 8,
+            "dram_bytes_per_cycle": 128,
+            "window": 32,
+            "fifo_chunks": 128,
+            "chain_length": 16,
+            "epilogue_lanes": 2,
+            "quant_buffer_chunks": 1024,
+            "batch_rows": 8,
+            "matrix_engines": 1
+          },
+          "numerical_validation": "independent ISA versus RTL; INT8 checkpoint execution",
+          "core_speedup": 380.7938169968389,
+          "timing_cache_hit": true,
+          "timing_net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          },
+          "timing_ir_bytes": 175256,
+          "single_use_lpn_seconds": 10.097735231742263,
+          "phase": "prefill",
+          "input_token": 9625,
+          "position": 3,
+          "next_token": 374,
+          "logits_sha256": "a24b8d8213053057ad60fe77c0fee910d68e14ed72befaf1abccd971f9ba6ef9",
+          "total_step_seconds": 800.5971213560551
         }
       ],
       "status": "running",
-      "rtl_core_seconds": 1397.505825657,
-      "rtl_cycles": 27249870,
-      "lpn_cycles": 27394706.0,
-      "lpn_core_seconds": 3.665132024,
-      "single_use_lpn_seconds": 19.892655612900853,
+      "rtl_core_seconds": 2839.225399852,
+      "rtl_cycles": 54499852,
+      "lpn_cycles": 54789608.0,
+      "lpn_core_seconds": 7.340856784,
+      "single_use_lpn_seconds": 40.115962410345674,
       "all_steps_within_5_percent": true,
-      "core_speedup": 381.29754030846885
+      "core_speedup": 386.77030262193983
     },
     "robot": {
       "identity": {
@@ -638,7 +881,7 @@
           "opentpu/rtlsim.py": "214fb48abe5168e8c9b61ea84b5d95d993b57ff1ddfe53a23866928f7da01a84"
         }
       },
-      "position": 2,
+      "position": 4,
       "generated_tokens": [],
       "generated_text": "",
       "records": [
@@ -761,16 +1004,136 @@
           "next_token": 374,
           "logits_sha256": "3dca8ce591b9405db2b1f24bf94fc2383200d83bfa3eda0b4dc4f8df5930dada",
           "total_step_seconds": 818.7794237677008
+        },
+        {
+          "step": 2,
+          "rtl_cycles": 13624977,
+          "lpn_cycles": 13697451.0,
+          "relative_cycle_error": 0.0053192016397531905,
+          "accuracy_within_5_percent": true,
+          "all_dram_and_tmem_bit_exact": true,
+          "identical_input_files": true,
+          "observed_command_path_checked": false,
+          "zero_rollbacks": true,
+          "rtl_traced": false,
+          "instructions": [
+            11055
+          ],
+          "input_sha256": {
+            "prog_0.hex": "1d188bb1a019f198188c7fd0c59d6c2c8225ffe0eeaf2fb12e76affe035e361d",
+            "dram_0.bin": "81645388e0731f3dba9c7dc954278c6a9cf12a4bc357fa178d1b43d768be88a6"
+          },
+          "functional_frontend_seconds": 5.984840439632535,
+          "model_build_seconds": 1.3551689554005861,
+          "native_compile_seconds": 7.46995210647583e-05,
+          "lpn_core_seconds": 1.848313191,
+          "lpn_process_seconds": 1.864255340769887,
+          "rtl_core_seconds": 755.364669546,
+          "rtl_process_seconds": 841.3757042624056,
+          "rtl_build_seconds": 0.004065822809934616,
+          "baseline_binary_sha256": "7d69512175034f8a6d9a8001b2509b8007f51ea9a1d61c97155e0bfc6d4928ca",
+          "timing": {
+            "dram_latency": 8,
+            "dram_bytes_per_cycle": 128,
+            "window": 32,
+            "fifo_chunks": 128,
+            "chain_length": 16,
+            "epilogue_lanes": 2,
+            "quant_buffer_chunks": 1024,
+            "batch_rows": 8,
+            "matrix_engines": 1
+          },
+          "numerical_validation": "independent ISA versus RTL; INT8 checkpoint execution",
+          "core_speedup": 408.6778546104095,
+          "timing_cache_hit": true,
+          "timing_net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          },
+          "timing_ir_bytes": 175256,
+          "single_use_lpn_seconds": 9.204339435324073,
+          "phase": "prefill",
+          "input_token": 1730,
+          "position": 2,
+          "next_token": 264,
+          "logits_sha256": "6206582fde8efdc7f3752aa0c9a62216a312cd5fdd60cb6983d55f817da50000",
+          "total_step_seconds": 855.6821813713759
+        },
+        {
+          "step": 3,
+          "rtl_cycles": 13625005,
+          "lpn_cycles": 13697451.0,
+          "relative_cycle_error": 0.005317135663436501,
+          "accuracy_within_5_percent": true,
+          "all_dram_and_tmem_bit_exact": true,
+          "identical_input_files": true,
+          "observed_command_path_checked": false,
+          "zero_rollbacks": true,
+          "rtl_traced": false,
+          "instructions": [
+            11055
+          ],
+          "input_sha256": {
+            "prog_0.hex": "6833d4f52b0ecc48adbb8e64463588f3b25c13db01287fd959c27e97a880d3eb",
+            "dram_0.bin": "4ab49f7ab08a0231e3d6f7c6112947c9a660f25d5f2ececaa6451b4b1afe312f"
+          },
+          "functional_frontend_seconds": 5.885793946683407,
+          "model_build_seconds": 1.434461623430252,
+          "native_compile_seconds": 7.641687989234924e-05,
+          "lpn_core_seconds": 1.862466509,
+          "lpn_process_seconds": 1.8783976286649704,
+          "rtl_core_seconds": 719.912108641,
+          "rtl_process_seconds": 805.3125970549881,
+          "rtl_build_seconds": 0.003762010484933853,
+          "baseline_binary_sha256": "7d69512175034f8a6d9a8001b2509b8007f51ea9a1d61c97155e0bfc6d4928ca",
+          "timing": {
+            "dram_latency": 8,
+            "dram_bytes_per_cycle": 128,
+            "window": 32,
+            "fifo_chunks": 128,
+            "chain_length": 16,
+            "epilogue_lanes": 2,
+            "quant_buffer_chunks": 1024,
+            "batch_rows": 8,
+            "matrix_engines": 1
+          },
+          "numerical_validation": "independent ISA versus RTL; INT8 checkpoint execution",
+          "core_speedup": 386.5369418253523,
+          "timing_cache_hit": true,
+          "timing_net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          },
+          "timing_ir_bytes": 175256,
+          "single_use_lpn_seconds": 9.198729615658522,
+          "phase": "prefill",
+          "input_token": 264,
+          "position": 3,
+          "next_token": 1372,
+          "logits_sha256": "db1ffc17f2a6399c98fa9514330b3688cd5dbada390fef340ab405f5fa03b7bf",
+          "total_step_seconds": 819.71866135858
         }
       ],
       "status": "running",
-      "rtl_core_seconds": 1475.489120953,
-      "rtl_cycles": 27249870,
-      "lpn_cycles": 27394706.0,
-      "lpn_core_seconds": 3.667482692,
-      "single_use_lpn_seconds": 19.090087212622166,
+      "rtl_core_seconds": 2950.76589914,
+      "rtl_cycles": 54499852,
+      "lpn_cycles": 54789608.0,
+      "lpn_core_seconds": 7.378262392,
+      "single_use_lpn_seconds": 37.49315626360476,
       "all_steps_within_5_percent": true,
-      "core_speedup": 402.31658738881924
+      "core_speedup": 399.9269397547335
     },
     "sky": {
       "identity": {
@@ -888,7 +1251,7 @@
           "opentpu/rtlsim.py": "214fb48abe5168e8c9b61ea84b5d95d993b57ff1ddfe53a23866928f7da01a84"
         }
       },
-      "position": 2,
+      "position": 4,
       "generated_tokens": [],
       "generated_text": "",
       "records": [
@@ -1011,16 +1374,136 @@
           "next_token": 374,
           "logits_sha256": "a7b790f1e3a6cd6c21278c13584679a49713eb7947fa54cecfb0fffdd10b2d90",
           "total_step_seconds": 844.8286540638655
+        },
+        {
+          "step": 2,
+          "rtl_cycles": 13624977,
+          "lpn_cycles": 13697451.0,
+          "relative_cycle_error": 0.0053192016397531905,
+          "accuracy_within_5_percent": true,
+          "all_dram_and_tmem_bit_exact": true,
+          "identical_input_files": true,
+          "observed_command_path_checked": false,
+          "zero_rollbacks": true,
+          "rtl_traced": false,
+          "instructions": [
+            11055
+          ],
+          "input_sha256": {
+            "prog_0.hex": "1d188bb1a019f198188c7fd0c59d6c2c8225ffe0eeaf2fb12e76affe035e361d",
+            "dram_0.bin": "e3b221056a4c789dae2ccb270b5516e040a52b6c591a823e38db95a0985c952a"
+          },
+          "functional_frontend_seconds": 6.037576569244266,
+          "model_build_seconds": 1.3600932359695435,
+          "native_compile_seconds": 7.92481005191803e-05,
+          "lpn_core_seconds": 1.833385216,
+          "lpn_process_seconds": 1.8497861046344042,
+          "rtl_core_seconds": 700.134621326,
+          "rtl_process_seconds": 786.355221632868,
+          "rtl_build_seconds": 0.0038656238466501236,
+          "baseline_binary_sha256": "7d69512175034f8a6d9a8001b2509b8007f51ea9a1d61c97155e0bfc6d4928ca",
+          "timing": {
+            "dram_latency": 8,
+            "dram_bytes_per_cycle": 128,
+            "window": 32,
+            "fifo_chunks": 128,
+            "chain_length": 16,
+            "epilogue_lanes": 2,
+            "quant_buffer_chunks": 1024,
+            "batch_rows": 8,
+            "matrix_engines": 1
+          },
+          "numerical_validation": "independent ISA versus RTL; INT8 checkpoint execution",
+          "core_speedup": 381.8808045444608,
+          "timing_cache_hit": true,
+          "timing_net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          },
+          "timing_ir_bytes": 175256,
+          "single_use_lpn_seconds": 9.247535157948732,
+          "phase": "prefill",
+          "input_token": 374,
+          "position": 2,
+          "next_token": 6303,
+          "logits_sha256": "c2346f9845f30900ae3115963784b2226625e2cb2f83136e9ea867d7598746a9",
+          "total_step_seconds": 800.7427341043949
+        },
+        {
+          "step": 3,
+          "rtl_cycles": 13625005,
+          "lpn_cycles": 13697451.0,
+          "relative_cycle_error": 0.005317135663436501,
+          "accuracy_within_5_percent": true,
+          "all_dram_and_tmem_bit_exact": true,
+          "identical_input_files": true,
+          "observed_command_path_checked": false,
+          "zero_rollbacks": true,
+          "rtl_traced": false,
+          "instructions": [
+            11055
+          ],
+          "input_sha256": {
+            "prog_0.hex": "6833d4f52b0ecc48adbb8e64463588f3b25c13db01287fd959c27e97a880d3eb",
+            "dram_0.bin": "4bc8ec02483cc196415376a6e7856ad8c5fb38c95a8c50222885cca1ba15b9ec"
+          },
+          "functional_frontend_seconds": 6.975541431456804,
+          "model_build_seconds": 1.430356727913022,
+          "native_compile_seconds": 7.321871817111969e-05,
+          "lpn_core_seconds": 1.83024393,
+          "lpn_process_seconds": 1.845459170639515,
+          "rtl_core_seconds": 744.137748435,
+          "rtl_process_seconds": 832.3513754680753,
+          "rtl_build_seconds": 0.003906400874257088,
+          "baseline_binary_sha256": "7d69512175034f8a6d9a8001b2509b8007f51ea9a1d61c97155e0bfc6d4928ca",
+          "timing": {
+            "dram_latency": 8,
+            "dram_bytes_per_cycle": 128,
+            "window": 32,
+            "fifo_chunks": 128,
+            "chain_length": 16,
+            "epilogue_lanes": 2,
+            "quant_buffer_chunks": 1024,
+            "batch_rows": 8,
+            "matrix_engines": 1
+          },
+          "numerical_validation": "independent ISA versus RTL; INT8 checkpoint execution",
+          "core_speedup": 406.57845450961287,
+          "timing_cache_hit": true,
+          "timing_net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          },
+          "timing_ir_bytes": 175256,
+          "single_use_lpn_seconds": 10.251430548727512,
+          "phase": "prefill",
+          "input_token": 6303,
+          "position": 3,
+          "next_token": 11,
+          "logits_sha256": "343dcd9e382daaa568d9ec76da59f111575ad2e7ae1aa9716392846b452f573c",
+          "total_step_seconds": 847.8065112177283
         }
       ],
       "status": "running",
-      "rtl_core_seconds": 1495.882636678,
-      "rtl_cycles": 27249870,
-      "lpn_cycles": 27394706.0,
-      "lpn_core_seconds": 3.664614216,
-      "single_use_lpn_seconds": 19.03624052926898,
+      "rtl_core_seconds": 2940.1550064390003,
+      "rtl_cycles": 54499852,
+      "lpn_cycles": 54789608.0,
+      "lpn_core_seconds": 7.328243362,
+      "single_use_lpn_seconds": 38.535206235945225,
       "all_steps_within_5_percent": true,
-      "core_speedup": 408.1964835880558
+      "core_speedup": 401.208701895045
     }
   }
 }
