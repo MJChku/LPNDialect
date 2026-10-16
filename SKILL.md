@@ -212,6 +212,16 @@ Use `examples.opentpu.standard_inference` for normal upstream inference.
 both RTL and LPN receive its programs and persistent device state. The backend
 adapter must not decide inference batching, tiling, or token order. The small
 synthetic numerical fixture is not full-checkpoint accuracy validation.
+The completed normal-inference SmolLM2-135M case (16 prompt/eight output tokens,
+two eight-row prefill kernels) is under
+`examples/opentpu/validation/standard_inference/smollm2_16in8out`. Its numerical
+checks are bit-exact; worst per-kernel timing error is 2.79%. The accompanying
+`audit_checkpoint.py` verifies identities and independently replays the final
+retained kernel; use frozen project revision `c82de17` for its source checks.
+Keep long validation sources frozen. Live case manifests and progress for this
+case and `qwen17_8in2out` are under `~/lpn-runs/standard-checkpoint-validation`.
+Read their job status and child PID before starting another validation; a
+completed manifest is historical evidence, not a reason to restart it.
 
 To reproduce the historical custom token loop, `examples.opentpu.e2e` retains
 real trained-model numerical execution with persistent KV state and per-step RTL

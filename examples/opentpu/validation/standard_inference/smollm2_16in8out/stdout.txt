@@ -1,0 +1,109 @@
+{"stage": "rtl", "step": 0, "predicted_cycles": 3870859.0, "frontend_seconds": 6.053490089252591, "compile_seconds": 0.3237582556903362}
+{"stage": "rtl", "step": 1, "predicted_cycles": 4349810.0, "frontend_seconds": 6.086388695985079, "compile_seconds": 0.0001372937113046646}
+{"stage": "rtl", "step": 2, "predicted_cycles": 2208554.0, "frontend_seconds": 1.7795044146478176, "compile_seconds": 7.420778274536133e-05}
+{"stage": "rtl", "step": 3, "predicted_cycles": 2208884.0, "frontend_seconds": 1.9022805839776993, "compile_seconds": 7.514283061027527e-05}
+{"stage": "rtl", "step": 4, "predicted_cycles": 2208944.0, "frontend_seconds": 1.850128510966897, "compile_seconds": 9.877607226371765e-05}
+{"stage": "rtl", "step": 5, "predicted_cycles": 2209274.0, "frontend_seconds": 1.8530763760209084, "compile_seconds": 7.861852645874023e-05}
+{"stage": "rtl", "step": 6, "predicted_cycles": 2209424.0, "frontend_seconds": 1.8563475850969553, "compile_seconds": 7.639080286026001e-05}
+{"stage": "rtl", "step": 7, "predicted_cycles": 2209814.0, "frontend_seconds": 1.8543080016970634, "compile_seconds": 7.429905235767365e-05}
+{"stage": "rtl", "step": 8, "predicted_cycles": 2210204.0, "frontend_seconds": 1.77466263435781, "compile_seconds": 7.78883695602417e-05}
+{"stage": "rtl", "step": 9, "predicted_cycles": 2210594.0, "frontend_seconds": 1.776091706007719, "compile_seconds": 7.718615233898163e-05}
+{
+  "status": "complete",
+  "mode": "validate-rtl",
+  "entrypoint": "opentpu.llm.qwen3.Engine.generate",
+  "scheduling": "Unmodified upstream prefill_chunks/fit_chunk and autoregressive decode; default PREFILL_ROWS. Host compile pipeline disabled; resident device decode disabled.",
+  "scope": "Real checkpoint numerical execution; identical ISA/LPN/RTL inputs and bit-exact device memory checks.",
+  "model": {
+    "hidden": 576,
+    "layers": 30,
+    "n_q": 9,
+    "n_kv": 3,
+    "head_dim": 64,
+    "ffn": 1536,
+    "vocab": 49152,
+    "eps": 1e-05,
+    "theta": 100000,
+    "tied": true,
+    "bos": 0,
+    "eos": [
+      0
+    ],
+    "qk_norm": false,
+    "qk_smooth": true,
+    "nope": [],
+    "rotary": 0,
+    "rope_div": [],
+    "rope_scale": 1.0,
+    "ctx": 0,
+    "embed": "int8",
+    "formats": "",
+    "mix": ""
+  },
+  "config": {
+    "S": 1,
+    "D": 64,
+    "MCOLS": 4,
+    "ACT_BLOCKS": 64,
+    "TMEM_WORDS": 65536,
+    "DRAM_BYTES": 268435456,
+    "IMEM_WORDS": 32768,
+    "LANES": 8,
+    "PAIR": false,
+    "DSTEP": false,
+    "STREAM": false,
+    "ACT_ROWS": 16,
+    "SEQ_WC": false
+  },
+  "model_directory": "/home/ubuntu/FeSens-openTPU/models/SmolLM2-135M",
+  "prompt_ids": [
+    6403,
+    1980,
+    253,
+    655,
+    28,
+    281,
+    253,
+    8354,
+    6560,
+    2141,
+    260,
+    8718,
+    28,
+    665,
+    4161,
+    253
+  ],
+  "prompt_tokens": 16,
+  "requested_output_tokens": 8,
+  "returned_output_tokens": 8,
+  "final_position": 24,
+  "generated_ids": [
+    9357,
+    1573,
+    555,
+    3365,
+    4994,
+    30,
+    16792,
+    30
+  ],
+  "generated_text": " wise old man named Mr. Oak.",
+  "engine_default_rows": 8,
+  "host_seconds": 1244.215449720621,
+  "timing_totals": {
+    "rtl_cycles": 25455239,
+    "lpn_cycles": 25896361.0,
+    "relative_cycle_error": 0.017329320695044448,
+    "worst_kernel_cycle_error": 0.027895465790499063,
+    "rtl_core_seconds": 984.254665088,
+    "lpn_core_seconds": 12.300804343,
+    "core_speedup": 80.01547196774237,
+    "lpn_pipeline_seconds_excluding_input_serialization": 54.364796079695225,
+    "rtl_process_seconds": 1104.4811408948153,
+    "all_device_memories_bit_exact": true,
+    "all_input_files_identical": true,
+    "zero_rollbacks": true
+  }
+}
+{"kernel_schedule": [{"position_before": 0, "phase": "prefill", "input_rows": 8, "logit_rows_read": 0, "instructions": [19776]}, {"position_before": 8, "phase": "prefill", "input_rows": 8, "logit_rows_read": 1, "instructions": [19794]}, {"position_before": 16, "phase": "decode", "input_rows": 1, "logit_rows_read": 1, "instructions": [5811]}, {"position_before": 17, "phase": "decode", "input_rows": 1, "logit_rows_read": 1, "instructions": [5811]}, {"position_before": 18, "phase": "decode", "input_rows": 1, "logit_rows_read": 1, "instructions": [5811]}, {"position_before": 19, "phase": "decode", "input_rows": 1, "logit_rows_read": 1, "instructions": [5811]}, {"position_before": 20, "phase": "decode", "input_rows": 1, "logit_rows_read": 1, "instructions": [5811]}, {"position_before": 21, "phase": "decode", "input_rows": 1, "logit_rows_read": 1, "instructions": [5811]}, {"position_before": 22, "phase": "decode", "input_rows": 1, "logit_rows_read": 1, "instructions": [5811]}, {"position_before": 23, "phase": "decode", "input_rows": 1, "logit_rows_read": 1, "instructions": [5811]}]}

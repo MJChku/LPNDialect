@@ -101,6 +101,46 @@ OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 PYTHONPATH=. \
   --artifacts /tmp/opentpu-standard-fixture
 ```
 
+A real [SmolLM2-135M checkpoint run](validation/standard_inference/smollm2_16in8out/report.json)
+now checks all 30 layers with **16 prompt tokens and eight generated tokens**.
+Unmodified upstream inference selected two eight-token prefill kernels, reading
+prompt logits only after the second, followed by eight decode kernels (including
+the upstream final step described above). Every DRAM byte and TMEM word matched
+the independent ISA execution on every kernel; both engines used identical
+programs and numerical inputs, with zero LPN rollbacks.
+
+| Case | RTL cycles | LPN cycles | Total cycle error | Worst kernel error | RTL core time | Native LPN core time |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| SmolLM2-135M, 16 input / 8 output | 25,455,239 | 25,896,361 | +1.73% | 2.79% | 984.25 s | 12.30 s |
+
+That is **80.02x native timing-core speedup** in this single run. The measured
+functional/preparation/compilation/native-process stages total **54.36 s**;
+that total excludes input serialization and is not an entire-process wall
+measurement. Joint validation wall time, including RTL and its build, was
+1,245.99 s. The generated continuation was ` wise old man named Mr. Oak.`
+These results establish this batched checkpoint case, not accuracy for arbitrary
+models or context lengths. Raw output, the terminal job manifest and an
+[independent archive audit](validation/standard_inference/smollm2_16in8out/audit.json)
+are retained beside the report.
+
+The audit verifies checkpoint/source/program hashes and all reported checks,
+then independently replays the retained final kernel's ISA memory results and
+native LPN timing. Earlier kernels' numerical comparisons remain the runner's
+in-run checks. Its matching source revision is `c82de17`; later harness changes
+fix progress row logging and narrow planning bandwidth without changing the
+hardware timing model. To audit the original server artifacts, use a frozen
+worktree at that revision:
+
+```sh
+git worktree add --detach /tmp/lpn-checkpoint-source c82de17
+OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 PYTHONDONTWRITEBYTECODE=1 \
+  ../FeSens-openTPU/.venv/bin/python \
+  examples/opentpu/validation/standard_inference/audit_checkpoint.py \
+  --case "$HOME/lpn-runs/standard-checkpoint-validation/smollm2_16in8out" \
+  --project-root /tmp/lpn-checkpoint-source --opentpu-root ../FeSens-openTPU-qwen \
+  --output /tmp/smollm2-standard-audit.json
+```
+
 The [1,024-input/8-output Qwen3-1.7B planning report](validation/standard_inference/qwen17_plan1024.json)
 records upstream selecting 256 four-token prefill kernels, one prompt-logit
 readback, and eight decode kernels. Its 207.23 seconds are host planning and

@@ -1,0 +1,12 @@
+test_shared_upstream_generate_matches_real_isa_and_rtl (__main__.StandardInferenceTest.test_shared_upstream_generate_matches_real_isa_and_rtl) ... {"stage": "rtl", "step": 0, "predicted_cycles": 10892.0, "frontend_seconds": 0.0716362502425909, "compile_seconds": 0.3167856503278017}
+{"stage": "rtl", "step": 1, "predicted_cycles": 11457.0, "frontend_seconds": 0.07434042729437351, "compile_seconds": 6.256811320781708e-05}
+{"stage": "rtl", "step": 2, "predicted_cycles": 3434.0, "frontend_seconds": 0.021014170721173286, "compile_seconds": 8.570030331611633e-05}
+{"stage": "rtl", "step": 3, "predicted_cycles": 3435.0, "frontend_seconds": 0.020784365013241768, "compile_seconds": 5.786679685115814e-05}
+shared_inference_validation {'scope': 'Small synthetic numerical fixture through unmodified upstream Engine.generate; not full Qwen checkpoint validation', 'prompt_rows': [8, 8], 'generated_ids': [15, 15], 'kernels': 4, 'rtl_cycles': 29595, 'lpn_cycles': 29218.0, 'max_cycle_error': 0.026368018145732863}
+ok
+test_upstream_plans_multirow_prefill_and_last_prompt_logits (__main__.StandardInferenceTest.test_upstream_plans_multirow_prefill_and_last_prompt_logits) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 9.590s
+
+OK

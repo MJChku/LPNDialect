@@ -1,0 +1,33 @@
+{
+  "status": "complete",
+  "scope": "Audit a completed standard-inference checkpoint run and replay its final kernel.\n\nEarlier numerical comparisons are the runner's in-run checks. This audit\nindependently checks their metadata/program identities and replays the last\nkernel's numerical execution and native timing from its retained input bundle.\n",
+  "model_directory": "/home/ubuntu/FeSens-openTPU/models/SmolLM2-135M",
+  "kernels": 10,
+  "prompt_tokens": 16,
+  "output_tokens": 8,
+  "prefill_rows": [
+    8,
+    8
+  ],
+  "source_checkpoint_and_program_hashes_match": true,
+  "reported_checks_pass": true,
+  "final_dram_and_tmem_independently_replayed_bit_exact": true,
+  "final_native_cycles_replayed": 2210594.0,
+  "report_sha256": "f97ddad3edee7cba76f5683569d7c2f514dfc93b2b7cbf428723a8aeac4ebbaf",
+  "audit_source_sha256": "f6cab5787a43b47b31a707e9ebbef562e69d9ddbd3c90e8b01de477f681d7003",
+  "timing_totals": {
+    "rtl_cycles": 25455239,
+    "lpn_cycles": 25896361.0,
+    "relative_cycle_error": 0.017329320695044448,
+    "worst_kernel_cycle_error": 0.027895465790499063,
+    "rtl_core_seconds": 984.254665088,
+    "lpn_core_seconds": 12.300804343,
+    "core_speedup": 80.01547196774237,
+    "lpn_pipeline_seconds_excluding_input_serialization": 54.364796079695225,
+    "rtl_process_seconds": 1104.4811408948153,
+    "all_device_memories_bit_exact": true,
+    "all_input_files_identical": true,
+    "zero_rollbacks": true
+  },
+  "matched_source_revision": "c82de17a39010058efac9bebbbaf15dfb38e67bf"
+}
