@@ -1,0 +1,32 @@
+{
+  "captured_utc": "2026-10-16T10:14:59.748807+00:00",
+  "scope": "Three complete weight-free Qwen3-1.7B architecture studies after fixing scaled/unscaled prefetch ordering. Resource-screened hypotheses; no modified RTL or FPGA performance validation.",
+  "artifacts": {
+    "qwen17_v80_1col.json": "e5e564c4843cfe5a1ceea46ae6d4163e898714bf432fdf2079f017e52432dae6",
+    "qwen17_v80_4cols.json": "ef7a6e9e7c5baca2207bbb532799c7a7b5b07bca9372719f2f8160f2f184cda1",
+    "qwen17_v80_context1024.json": "ad58866e159abb9a06e96d1e88ef48e0a0d28191e3fa1ac284fe951a1130d14e",
+    "tests.txt": "0b159fd4c5a95704d01a28b615cf656ca8fe91c133796c760be2a31369567996"
+  },
+  "test_source_sha256": "6f3e8f69e6ea2930e101a814fc68d54ce001c59b71a639bc3a73043a20994771",
+  "integration_tests_passed": 18,
+  "original_sequence_steps_checked": 24,
+  "full_sequence_baseline_cycles": 328851748.0,
+  "full_sequence_narrow_cycles": 29675852.0,
+  "full_sequence_cycle_speedup": 11.081459362986445,
+  "long_context_cycle_speedup": 6.998260081829697,
+  "all_final_report_source_hashes_match": true,
+  "all_native_runs_zero_rollbacks": true,
+  "regression_reproduced_before_fix": true,
+  "resource_screened_points": 70,
+  "rejected_points": 2,
+  "recommended_first_candidate": {
+    "scope": "Suggested synthesis starting point, not proven FPGA fit.",
+    "matrix_columns": 1,
+    "parallel_output_rows": 32,
+    "matrix_mac_lanes": 4096,
+    "vector_lanes": 64,
+    "effective_memory_gbs": 563.2,
+    "short_context_cycles": 1243512.0,
+    "short_context_cycle_speedup": 11.02004242821943
+  }
+}

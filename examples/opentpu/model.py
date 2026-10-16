@@ -313,7 +313,7 @@ class OpenTPU:
       if row+batch<n:
         emit(request,token.set("row",row+batch),delay=service)
       else:
-        emit(prefetch_done,create(),delay=service)
+        emit(prefetch_done,create(),delay=arrival)
 
     @net.transition(name+"_compute")
     def compute():

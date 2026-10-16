@@ -25,8 +25,8 @@ V80_SOURCE='https://www.amd.com/content/dam/amd/en/documents/products/accelerato
 def candidates():
   # Mechanism ablations and balanced points, rather than an unbounded grid.
   points=[('validated_architecture',1,1,8,128)]
-  for rows in (1,2,4,8,16,32):
-    points.append((f'balanced_{rows}',rows,1,min(64,8*rows),128*rows))
+  for rows in (1,2,4,8,16,32,64):
+    points.append((f'balanced_{rows}',rows,1,min(64,8*rows),min(2816,128*rows)))
   for rows in (4,8,16):
     points.append((f'compute_only_{rows}',rows,1,8,128))
   for bw in (512,2048):
@@ -109,6 +109,8 @@ def main():
   p.add_argument('--compiler',type=Path,required=True)
   p.add_argument('--output',type=Path,required=True)
   p.add_argument('--position',type=int,default=15,help='Decode position used for architecture sweep')
+  p.add_argument('--matrix-columns',type=int,default=4,choices=(1,2,4),
+      help='Physical stationary columns for evolved points; the original instruction stream and validated baseline keep four')
   p.add_argument('--prompt-tokens',type=int,default=16)
   p.add_argument('--output-tokens',type=int,default=8)
   p.add_argument('--clock-mhz',type=float,default=200,help='Assumed common hardware clock, not a measured Fmax')
@@ -151,11 +153,12 @@ def main():
   base_cycles=None
   for point in points:
     label,rows,engines,lanes,bw=point
+    columns=4 if label=='validated_architecture' else args.matrix_columns
     timing=architecture(point,args.memory_latency)
-    item=dict(label=label,timing=asdict(timing),vector_lanes=lanes,
-      resources=resources(workload.config,image,point,args))
+    item=dict(label=label,timing=asdict(timing),vector_lanes=lanes,matrix_columns=columns,
+      resources=resources(replace(workload.config,MCOLS=columns),image,point,args))
     if item['resources']['passes_resource_screen']:
-      cfg=replace(workload.config,LANES=lanes)
+      cfg=replace(workload.config,LANES=lanes,MCOLS=columns)
       measured=measure(runner,replace(workload,config=cfg),timing,args.output/label)
       item.update(measured)
       if base_cycles is None:base_cycles=measured['cycles']
@@ -186,7 +189,7 @@ def main():
       if cap==128 and pos in reference:
         if program_hash(w.programs[0])!=reference[pos]['input_sha256']['prog_0.hex'] or base['cycles']!=reference[pos]['lpn_cycles']:
           raise RuntimeError(f'static shape differs from validated baseline at position {pos}')
-      evolved=measure(runner,replace(w,config=replace(w.config,LANES=best_point[3])),
+      evolved=measure(runner,replace(w,config=replace(w.config,LANES=best_point[3],MCOLS=best['matrix_columns'])),
         architecture(best_point,args.memory_latency),args.output/'sequence'/str(pos)/'evolved')
       sequence.append(dict(position=pos,phase='prefill' if pos<args.prompt_tokens else 'decode',
         shape_seconds=shape,baseline=base,evolved=evolved,

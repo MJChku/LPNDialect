@@ -66,6 +66,21 @@ calls to one runtime. `e2e --reuse-timing` avoids compiling per command stream.
 Full trained-model numerical execution remains Python/NumPy; do not describe
 the native scalar subset or linking demonstration as a complete neural model.
 
+For weight-free FPGA architecture exploration, use
+`examples.opentpu.fpga_dse` and read
+[FPGA_DSE.md](examples/opentpu/FPGA_DSE.md). This compiles dense Qwen shapes and
+resolves static scalar control without creating weight/DRAM images or executing
+tensor arithmetic. It rejects data-dependent control. This differs from
+`replay_e2e --timing-only`, which retains numerical execution. Prescribed
+sequence lengths do not imply generated text or EOS prediction. Distinguish
+hardware-cycle reductions, assumed-clock latency and simulator wall speed.
+Board bandwidth, MAC/DSP mapping and reserves are explicit assumptions;
+resource screening is not synthesis proof or modified-RTL accuracy validation.
+The new Timing knobs default to the original RTL behavior. Preserve shared
+memory contention, scale readiness, output-bank limits and dependencies when
+adding parallel lanes. Whole-image addresses above 4 GiB require a different
+mapping; do not silently wrap addresses for a larger model.
+
 Create places with `net.place(name, initial_tokens=N, observable=True)` as
 needed, and register transitions with `@net.transition`. Transition primitives
 such as `take`, `peek`, `count`, `guard`, `create`, and `emit` are supplied by

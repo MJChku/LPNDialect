@@ -152,7 +152,10 @@ class MatrixEngine:
       if row+batch<n:
         emit(request,token.set("row",row+batch),delay=service)
       else:
-        emit(prefetch_credit,create(),delay=service)
+        # A later unscaled command must not bypass this command's scale
+        # decoder and reach the FIFO before its last batch. Common arrival
+        # latency preserves order once both transfer paths have finished.
+        emit(prefetch_credit,create(),delay=arrival)
 
     @net.transition(prefix+"_issue_rows")
     def compute():

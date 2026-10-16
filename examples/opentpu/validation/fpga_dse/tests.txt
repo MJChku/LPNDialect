@@ -3,6 +3,7 @@ test_batched_rows_preserve_long_workload_timing (__main__.OpenTPUTest.test_batch
 test_compact_completion_banks_match_expanded_dataflow (__main__.OpenTPUTest.test_compact_completion_banks_match_expanded_dataflow) ... ok
 test_fpga_datapath_matches_expanded_and_native_models (__main__.OpenTPUTest.test_fpga_datapath_matches_expanded_and_native_models) ... ok
 test_fpga_output_bank_service_counts_actual_collisions (__main__.OpenTPUTest.test_fpga_output_bank_service_counts_actual_collisions) ... ok
+test_fpga_unscaled_prefetch_does_not_overtake_scale_fetch (__main__.OpenTPUTest.test_fpga_unscaled_prefetch_does_not_overtake_scale_fetch) ... ok
 test_matrix_admission_cannot_overtake_an_older_blocked_command (__main__.OpenTPUTest.test_matrix_admission_cannot_overtake_an_older_blocked_command) ... ok
 test_multi_engine_configuration_requires_compact_model (__main__.OpenTPUTest.test_multi_engine_configuration_requires_compact_model) ... ok
 test_multiple_engines_overlap_independent_commands_and_keep_write_hazards (__main__.OpenTPUTest.test_multiple_engines_overlap_independent_commands_and_keep_write_hazards) ... ok
@@ -17,6 +18,6 @@ test_truncated_input_is_rejected (__main__.OpenTPUTest.test_truncated_input_is_r
 test_unsupported_host_synchronization_is_rejected (__main__.OpenTPUTest.test_unsupported_host_synchronization_is_rejected) ... ok
 
 ----------------------------------------------------------------------
-Ran 17 tests in 97.972s
+Ran 18 tests in 105.531s
 
 OK

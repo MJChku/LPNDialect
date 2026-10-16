@@ -48,6 +48,24 @@ class OpenTPUTest(unittest.TestCase):
     self.assertEqual(bank_write_cycles(8,4,64,8),4)
     self.assertEqual(bank_write_cycles(8,4,64,1),32)
 
+  def test_fpga_unscaled_prefetch_does_not_overtake_scale_fetch(self):
+    if not self.tool:
+      self.skipTest('native compiler not supplied')
+    from dataclasses import replace
+    from examples.opentpu.shape_workload import compile_shape,qwen17_spec
+    from examples.opentpu.native_timing import ReusableTiming
+    workload,_=compile_shape(qwen17_spec(),1023,1024)
+    workload=replace(workload,config=replace(workload.config,MCOLS=1,LANES=64))
+    timing=Timing(batch_rows=8,matrix_engines=4,matrix_row_lanes=4,
+        dram_port_bytes=2048,dram_bytes_per_cycle=2048,dram_latency=64,
+        scale_lanes=4,fifo_chunks=512,unified_dram=True,scalar_store_bytes=256)
+    with tempfile.TemporaryDirectory() as directory:
+      out=Path(directory)
+      prepared=ReusableTiming(self.tool,out/'cache',capacity=32768).prepare(workload,timing,out/'timing.tables')
+      cycles,_,_,log=prepared.run()
+      self.assertGreater(cycles,1_000_000)
+      self.assertIn('rollbacks: 0',log)
+
   def test_fpga_datapath_matches_expanded_and_native_models(self):
     from examples.opentpu.shape_workload import resolve_static
     from dataclasses import replace
