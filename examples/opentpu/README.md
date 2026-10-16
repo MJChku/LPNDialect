@@ -142,6 +142,49 @@ python -m examples.opentpu.benchmark --opentpu-root ../FeSens-openTPU \
 
 ## Long trained-model runs
 
+The completed SmolLM2 story validation contains 72 prompt tokens and 64
+generated tokens (136 separate RTL invocations with persistent KV state):
+298,017,840 RTL cycles and 11,179.11 s of RTL core time. Every DRAM/TMEM result
+matched independently executed ISA results; maximum per-token timing error was
+3.28%. The [complete heartbeat replay](validation/guard_heartbeats/smollm2_136.json)
+checks all original input hashes, logits and LPN predictions. Its native timing
+was 55.11 s; functional/preparation/compilation/native process time was 354.72 s,
+and complete replay wall time was 405.34 s. The RTL observations were retained,
+not rerun for the heartbeat replay.
+
+Qwen3-1.7B bring-up uses the official `Qwen/Qwen3-1.7B` checkpoint at
+`70d244cc86ccca08cf5af4e1e306ecf908b1ad5e`, compiled to the upstream INT8
+execution path. Validation is in progress; do not claim numerical or timing
+accuracy until its reports pass. It uses D=128, a 2 GiB memory, the same
+behavioral memory latency/ports as the earlier runs, and a larger command-table
+capacity of 32768. Real Llama 3.2 remains unvalidated.
+
+For Qwen's memory size, apply [verilator-large-memory.patch](verilator-large-memory.patch)
+in an isolated pinned FeSens worktree, after the observer patch. It splits the
+simulation memory's storage array into rows to avoid Verilator's range limit;
+it adds no architectural bank conflicts or DRAM timing. The
+[storage equivalence check](validation/qwen17/memory_equivalence.json) exercises
+all ports, byte writes, boundary crossings, partial input loading and read
+response cycles against the original memory and an independent byte result.
+Reproduce it with:
+
+```sh
+PYTHONPATH=. ../FeSens-openTPU/.venv/bin/python -m examples.opentpu.check_memory_storage \
+  --reference-root ../FeSens-openTPU --candidate-root ../FeSens-openTPU-qwen \
+  --verilator "$VERILATOR_ROOT/bin/verilator" --verilator-root "$VERILATOR_ROOT" \
+  --output /tmp/lpn-memory-storage-check
+```
+
+On icdslab2, set `VERILATOR_ROOT=$HOME/.local/opt/lpn-verilator-5.052` and put
+its `bin` directory first on `PATH`. The system Verilator 5.020 is insufficient.
+The active batch is under `~/lpn-runs/qwen3-1.7b-parallel`: eight independent
+generation cases, four concurrent processes, each requesting up to eight new
+tokens. `batch.json` records PIDs, commands, progress and failures. Large active
+files/snapshots live under `/dev/shm/lpn-qwen3-17-validation`; reports and logs
+are mirrored to disk, and the latest snapshot is archived when each case ends.
+Active RAM snapshots do not survive a reboot. Each case freezes RTL/observer
+source hashes as well as the upstream revision in its resume identity.
+
 `e2e.py` runs the upstream model compiler and Engine with real checkpoint
 weights and tokenizer. Every prompt/decode token executes all layers,
 attention, SwiGLU, KV-cache writes/reads and the vocabulary head. Host greedy

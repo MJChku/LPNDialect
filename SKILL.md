@@ -182,6 +182,15 @@ Keep long-run artifacts under `~/lpn-runs`, not the source tree. The runner
 keeps two bounded snapshots and one current input/output bundle. Do not change
 hashed model/compiler sources while a resumable validation is running.
 
+Larger Qwen3-1.7B runs need the behavioral memory storage patch and isolated
+FeSens worktree described in the openTPU README. Use the installed Verilator
+5.052 with both `VERILATOR_ROOT` and `PATH` set. The active parallel batch's
+manifest is `~/lpn-runs/qwen3-1.7b-parallel/batch.json`; inspect it and the case
+logs before launching duplicate jobs. RAM scratch holds active large snapshots;
+only finished snapshots are archived to disk. Freeze the RTL/observer source
+hashes in run identities; the pinned commit alone does not identify local
+simulation patches. Do not modify the separate frozen SmolLM2 baseline tree.
+
 Use the compact model for long traces: reusable transitions, immutable flag
 banks and precomputed dependency metadata. Compare against the expanded model
 when changing the compact representation. Do not replace the event-driven

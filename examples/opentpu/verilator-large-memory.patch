@@ -1,0 +1,85 @@
+diff --git a/rtl/mem/otpu_dram.sv b/rtl/mem/otpu_dram.sv
+index 4c00c462..f419b2b1 100644
+--- a/rtl/mem/otpu_dram.sv
++++ b/rtl/mem/otpu_dram.sv
+@@ -37,7 +37,14 @@ module otpu_dram #(
+   localparam int AW = $clog2(WORDS);
+   localparam int CW = D / 4;
+ 
+-  logic [31:0] mem [WORDS];
++  // The behavioral image can exceed Verilator's single-dimension range limit.
++  // Split storage into rows; this is only an address representation, not DRAM
++  // bank timing or arbitration. All ports retain their original latency.
++  localparam int BANK_SHIFT = (AW < 16) ? AW : 16;
++  localparam int BANK_WORDS = 1 << BANK_SHIFT;
++  localparam int BANK_MASK = BANK_WORDS - 1;
++  localparam int BANKS = (WORDS + BANK_WORDS - 1) / BANK_WORDS;
++  logic [31:0] mem [BANKS][BANK_WORDS];
+ 
+   logic [LAT-1:0]    av, bv, bt;
+   logic [255:0]      ad [LAT];
+@@ -56,25 +63,25 @@ module otpu_dram #(
+ `ifndef SYNTHESIS
+     pk_cyc <= pk_cyc + 1;
+     if (pk_i < pk_n && pk_cyc >= pk_c[pk_i]) begin
+-      mem[pk_a[pk_i][AW-1:0]] <= pk_v[pk_i];
++      mem[(AW'(pk_a[pk_i][AW-1:0])) >> BANK_SHIFT][(AW'(pk_a[pk_i][AW-1:0])) & BANK_MASK] <= pk_v[pk_i];
+       pk_i <= pk_i + 1;
+     end
+ `endif
+     if (a_req && a_we) begin
+       for (int b = 0; b < 4; b++)
+-        if (a_be[b]) mem[a_addr[AW-1:0]][8*b +: 8] <= a_wdata[8*b +: 8];
++        if (a_be[b]) mem[(AW'(a_addr[AW-1:0])) >> BANK_SHIFT][(AW'(a_addr[AW-1:0])) & BANK_MASK][8*b +: 8] <= a_wdata[8*b +: 8];
+     end
+     if (sw_req) begin
+       for (int b = 0; b < 4; b++)
+-        if (sw_be[b]) mem[sw_addr[AW-1:0]][8*b +: 8] <= sw_wdata[8*b +: 8];
++        if (sw_be[b]) mem[(AW'(sw_addr[AW-1:0])) >> BANK_SHIFT][(AW'(sw_addr[AW-1:0])) & BANK_MASK][8*b +: 8] <= sw_wdata[8*b +: 8];
+     end
+     av[0] <= a_req && !a_we;
+-    for (int w = 0; w < 8; w++) ad[0][32*w +: 32] <= mem[{a_addr[AW-1:3], 3'(w)}];
++    for (int w = 0; w < 8; w++) ad[0][32*w +: 32] <= mem[(AW'({a_addr[AW-1:3], 3'(w)})) >> BANK_SHIFT][(AW'({a_addr[AW-1:3], 3'(w)})) & BANK_MASK];
+     bv[0] <= b_req && !b_we;
+     bt[0] <= b_tag;
+-    for (int w = 0; w < CW; w++) bd[0][32*w +: 32] <= mem[AW'(b_addr + w)];
++    for (int w = 0; w < CW; w++) bd[0][32*w +: 32] <= mem[(AW'(AW'(b_addr + w))) >> BANK_SHIFT][(AW'(AW'(b_addr + w))) & BANK_MASK];
+     if (b_req && b_we)
+-      for (int w = 0; w < CW; w++) if (b_wmask[w]) mem[AW'(b_addr + w)] <= b_wdata[32*w +: 32];
++      for (int w = 0; w < CW; w++) if (b_wmask[w]) mem[(AW'(AW'(b_addr + w))) >> BANK_SHIFT][(AW'(AW'(b_addr + w))) & BANK_MASK] <= b_wdata[32*w +: 32];
+     for (int k = 1; k < LAT; k++) begin
+       av[k] <= av[k-1];
+       ad[k] <= ad[k-1];
+@@ -95,15 +102,21 @@ module otpu_dram #(
+   // dram_out_<SID>.bin is little-endian (the byte order of the DRAM itself).
+   string dir;
+   integer fd, nread;
++  logic [31:0] load_bank [BANK_WORDS];
+   initial begin
+     av = '0;
+     bv = '0;
+     bt = '0;
+-    for (int i = 0; i < WORDS; i++) mem[i] = '0;
++    for (int i = 0; i < WORDS; i++) mem[(AW'(i)) >> BANK_SHIFT][(AW'(i)) & BANK_MASK] = '0;
+     if ($value$plusargs("dir=%s", dir)) begin
+       fd = $fopen($sformatf("%s/dram_%0d.bin", dir, SID), "rb");
+       if (fd != 0) begin
+-        nread = $fread(mem, fd);
++        for (int bank = 0; bank < BANKS; bank++) begin
++          nread = $fread(load_bank, fd);
++          for (int word_idx = 0; word_idx < (nread + 3) / 4; word_idx++)
++            mem[bank][word_idx] = load_bank[word_idx];
++          if (nread < 4 * BANK_WORDS) break;
++        end
+         $fclose(fd);
+       end
+       fd = $fopen($sformatf("%s/poke_%0d.txt", dir, SID), "r");
+@@ -116,7 +129,7 @@ module otpu_dram #(
+   end
+   always @(posedge clk) if (dump) begin
+     fd = $fopen($sformatf("%s/dram_out_%0d.bin", dir, SID), "wb");
+-    for (int i = 0; i < WORDS; i++) $fwrite(fd, "%u", mem[i]);
++    for (int i = 0; i < WORDS; i++) $fwrite(fd, "%u", mem[(AW'(i)) >> BANK_SHIFT][(AW'(i)) & BANK_MASK]);
+     $fclose(fd);
+   end
+ `endif

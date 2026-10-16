@@ -259,6 +259,13 @@ def main():
   identity["torch_version"] = torch.__version__
   identity["rtl_uarch"] = rtlsim.UARCH
   identity["rtl_memory"] = rtlsim.MEMORY
+  # The pinned checkout may contain simulation adapters/observer patches.
+  # Freeze their actual bytes as well as the upstream commit before resuming.
+  rtl_files = [rtlsim.RTL/s for s in rtlsim.RTL_SOURCES]
+  rtl_files += [rtlsim.TB/"tb_top.sv",rtlsim.TB/"lpn_wall.cpp",
+                Path(rtlsim.__file__)]
+  identity["rtl_source_sha256"] = {
+      str(f.relative_to(rtlsim.ROOT)):digest(f) for f in rtl_files}
   saved = a.output/"state.json"
   if saved.exists() and not a.resume:
     p.error("output has a checkpoint; use --resume or a new output directory")
