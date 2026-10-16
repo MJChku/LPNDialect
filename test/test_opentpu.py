@@ -16,6 +16,64 @@ from examples.opentpu.workload import load, use_checkout
 class OpenTPUTest(unittest.TestCase):
   tool = None
 
+  def test_shape_trace_matches_numerical_control_and_footprints(self):
+    from examples.opentpu.shape_workload import resolve_static
+    from opentpu import Config,isa as I
+    import numpy as np
+    from unittest.mock import patch
+    with tempfile.TemporaryDirectory() as directory:
+      cfg=Config(D=128,MCOLS=4,DRAM_BYTES=1024)
+      program=[I.li(1,3),I.loop(3,0,rcount=1),I.addi(2,2,4),
+               I.ld(0,0,1,ra=2),I.nop(),I.halt()]
+      write_inputs(directory,cfg,[program],[np.zeros(1024,np.uint8)])
+      numerical=load(directory)
+      with patch('opentpu.isasim.Machine',side_effect=AssertionError('numerical execution forbidden')):
+        static=resolve_static(cfg,[program])
+      self.assertIsNone(static.machine)
+      self.assertEqual(static.images,[])
+      self.assertEqual([(c.pc,c.instruction.encode(),c.footprint) for c in static.commands[0]],
+                       [(c.pc,c.instruction.encode(),c.footprint) for c in numerical.commands[0]])
+
+  def test_shape_trace_rejects_data_dependent_control(self):
+    from examples.opentpu.shape_workload import resolve_static
+    from opentpu import Config,isa as I
+    with self.assertRaisesRegex(ValueError,'RLD'):
+      resolve_static(Config(),[[I.Instr(I.RLD),I.halt()]])
+    with self.assertRaisesRegex(ValueError,'limit'):
+      resolve_static(Config(),[[I.nop(),I.halt()]],max_steps=1)
+
+  def test_fpga_output_bank_service_counts_actual_collisions(self):
+    from examples.opentpu.model import bank_write_cycles
+    self.assertEqual(bank_write_cycles(3,8,2,8),4)
+    self.assertEqual(bank_write_cycles(8,4,64,8),4)
+    self.assertEqual(bank_write_cycles(8,4,64,1),32)
+
+  def test_fpga_datapath_matches_expanded_and_native_models(self):
+    from examples.opentpu.shape_workload import resolve_static
+    from dataclasses import replace
+    with tempfile.TemporaryDirectory() as directory:
+      out=Path(directory)
+      gemm(out/'input',n=32,kb=2,jobs=2,m=4)
+      numerical=load(out/'input')
+      workload=resolve_static(numerical.config,numerical.programs)
+      # Fast weight bus but slow scale decoder; readiness must wait for both.
+      timing=Timing(batch_rows=8,matrix_row_lanes=4,dram_port_bytes=1024,
+          dram_bytes_per_cycle=1024,scale_lanes=1,unified_dram=True,
+          scalar_store_bytes=32)
+      predictions=[]
+      for cls in (OpenTPU,CompactOpenTPU):
+        model=cls(workload,timing)
+        sim=model.net.python_simulator()
+        predictions.append(sim.run(max_time=1_000_000))
+        self.assertEqual(len(sim.place_dicts('program_completed')),1)
+      self.assertEqual(*predictions)
+      if self.tool:
+        from examples.opentpu.native_timing import ReusableTiming
+        prepared=ReusableTiming(self.tool,out/'cache',capacity=128).prepare(workload,timing,out/'timing.tables')
+        cycles,_,_,log=prepared.run()
+        self.assertEqual(cycles,predictions[0])
+        self.assertIn('rollbacks: 0',log)
+
   def test_reusable_timing_accepts_changed_command_count_without_recompilation(self):
     if not self.tool:
       self.skipTest("native compiler not supplied")

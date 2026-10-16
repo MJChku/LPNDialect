@@ -1,0 +1,2351 @@
+{
+  "scope": "Weight-free fixed-length dense Qwen3-1.7B architecture predictions. No numerical inference, generated text, EOS or evolved-RTL validation. Hardware cycles, simulator seconds and assumed-clock latency are reported separately.",
+  "model": {
+    "hidden": 2048,
+    "layers": 28,
+    "n_q": 16,
+    "n_kv": 8,
+    "head_dim": 128,
+    "ffn": 6144,
+    "vocab": 151936,
+    "eps": 1e-06,
+    "theta": 1000000.0,
+    "tied": true,
+    "bos": 151643,
+    "eos": [
+      151645,
+      151643
+    ],
+    "qk_norm": true,
+    "qk_smooth": true,
+    "nope": [],
+    "rotary": 0,
+    "rope_div": [],
+    "rope_scale": 1.0,
+    "ctx": 0,
+    "embed": "f32",
+    "formats": "",
+    "mix": ""
+  },
+  "position": 15,
+  "cap": 128,
+  "assumptions": {
+    "clock_mhz": 200,
+    "memory_latency_cycles": 64,
+    "peak_hbm_gbs": 810,
+    "hbm_efficiency": 0.7,
+    "hbm_capacity_bytes": 32000000000,
+    "dsp_slices": 10848,
+    "dsp_fraction": 0.8,
+    "macs_per_dsp": 1,
+    "embedded_memory_bits": 673000000,
+    "sram_fraction": 0.5,
+    "board_reference": "https://www.amd.com/content/dam/amd/en/documents/products/accelerators/alveo/v80/alveo-v80-product-brief.pdf",
+    "bank_conflicts": "TMEM strided output ports modeled; HBM bank conflicts and detailed controller queues not modeled."
+  },
+  "compiler_sha256": "e264d5fd1334e5bdc922267eaa764123b874c33a343dd4e7f8120f0ff5623982",
+  "source_sha256": {
+    "fpga_dse.py": "16f077910b39c04979fc54b77391d915357b0d15895c426513834a2d616a1afd",
+    "shape_workload.py": "d0f1db9e2bba7f3b1b1b119e9483b7ebc7ce17823d343ac135b26e5e51b91169",
+    "model.py": "3cd565ada1d153e5a1470fe7a0f057bfbe36cf2477d5ab84fec621283fe9c96d",
+    "compact.py": "8dc9aca5465fc7dc10cdbf401e2bb303e0f538a2484bd97a9658513161f61f11",
+    "components.py": "a89b28cd83969817738cdd039fe0a1d65699874a05391024e78b379fe71d31b7",
+    "native_timing.py": "b5dc4aa68dc70190c67f93a06e04fc054f4a1951533e9d4b26d3f5ea6a7ac496"
+  },
+  "shape_compilation_seconds": 0.19404813647270203,
+  "workload": {
+    "instruction_counts": {
+      "LI": 1,
+      "LD": 340,
+      "LOOP": 1,
+      "VOP": 8012,
+      "QACT": 757,
+      "MM": 1447,
+      "QST": 448,
+      "ADDI": 29,
+      "ST": 19,
+      "HALT": 1
+    },
+    "matrix_macs": 1728708608,
+    "modeled_stream_bytes": 1744729600,
+    "byte_scope": "Matrix data/scales, LD/ST and QST data; excludes QST scale writes, controller overhead and padding. No persistent weight cache assumed."
+  },
+  "points": [
+    {
+      "label": "validated_architecture",
+      "timing": {
+        "dram_latency": 8,
+        "dram_bytes_per_cycle": 128,
+        "window": 32,
+        "fifo_chunks": 128,
+        "chain_length": 16,
+        "epilogue_lanes": 2,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 8,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 1,
+        "dram_port_bytes": 0,
+        "scale_lanes": 1,
+        "unified_dram": false,
+        "scalar_store_bytes": 0
+      },
+      "vector_lanes": 8,
+      "resources": {
+        "matrix_mac_lanes": 512,
+        "mxu_dsp_equivalent": 512,
+        "onchip_bytes_lower_bound": 418624,
+        "image_bytes": 1752530432,
+        "requested_memory_gbs": 25.6,
+        "passes_resource_screen": true,
+        "rejection_reasons": [],
+        "scope": "Capacity/throughput screening only. DSP packing is assumed; non-MXU DSPs, LUTs, shell, routing, bank implementation and achievable Fmax require synthesis. Reserves are configurable."
+      },
+      "cycles": 13703555.0,
+      "host_total_seconds": 3.4802385084331036,
+      "native_seconds": 1.789804574,
+      "preparation_seconds": 1.376683335751295,
+      "compile_seconds": 0.3025238085538149,
+      "process_seconds": 1.800096184015274,
+      "cache_hit": false,
+      "rollbacks": 0,
+      "net": {
+        "transitions": 15,
+        "places": 574,
+        "completion_flag_banks": 513,
+        "command_slots": 32,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          11055
+        ]
+      },
+      "matches_recorded_program_and_lpn_cycles": true,
+      "recorded_rtl_cycles": 13626237,
+      "baseline_cycle_error": 0.005674200441398547,
+      "cycle_speedup": 1.0,
+      "hardware_seconds_at_assumed_clock": 0.068517775,
+      "matrix_utilization": 0.24638745201518875
+    },
+    {
+      "label": "balanced_1",
+      "timing": {
+        "dram_latency": 64,
+        "dram_bytes_per_cycle": 128,
+        "window": 32,
+        "fifo_chunks": 128,
+        "chain_length": 16,
+        "epilogue_lanes": 2,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 8,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 1,
+        "dram_port_bytes": 128,
+        "scale_lanes": 1,
+        "unified_dram": true,
+        "scalar_store_bytes": 32
+      },
+      "vector_lanes": 8,
+      "resources": {
+        "matrix_mac_lanes": 512,
+        "mxu_dsp_equivalent": 512,
+        "onchip_bytes_lower_bound": 418624,
+        "image_bytes": 1752530432,
+        "requested_memory_gbs": 25.6,
+        "passes_resource_screen": true,
+        "rejection_reasons": [],
+        "scope": "Capacity/throughput screening only. DSP packing is assumed; non-MXU DSPs, LUTs, shell, routing, bank implementation and achievable Fmax require synthesis. Reserves are configurable."
+      },
+      "cycles": 15248559.0,
+      "host_total_seconds": 3.6130678225308657,
+      "native_seconds": 1.933015846,
+      "preparation_seconds": 1.3662369940429926,
+      "compile_seconds": 0.29527008533477783,
+      "process_seconds": 1.950921481475234,
+      "cache_hit": false,
+      "rollbacks": 0,
+      "net": {
+        "transitions": 15,
+        "places": 573,
+        "completion_flag_banks": 513,
+        "command_slots": 32,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          11055
+        ]
+      },
+      "cycle_speedup": 0.8986786882616252,
+      "hardware_seconds_at_assumed_clock": 0.076242795,
+      "matrix_utilization": 0.22142315218113398
+    },
+    {
+      "label": "balanced_2",
+      "timing": {
+        "dram_latency": 64,
+        "dram_bytes_per_cycle": 256,
+        "window": 32,
+        "fifo_chunks": 256,
+        "chain_length": 16,
+        "epilogue_lanes": 2,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 8,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 2,
+        "dram_port_bytes": 256,
+        "scale_lanes": 2,
+        "unified_dram": true,
+        "scalar_store_bytes": 64
+      },
+      "vector_lanes": 16,
+      "resources": {
+        "matrix_mac_lanes": 1024,
+        "mxu_dsp_equivalent": 1024,
+        "onchip_bytes_lower_bound": 575104,
+        "image_bytes": 1752530432,
+        "requested_memory_gbs": 51.2,
+        "passes_resource_screen": true,
+        "rejection_reasons": [],
+        "scope": "Capacity/throughput screening only. DSP packing is assumed; non-MXU DSPs, LUTs, shell, routing, bank implementation and achievable Fmax require synthesis. Reserves are configurable."
+      },
+      "cycles": 9183431.0,
+      "host_total_seconds": 3.081941796466708,
+      "native_seconds": 1.38860876,
+      "preparation_seconds": 1.3722287863492966,
+      "compile_seconds": 0.30194298923015594,
+      "process_seconds": 1.4070094227790833,
+      "cache_hit": false,
+      "rollbacks": 0,
+      "net": {
+        "transitions": 15,
+        "places": 573,
+        "completion_flag_banks": 513,
+        "command_slots": 32,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          11055
+        ]
+      },
+      "cycle_speedup": 1.492204275286655,
+      "hardware_seconds_at_assumed_clock": 0.045917155,
+      "matrix_utilization": 0.1838302046370251
+    },
+    {
+      "label": "balanced_4",
+      "timing": {
+        "dram_latency": 64,
+        "dram_bytes_per_cycle": 512,
+        "window": 32,
+        "fifo_chunks": 512,
+        "chain_length": 16,
+        "epilogue_lanes": 2,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 8,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 4,
+        "dram_port_bytes": 512,
+        "scale_lanes": 4,
+        "unified_dram": true,
+        "scalar_store_bytes": 128
+      },
+      "vector_lanes": 32,
+      "resources": {
+        "matrix_mac_lanes": 2048,
+        "mxu_dsp_equivalent": 2048,
+        "onchip_bytes_lower_bound": 888064,
+        "image_bytes": 1752530432,
+        "requested_memory_gbs": 102.4,
+        "passes_resource_screen": true,
+        "rejection_reasons": [],
+        "scope": "Capacity/throughput screening only. DSP packing is assumed; non-MXU DSPs, LUTs, shell, routing, bank implementation and achievable Fmax require synthesis. Reserves are configurable."
+      },
+      "cycles": 4360831.0,
+      "host_total_seconds": 3.2645673137158155,
+      "native_seconds": 1.521484831,
+      "preparation_seconds": 1.4173297863453627,
+      "compile_seconds": 0.3058496695011854,
+      "process_seconds": 1.5407503638416529,
+      "cache_hit": false,
+      "rollbacks": 0,
+      "net": {
+        "transitions": 15,
+        "places": 573,
+        "completion_flag_banks": 513,
+        "command_slots": 32,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          11055
+        ]
+      },
+      "cycle_speedup": 3.142418268444707,
+      "hardware_seconds_at_assumed_clock": 0.021804155,
+      "matrix_utilization": 0.1935631075820182
+    },
+    {
+      "label": "balanced_8",
+      "timing": {
+        "dram_latency": 64,
+        "dram_bytes_per_cycle": 1024,
+        "window": 32,
+        "fifo_chunks": 1024,
+        "chain_length": 16,
+        "epilogue_lanes": 2,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 8,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 8,
+        "dram_port_bytes": 1024,
+        "scale_lanes": 8,
+        "unified_dram": true,
+        "scalar_store_bytes": 256
+      },
+      "vector_lanes": 64,
+      "resources": {
+        "matrix_mac_lanes": 4096,
+        "mxu_dsp_equivalent": 4096,
+        "onchip_bytes_lower_bound": 1513984,
+        "image_bytes": 1752530432,
+        "requested_memory_gbs": 204.8,
+        "passes_resource_screen": true,
+        "rejection_reasons": [],
+        "scope": "Capacity/throughput screening only. DSP packing is assumed; non-MXU DSPs, LUTs, shell, routing, bank implementation and achievable Fmax require synthesis. Reserves are configurable."
+      },
+      "cycles": 2272477.0,
+      "host_total_seconds": 2.9812206234782934,
+      "native_seconds": 1.323317318,
+      "preparation_seconds": 1.3574019484221935,
+      "compile_seconds": 0.29038952849805355,
+      "process_seconds": 1.3328313119709492,
+      "cache_hit": false,
+      "rollbacks": 0,
+      "net": {
+        "transitions": 15,
+        "places": 573,
+        "completion_flag_banks": 513,
+        "command_slots": 32,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          11055
+        ]
+      },
+      "cycle_speedup": 6.03022824873475,
+      "hardware_seconds_at_assumed_clock": 0.011362385,
+      "matrix_utilization": 0.18572157165947115
+    },
+    {
+      "label": "balanced_16",
+      "timing": {
+        "dram_latency": 64,
+        "dram_bytes_per_cycle": 2048,
+        "window": 32,
+        "fifo_chunks": 2048,
+        "chain_length": 16,
+        "epilogue_lanes": 2,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 16,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 16,
+        "dram_port_bytes": 2048,
+        "scale_lanes": 16,
+        "unified_dram": true,
+        "scalar_store_bytes": 256
+      },
+      "vector_lanes": 64,
+      "resources": {
+        "matrix_mac_lanes": 8192,
+        "mxu_dsp_equivalent": 8192,
+        "onchip_bytes_lower_bound": 2765824,
+        "image_bytes": 1752530432,
+        "requested_memory_gbs": 409.6,
+        "passes_resource_screen": true,
+        "rejection_reasons": [],
+        "scope": "Capacity/throughput screening only. DSP packing is assumed; non-MXU DSPs, LUTs, shell, routing, bank implementation and achievable Fmax require synthesis. Reserves are configurable."
+      },
+      "cycles": 1446997.0,
+      "host_total_seconds": 2.731637654826045,
+      "native_seconds": 1.013795511,
+      "preparation_seconds": 1.3942475654184818,
+      "compile_seconds": 0.30560955591499805,
+      "process_seconds": 1.031243847683072,
+      "cache_hit": false,
+      "rollbacks": 0,
+      "net": {
+        "transitions": 15,
+        "places": 573,
+        "completion_flag_banks": 513,
+        "command_slots": 32,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          11055
+        ]
+      },
+      "cycle_speedup": 9.470340988958512,
+      "hardware_seconds_at_assumed_clock": 0.007234985,
+      "matrix_utilization": 0.14583582412403068
+    },
+    {
+      "label": "balanced_32",
+      "timing": {
+        "dram_latency": 64,
+        "dram_bytes_per_cycle": 4096,
+        "window": 32,
+        "fifo_chunks": 4096,
+        "chain_length": 16,
+        "epilogue_lanes": 2,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 32,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 32,
+        "dram_port_bytes": 4096,
+        "scale_lanes": 32,
+        "unified_dram": true,
+        "scalar_store_bytes": 256
+      },
+      "vector_lanes": 64,
+      "resources": {
+        "matrix_mac_lanes": 16384,
+        "mxu_dsp_equivalent": 16384,
+        "onchip_bytes_lower_bound": 5269504,
+        "image_bytes": 1752530432,
+        "requested_memory_gbs": 819.2,
+        "passes_resource_screen": false,
+        "rejection_reasons": [
+          "MXU DSP screening budget",
+          "sustained HBM bandwidth budget"
+        ],
+        "scope": "Capacity/throughput screening only. DSP packing is assumed; non-MXU DSPs, LUTs, shell, routing, bank implementation and achievable Fmax require synthesis. Reserves are configurable."
+      }
+    },
+    {
+      "label": "compute_only_4",
+      "timing": {
+        "dram_latency": 64,
+        "dram_bytes_per_cycle": 128,
+        "window": 32,
+        "fifo_chunks": 512,
+        "chain_length": 16,
+        "epilogue_lanes": 2,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 8,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 4,
+        "dram_port_bytes": 128,
+        "scale_lanes": 4,
+        "unified_dram": true,
+        "scalar_store_bytes": 32
+      },
+      "vector_lanes": 8,
+      "resources": {
+        "matrix_mac_lanes": 2048,
+        "mxu_dsp_equivalent": 2048,
+        "onchip_bytes_lower_bound": 888064,
+        "image_bytes": 1752530432,
+        "requested_memory_gbs": 25.6,
+        "passes_resource_screen": true,
+        "rejection_reasons": [],
+        "scope": "Capacity/throughput screening only. DSP packing is assumed; non-MXU DSPs, LUTs, shell, routing, bank implementation and achievable Fmax require synthesis. Reserves are configurable."
+      },
+      "cycles": 14103086.0,
+      "host_total_seconds": 3.2718083951622248,
+      "native_seconds": 1.616285193,
+      "preparation_seconds": 1.350998455658555,
+      "compile_seconds": 0.2939113602042198,
+      "process_seconds": 1.6263148356229067,
+      "cache_hit": false,
+      "rollbacks": 0,
+      "net": {
+        "transitions": 15,
+        "places": 573,
+        "completion_flag_banks": 513,
+        "command_slots": 32,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          11055
+        ]
+      },
+      "cycle_speedup": 0.971670668391301,
+      "hardware_seconds_at_assumed_clock": 0.07051543,
+      "matrix_utilization": 0.05985186504570702
+    },
+    {
+      "label": "compute_only_8",
+      "timing": {
+        "dram_latency": 64,
+        "dram_bytes_per_cycle": 128,
+        "window": 32,
+        "fifo_chunks": 1024,
+        "chain_length": 16,
+        "epilogue_lanes": 2,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 8,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 8,
+        "dram_port_bytes": 128,
+        "scale_lanes": 8,
+        "unified_dram": true,
+        "scalar_store_bytes": 32
+      },
+      "vector_lanes": 8,
+      "resources": {
+        "matrix_mac_lanes": 4096,
+        "mxu_dsp_equivalent": 4096,
+        "onchip_bytes_lower_bound": 1513984,
+        "image_bytes": 1752530432,
+        "requested_memory_gbs": 25.6,
+        "passes_resource_screen": true,
+        "rejection_reasons": [],
+        "scope": "Capacity/throughput screening only. DSP packing is assumed; non-MXU DSPs, LUTs, shell, routing, bank implementation and achievable Fmax require synthesis. Reserves are configurable."
+      },
+      "cycles": 13917398.0,
+      "host_total_seconds": 3.286413758993149,
+      "native_seconds": 1.611957054,
+      "preparation_seconds": 1.3560112584382296,
+      "compile_seconds": 0.3014969527721405,
+      "process_seconds": 1.628163117915392,
+      "cache_hit": false,
+      "rollbacks": 0,
+      "net": {
+        "transitions": 15,
+        "places": 573,
+        "completion_flag_banks": 513,
+        "command_slots": 32,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          11055
+        ]
+      },
+      "cycle_speedup": 0.9846348433809251,
+      "hardware_seconds_at_assumed_clock": 0.06958699,
+      "matrix_utilization": 0.03032520877825007
+    },
+    {
+      "label": "compute_only_16",
+      "timing": {
+        "dram_latency": 64,
+        "dram_bytes_per_cycle": 128,
+        "window": 32,
+        "fifo_chunks": 2048,
+        "chain_length": 16,
+        "epilogue_lanes": 2,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 16,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 16,
+        "dram_port_bytes": 128,
+        "scale_lanes": 16,
+        "unified_dram": true,
+        "scalar_store_bytes": 32
+      },
+      "vector_lanes": 8,
+      "resources": {
+        "matrix_mac_lanes": 8192,
+        "mxu_dsp_equivalent": 8192,
+        "onchip_bytes_lower_bound": 2765824,
+        "image_bytes": 1752530432,
+        "requested_memory_gbs": 25.6,
+        "passes_resource_screen": true,
+        "rejection_reasons": [],
+        "scope": "Capacity/throughput screening only. DSP packing is assumed; non-MXU DSPs, LUTs, shell, routing, bank implementation and achievable Fmax require synthesis. Reserves are configurable."
+      },
+      "cycles": 13853022.0,
+      "host_total_seconds": 2.8225276488810778,
+      "native_seconds": 1.097094152,
+      "preparation_seconds": 1.4166837520897388,
+      "compile_seconds": 0.2909478284418583,
+      "process_seconds": 1.1142071448266506,
+      "cache_hit": false,
+      "rollbacks": 0,
+      "net": {
+        "transitions": 15,
+        "places": 573,
+        "completion_flag_banks": 513,
+        "command_slots": 32,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          11055
+        ]
+      },
+      "cycle_speedup": 0.9892105130562847,
+      "hardware_seconds_at_assumed_clock": 0.06926511,
+      "matrix_utilization": 0.015233066113660976
+    },
+    {
+      "label": "memory_only_512",
+      "timing": {
+        "dram_latency": 64,
+        "dram_bytes_per_cycle": 512,
+        "window": 32,
+        "fifo_chunks": 128,
+        "chain_length": 16,
+        "epilogue_lanes": 2,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 8,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 1,
+        "dram_port_bytes": 512,
+        "scale_lanes": 1,
+        "unified_dram": true,
+        "scalar_store_bytes": 32
+      },
+      "vector_lanes": 8,
+      "resources": {
+        "matrix_mac_lanes": 512,
+        "mxu_dsp_equivalent": 512,
+        "onchip_bytes_lower_bound": 418624,
+        "image_bytes": 1752530432,
+        "requested_memory_gbs": 102.4,
+        "passes_resource_screen": true,
+        "rejection_reasons": [],
+        "scope": "Capacity/throughput screening only. DSP packing is assumed; non-MXU DSPs, LUTs, shell, routing, bank implementation and achievable Fmax require synthesis. Reserves are configurable."
+      },
+      "cycles": 15110284.0,
+      "host_total_seconds": 3.631361920386553,
+      "native_seconds": 1.94197749,
+      "preparation_seconds": 1.3748270627111197,
+      "compile_seconds": 0.2966264858841896,
+      "process_seconds": 1.9594517461955547,
+      "cache_hit": false,
+      "rollbacks": 0,
+      "net": {
+        "transitions": 15,
+        "places": 573,
+        "completion_flag_banks": 513,
+        "command_slots": 32,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          11055
+        ]
+      },
+      "cycle_speedup": 0.906902543989246,
+      "hardware_seconds_at_assumed_clock": 0.07555142,
+      "matrix_utilization": 0.22344940703960295
+    },
+    {
+      "label": "memory_only_2048",
+      "timing": {
+        "dram_latency": 64,
+        "dram_bytes_per_cycle": 2048,
+        "window": 32,
+        "fifo_chunks": 128,
+        "chain_length": 16,
+        "epilogue_lanes": 2,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 8,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 1,
+        "dram_port_bytes": 2048,
+        "scale_lanes": 1,
+        "unified_dram": true,
+        "scalar_store_bytes": 32
+      },
+      "vector_lanes": 8,
+      "resources": {
+        "matrix_mac_lanes": 512,
+        "mxu_dsp_equivalent": 512,
+        "onchip_bytes_lower_bound": 418624,
+        "image_bytes": 1752530432,
+        "requested_memory_gbs": 409.6,
+        "passes_resource_screen": true,
+        "rejection_reasons": [],
+        "scope": "Capacity/throughput screening only. DSP packing is assumed; non-MXU DSPs, LUTs, shell, routing, bank implementation and achievable Fmax require synthesis. Reserves are configurable."
+      },
+      "cycles": 15107837.0,
+      "host_total_seconds": 3.658296613022685,
+      "native_seconds": 1.945981165,
+      "preparation_seconds": 1.390103904530406,
+      "compile_seconds": 0.30359889566898346,
+      "process_seconds": 1.9639513455331326,
+      "cache_hit": false,
+      "rollbacks": 0,
+      "net": {
+        "transitions": 15,
+        "places": 573,
+        "completion_flag_banks": 513,
+        "command_slots": 32,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          11055
+        ]
+      },
+      "cycle_speedup": 0.9070494340122944,
+      "hardware_seconds_at_assumed_clock": 0.075539185,
+      "matrix_utilization": 0.22348559889810832
+    },
+    {
+      "label": "engines_2_rows_1",
+      "timing": {
+        "dram_latency": 64,
+        "dram_bytes_per_cycle": 2048,
+        "window": 32,
+        "fifo_chunks": 128,
+        "chain_length": 16,
+        "epilogue_lanes": 2,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 8,
+        "matrix_engines": 2,
+        "matrix_row_lanes": 1,
+        "dram_port_bytes": 2048,
+        "scale_lanes": 1,
+        "unified_dram": true,
+        "scalar_store_bytes": 256
+      },
+      "vector_lanes": 64,
+      "resources": {
+        "matrix_mac_lanes": 1024,
+        "mxu_dsp_equivalent": 1024,
+        "onchip_bytes_lower_bound": 575104,
+        "image_bytes": 1752530432,
+        "requested_memory_gbs": 409.6,
+        "passes_resource_screen": true,
+        "rejection_reasons": [],
+        "scope": "Capacity/throughput screening only. DSP packing is assumed; non-MXU DSPs, LUTs, shell, routing, bank implementation and achievable Fmax require synthesis. Reserves are configurable."
+      },
+      "cycles": 13943905.0,
+      "host_total_seconds": 3.8832051102072,
+      "native_seconds": 2.132260075,
+      "preparation_seconds": 1.4106593113392591,
+      "compile_seconds": 0.32225064374506474,
+      "process_seconds": 2.1496417857706547,
+      "cache_hit": false,
+      "rollbacks": 0,
+      "net": {
+        "transitions": 19,
+        "places": 580,
+        "completion_flag_banks": 513,
+        "command_slots": 32,
+        "matrix_engines_per_slice": 2,
+        "instructions_per_slice": [
+          11055
+        ]
+      },
+      "cycle_speedup": 0.982763078205137,
+      "hardware_seconds_at_assumed_clock": 0.069719525,
+      "matrix_utilization": 0.12107024538678368
+    },
+    {
+      "label": "engines_4_rows_1",
+      "timing": {
+        "dram_latency": 64,
+        "dram_bytes_per_cycle": 2048,
+        "window": 32,
+        "fifo_chunks": 128,
+        "chain_length": 16,
+        "epilogue_lanes": 2,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 8,
+        "matrix_engines": 4,
+        "matrix_row_lanes": 1,
+        "dram_port_bytes": 2048,
+        "scale_lanes": 1,
+        "unified_dram": true,
+        "scalar_store_bytes": 256
+      },
+      "vector_lanes": 64,
+      "resources": {
+        "matrix_mac_lanes": 2048,
+        "mxu_dsp_equivalent": 2048,
+        "onchip_bytes_lower_bound": 888064,
+        "image_bytes": 1752530432,
+        "requested_memory_gbs": 409.6,
+        "passes_resource_screen": true,
+        "rejection_reasons": [],
+        "scope": "Capacity/throughput screening only. DSP packing is assumed; non-MXU DSPs, LUTs, shell, routing, bank implementation and achievable Fmax require synthesis. Reserves are configurable."
+      },
+      "cycles": 14023964.0,
+      "host_total_seconds": 4.0215981639921665,
+      "native_seconds": 2.254240693,
+      "preparation_seconds": 1.3852062784135342,
+      "compile_seconds": 0.36389712058007717,
+      "process_seconds": 2.271764311939478,
+      "cache_hit": false,
+      "rollbacks": 0,
+      "net": {
+        "transitions": 27,
+        "places": 594,
+        "completion_flag_banks": 513,
+        "command_slots": 32,
+        "matrix_engines_per_slice": 4,
+        "instructions_per_slice": [
+          11055
+        ]
+      },
+      "cycle_speedup": 0.9771527508199536,
+      "hardware_seconds_at_assumed_clock": 0.07011982,
+      "matrix_utilization": 0.06018954412604025
+    },
+    {
+      "label": "engines_2_rows_4",
+      "timing": {
+        "dram_latency": 64,
+        "dram_bytes_per_cycle": 2048,
+        "window": 32,
+        "fifo_chunks": 512,
+        "chain_length": 16,
+        "epilogue_lanes": 2,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 8,
+        "matrix_engines": 2,
+        "matrix_row_lanes": 4,
+        "dram_port_bytes": 2048,
+        "scale_lanes": 4,
+        "unified_dram": true,
+        "scalar_store_bytes": 256
+      },
+      "vector_lanes": 64,
+      "resources": {
+        "matrix_mac_lanes": 4096,
+        "mxu_dsp_equivalent": 4096,
+        "onchip_bytes_lower_bound": 1513984,
+        "image_bytes": 1752530432,
+        "requested_memory_gbs": 409.6,
+        "passes_resource_screen": true,
+        "rejection_reasons": [],
+        "scope": "Capacity/throughput screening only. DSP packing is assumed; non-MXU DSPs, LUTs, shell, routing, bank implementation and achievable Fmax require synthesis. Reserves are configurable."
+      },
+      "cycles": 3645779.0,
+      "host_total_seconds": 3.24902556091547,
+      "native_seconds": 1.496713734,
+      "preparation_seconds": 1.413196498528123,
+      "compile_seconds": 0.3209644481539726,
+      "process_seconds": 1.514262281358242,
+      "cache_hit": false,
+      "rollbacks": 0,
+      "net": {
+        "transitions": 19,
+        "places": 580,
+        "completion_flag_banks": 513,
+        "command_slots": 32,
+        "matrix_engines_per_slice": 2,
+        "instructions_per_slice": [
+          11055
+        ]
+      },
+      "cycle_speedup": 3.7587453874741175,
+      "hardware_seconds_at_assumed_clock": 0.018228895,
+      "matrix_utilization": 0.11576346234919889
+    },
+    {
+      "label": "engines_2_rows_8",
+      "timing": {
+        "dram_latency": 64,
+        "dram_bytes_per_cycle": 2048,
+        "window": 32,
+        "fifo_chunks": 1024,
+        "chain_length": 16,
+        "epilogue_lanes": 2,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 8,
+        "matrix_engines": 2,
+        "matrix_row_lanes": 8,
+        "dram_port_bytes": 2048,
+        "scale_lanes": 8,
+        "unified_dram": true,
+        "scalar_store_bytes": 256
+      },
+      "vector_lanes": 64,
+      "resources": {
+        "matrix_mac_lanes": 8192,
+        "mxu_dsp_equivalent": 8192,
+        "onchip_bytes_lower_bound": 2765824,
+        "image_bytes": 1752530432,
+        "requested_memory_gbs": 409.6,
+        "passes_resource_screen": true,
+        "rejection_reasons": [],
+        "scope": "Capacity/throughput screening only. DSP packing is assumed; non-MXU DSPs, LUTs, shell, routing, bank implementation and achievable Fmax require synthesis. Reserves are configurable."
+      },
+      "cycles": 1854388.0,
+      "host_total_seconds": 3.1769819743931293,
+      "native_seconds": 1.465588633,
+      "preparation_seconds": 1.3845554366707802,
+      "compile_seconds": 0.3086837511509657,
+      "process_seconds": 1.4830897022038698,
+      "cache_hit": false,
+      "rollbacks": 0,
+      "net": {
+        "transitions": 19,
+        "places": 580,
+        "completion_flag_banks": 513,
+        "command_slots": 32,
+        "matrix_engines_per_slice": 2,
+        "instructions_per_slice": [
+          11055
+        ]
+      },
+      "cycle_speedup": 7.3897992221692546,
+      "hardware_seconds_at_assumed_clock": 0.00927194,
+      "matrix_utilization": 0.11379711257838165
+    },
+    {
+      "label": "engines_4_rows_4",
+      "timing": {
+        "dram_latency": 64,
+        "dram_bytes_per_cycle": 2048,
+        "window": 32,
+        "fifo_chunks": 512,
+        "chain_length": 16,
+        "epilogue_lanes": 2,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 8,
+        "matrix_engines": 4,
+        "matrix_row_lanes": 4,
+        "dram_port_bytes": 2048,
+        "scale_lanes": 4,
+        "unified_dram": true,
+        "scalar_store_bytes": 256
+      },
+      "vector_lanes": 64,
+      "resources": {
+        "matrix_mac_lanes": 8192,
+        "mxu_dsp_equivalent": 8192,
+        "onchip_bytes_lower_bound": 2765824,
+        "image_bytes": 1752530432,
+        "requested_memory_gbs": 409.6,
+        "passes_resource_screen": true,
+        "rejection_reasons": [],
+        "scope": "Capacity/throughput screening only. DSP packing is assumed; non-MXU DSPs, LUTs, shell, routing, bank implementation and achievable Fmax require synthesis. Reserves are configurable."
+      },
+      "cycles": 3719464.0,
+      "host_total_seconds": 3.418628504499793,
+      "native_seconds": 1.570095746,
+      "preparation_seconds": 1.4638450127094984,
+      "compile_seconds": 0.36626571603119373,
+      "process_seconds": 1.5878089889883995,
+      "cache_hit": false,
+      "rollbacks": 0,
+      "net": {
+        "transitions": 27,
+        "places": 594,
+        "completion_flag_banks": 513,
+        "command_slots": 32,
+        "matrix_engines_per_slice": 4,
+        "instructions_per_slice": [
+          11055
+        ]
+      },
+      "cycle_speedup": 3.684282197649984,
+      "hardware_seconds_at_assumed_clock": 0.01859732,
+      "matrix_utilization": 0.05673505644899372
+    },
+    {
+      "label": "vector_8",
+      "timing": {
+        "dram_latency": 64,
+        "dram_bytes_per_cycle": 1024,
+        "window": 32,
+        "fifo_chunks": 1024,
+        "chain_length": 16,
+        "epilogue_lanes": 2,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 8,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 8,
+        "dram_port_bytes": 1024,
+        "scale_lanes": 8,
+        "unified_dram": true,
+        "scalar_store_bytes": 32
+      },
+      "vector_lanes": 8,
+      "resources": {
+        "matrix_mac_lanes": 4096,
+        "mxu_dsp_equivalent": 4096,
+        "onchip_bytes_lower_bound": 1513984,
+        "image_bytes": 1752530432,
+        "requested_memory_gbs": 204.8,
+        "passes_resource_screen": true,
+        "rejection_reasons": [],
+        "scope": "Capacity/throughput screening only. DSP packing is assumed; non-MXU DSPs, LUTs, shell, routing, bank implementation and achievable Fmax require synthesis. Reserves are configurable."
+      },
+      "cycles": 2376939.0,
+      "host_total_seconds": 2.722165809944272,
+      "native_seconds": 1.324742984,
+      "preparation_seconds": 1.3788814470171928,
+      "compile_seconds": 8.708424866199493e-05,
+      "process_seconds": 1.3427084051072598,
+      "cache_hit": true,
+      "rollbacks": 0,
+      "net": {
+        "transitions": 15,
+        "places": 573,
+        "completion_flag_banks": 513,
+        "command_slots": 32,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          11055
+        ]
+      },
+      "cycle_speedup": 5.765211055058628,
+      "hardware_seconds_at_assumed_clock": 0.011884695,
+      "matrix_utilization": 0.1775594577732117
+    },
+    {
+      "label": "vector_16",
+      "timing": {
+        "dram_latency": 64,
+        "dram_bytes_per_cycle": 1024,
+        "window": 32,
+        "fifo_chunks": 1024,
+        "chain_length": 16,
+        "epilogue_lanes": 2,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 8,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 8,
+        "dram_port_bytes": 1024,
+        "scale_lanes": 8,
+        "unified_dram": true,
+        "scalar_store_bytes": 64
+      },
+      "vector_lanes": 16,
+      "resources": {
+        "matrix_mac_lanes": 4096,
+        "mxu_dsp_equivalent": 4096,
+        "onchip_bytes_lower_bound": 1513984,
+        "image_bytes": 1752530432,
+        "requested_memory_gbs": 204.8,
+        "passes_resource_screen": true,
+        "rejection_reasons": [],
+        "scope": "Capacity/throughput screening only. DSP packing is assumed; non-MXU DSPs, LUTs, shell, routing, bank implementation and achievable Fmax require synthesis. Reserves are configurable."
+      },
+      "cycles": 2313669.0,
+      "host_total_seconds": 2.7041974049061537,
+      "native_seconds": 1.311004856,
+      "preparation_seconds": 1.3824262917041779,
+      "compile_seconds": 8.234754204750061e-05,
+      "process_seconds": 1.3213220350444317,
+      "cache_hit": true,
+      "rollbacks": 0,
+      "net": {
+        "transitions": 15,
+        "places": 573,
+        "completion_flag_banks": 513,
+        "command_slots": 32,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          11055
+        ]
+      },
+      "cycle_speedup": 5.922867532045422,
+      "hardware_seconds_at_assumed_clock": 0.011568345,
+      "matrix_utilization": 0.18241502998052012
+    },
+    {
+      "label": "vector_32",
+      "timing": {
+        "dram_latency": 64,
+        "dram_bytes_per_cycle": 1024,
+        "window": 32,
+        "fifo_chunks": 1024,
+        "chain_length": 16,
+        "epilogue_lanes": 2,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 8,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 8,
+        "dram_port_bytes": 1024,
+        "scale_lanes": 8,
+        "unified_dram": true,
+        "scalar_store_bytes": 128
+      },
+      "vector_lanes": 32,
+      "resources": {
+        "matrix_mac_lanes": 4096,
+        "mxu_dsp_equivalent": 4096,
+        "onchip_bytes_lower_bound": 1513984,
+        "image_bytes": 1752530432,
+        "requested_memory_gbs": 204.8,
+        "passes_resource_screen": true,
+        "rejection_reasons": [],
+        "scope": "Capacity/throughput screening only. DSP packing is assumed; non-MXU DSPs, LUTs, shell, routing, bank implementation and achievable Fmax require synthesis. Reserves are configurable."
+      },
+      "cycles": 2281753.0,
+      "host_total_seconds": 2.698028579354286,
+      "native_seconds": 1.322984903,
+      "preparation_seconds": 1.3569888100028038,
+      "compile_seconds": 8.930079638957977e-05,
+      "process_seconds": 1.3404096364974976,
+      "cache_hit": true,
+      "rollbacks": 0,
+      "net": {
+        "transitions": 15,
+        "places": 573,
+        "completion_flag_banks": 513,
+        "command_slots": 32,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          11055
+        ]
+      },
+      "cycle_speedup": 6.0057135895077165,
+      "hardware_seconds_at_assumed_clock": 0.011408765,
+      "matrix_utilization": 0.18496655860647493
+    },
+    {
+      "label": "bandwidth_256",
+      "timing": {
+        "dram_latency": 64,
+        "dram_bytes_per_cycle": 256,
+        "window": 32,
+        "fifo_chunks": 2048,
+        "chain_length": 16,
+        "epilogue_lanes": 2,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 16,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 16,
+        "dram_port_bytes": 256,
+        "scale_lanes": 16,
+        "unified_dram": true,
+        "scalar_store_bytes": 256
+      },
+      "vector_lanes": 64,
+      "resources": {
+        "matrix_mac_lanes": 8192,
+        "mxu_dsp_equivalent": 8192,
+        "onchip_bytes_lower_bound": 2765824,
+        "image_bytes": 1752530432,
+        "requested_memory_gbs": 51.2,
+        "passes_resource_screen": true,
+        "rejection_reasons": [],
+        "scope": "Capacity/throughput screening only. DSP packing is assumed; non-MXU DSPs, LUTs, shell, routing, bank implementation and achievable Fmax require synthesis. Reserves are configurable."
+      },
+      "cycles": 7017710.0,
+      "host_total_seconds": 2.7748050801455975,
+      "native_seconds": 1.101539117,
+      "preparation_seconds": 1.3493536971509457,
+      "compile_seconds": 0.3058285526931286,
+      "process_seconds": 1.1189918629825115,
+      "cache_hit": false,
+      "rollbacks": 0,
+      "net": {
+        "transitions": 15,
+        "places": 573,
+        "completion_flag_banks": 513,
+        "command_slots": 32,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          11055
+        ]
+      },
+      "cycle_speedup": 1.9527103570822961,
+      "hardware_seconds_at_assumed_clock": 0.03508855,
+      "matrix_utilization": 0.03007020808782352
+    },
+    {
+      "label": "bandwidth_512",
+      "timing": {
+        "dram_latency": 64,
+        "dram_bytes_per_cycle": 512,
+        "window": 32,
+        "fifo_chunks": 2048,
+        "chain_length": 16,
+        "epilogue_lanes": 2,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 16,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 16,
+        "dram_port_bytes": 512,
+        "scale_lanes": 16,
+        "unified_dram": true,
+        "scalar_store_bytes": 256
+      },
+      "vector_lanes": 64,
+      "resources": {
+        "matrix_mac_lanes": 8192,
+        "mxu_dsp_equivalent": 8192,
+        "onchip_bytes_lower_bound": 2765824,
+        "image_bytes": 1752530432,
+        "requested_memory_gbs": 102.4,
+        "passes_resource_screen": true,
+        "rejection_reasons": [],
+        "scope": "Capacity/throughput screening only. DSP packing is assumed; non-MXU DSPs, LUTs, shell, routing, bank implementation and achievable Fmax require synthesis. Reserves are configurable."
+      },
+      "cycles": 3642446.0,
+      "host_total_seconds": 2.7914733551442623,
+      "native_seconds": 1.086294946,
+      "preparation_seconds": 1.3958171643316746,
+      "compile_seconds": 0.2919200286269188,
+      "process_seconds": 1.1030346434563398,
+      "cache_hit": false,
+      "rollbacks": 0,
+      "net": {
+        "transitions": 15,
+        "places": 573,
+        "completion_flag_banks": 513,
+        "command_slots": 32,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          11055
+        ]
+      },
+      "cycle_speedup": 3.7621848065832686,
+      "hardware_seconds_at_assumed_clock": 0.01821223,
+      "matrix_utilization": 0.057934695531519205
+    },
+    {
+      "label": "bandwidth_1024",
+      "timing": {
+        "dram_latency": 64,
+        "dram_bytes_per_cycle": 1024,
+        "window": 32,
+        "fifo_chunks": 2048,
+        "chain_length": 16,
+        "epilogue_lanes": 2,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 16,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 16,
+        "dram_port_bytes": 1024,
+        "scale_lanes": 16,
+        "unified_dram": true,
+        "scalar_store_bytes": 256
+      },
+      "vector_lanes": 64,
+      "resources": {
+        "matrix_mac_lanes": 8192,
+        "mxu_dsp_equivalent": 8192,
+        "onchip_bytes_lower_bound": 2765824,
+        "image_bytes": 1752530432,
+        "requested_memory_gbs": 204.8,
+        "passes_resource_screen": true,
+        "rejection_reasons": [],
+        "scope": "Capacity/throughput screening only. DSP packing is assumed; non-MXU DSPs, LUTs, shell, routing, bank implementation and achievable Fmax require synthesis. Reserves are configurable."
+      },
+      "cycles": 2066664.0,
+      "host_total_seconds": 2.800052687525749,
+      "native_seconds": 1.105179224,
+      "preparation_seconds": 1.3804748579859734,
+      "compile_seconds": 0.2961020227521658,
+      "process_seconds": 1.1228275820612907,
+      "cache_hit": false,
+      "rollbacks": 0,
+      "net": {
+        "transitions": 15,
+        "places": 573,
+        "completion_flag_banks": 513,
+        "command_slots": 32,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          11055
+        ]
+      },
+      "cycle_speedup": 6.630760975175452,
+      "hardware_seconds_at_assumed_clock": 0.01033332,
+      "matrix_utilization": 0.10210851884970173
+    }
+  ],
+  "best_point": "balanced_16",
+  "sequence": {
+    "prompt_tokens": 16,
+    "output_tokens": 8,
+    "token_steps": 24,
+    "records": [
+      {
+        "position": 0,
+        "phase": "prefill",
+        "shape_seconds": 0.21717318333685398,
+        "baseline": {
+          "cycles": 13697339.0,
+          "host_total_seconds": 3.2104640789330006,
+          "native_seconds": 1.79671638,
+          "preparation_seconds": 1.3961297161877155,
+          "compile_seconds": 8.22562724351883e-05,
+          "process_seconds": 1.8138483595103025,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "evolved": {
+          "cycles": 1430309.0,
+          "host_total_seconds": 2.3688487075269222,
+          "native_seconds": 0.999849885,
+          "preparation_seconds": 1.350671550258994,
+          "compile_seconds": 8.221529424190521e-05,
+          "process_seconds": 1.0175782553851604,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 573,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "baseline_program_and_cycles_checked": true
+      },
+      {
+        "position": 1,
+        "phase": "prefill",
+        "shape_seconds": 0.24369103275239468,
+        "baseline": {
+          "cycles": 13697367.0,
+          "host_total_seconds": 3.2053223960101604,
+          "native_seconds": 1.787680131,
+          "preparation_seconds": 1.398379871621728,
+          "compile_seconds": 8.284859359264374e-05,
+          "process_seconds": 1.8064351044595242,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "evolved": {
+          "cycles": 1430449.0,
+          "host_total_seconds": 2.3658544290810823,
+          "native_seconds": 0.996732379,
+          "preparation_seconds": 1.350683929398656,
+          "compile_seconds": 8.545070886611938e-05,
+          "process_seconds": 1.014591746032238,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 573,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "baseline_program_and_cycles_checked": true
+      },
+      {
+        "position": 2,
+        "phase": "prefill",
+        "shape_seconds": 0.257278336212039,
+        "baseline": {
+          "cycles": 13697451.0,
+          "host_total_seconds": 3.154335519298911,
+          "native_seconds": 1.786330976,
+          "preparation_seconds": 1.34945934638381,
+          "compile_seconds": 8.618272840976715e-05,
+          "process_seconds": 1.8042764570564032,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "evolved": {
+          "cycles": 1430701.0,
+          "host_total_seconds": 2.415654009208083,
+          "native_seconds": 0.998562156,
+          "preparation_seconds": 1.398635108023882,
+          "compile_seconds": 8.405931293964386e-05,
+          "process_seconds": 1.0165233872830868,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 573,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "baseline_program_and_cycles_checked": true
+      },
+      {
+        "position": 3,
+        "phase": "prefill",
+        "shape_seconds": 0.2523472439497709,
+        "baseline": {
+          "cycles": 13697451.0,
+          "host_total_seconds": 3.1404319684952497,
+          "native_seconds": 1.770677289,
+          "preparation_seconds": 1.351797254756093,
+          "compile_seconds": 8.642300963401794e-05,
+          "process_seconds": 1.788065792992711,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "evolved": {
+          "cycles": 1430953.0,
+          "host_total_seconds": 2.4323786180466413,
+          "native_seconds": 0.996875662,
+          "preparation_seconds": 1.4169133882969618,
+          "compile_seconds": 8.387118577957153e-05,
+          "process_seconds": 1.0149178244173527,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 573,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "baseline_program_and_cycles_checked": true
+      },
+      {
+        "position": 4,
+        "phase": "prefill",
+        "shape_seconds": 0.2476255390793085,
+        "baseline": {
+          "cycles": 13697535.0,
+          "host_total_seconds": 3.1483200043439865,
+          "native_seconds": 1.781669797,
+          "preparation_seconds": 1.348401091992855,
+          "compile_seconds": 8.746795356273651e-05,
+          "process_seconds": 1.7993954792618752,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "evolved": {
+          "cycles": 1432381.0,
+          "host_total_seconds": 2.4373137410730124,
+          "native_seconds": 1.005496335,
+          "preparation_seconds": 1.4141367953270674,
+          "compile_seconds": 8.391775190830231e-05,
+          "process_seconds": 1.0226329118013382,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 573,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "baseline_program_and_cycles_checked": true
+      },
+      {
+        "position": 5,
+        "phase": "prefill",
+        "shape_seconds": 0.2509575393050909,
+        "baseline": {
+          "cycles": 13697535.0,
+          "host_total_seconds": 3.143378634005785,
+          "native_seconds": 1.77522085,
+          "preparation_seconds": 1.3497828990221024,
+          "compile_seconds": 8.508935570716858e-05,
+          "process_seconds": 1.7930360231548548,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "evolved": {
+          "cycles": 1432689.0,
+          "host_total_seconds": 2.3727612905204296,
+          "native_seconds": 1.013587024,
+          "preparation_seconds": 1.3408388439565897,
+          "compile_seconds": 8.646398782730103e-05,
+          "process_seconds": 1.0313686840236187,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 573,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "baseline_program_and_cycles_checked": true
+      },
+      {
+        "position": 6,
+        "phase": "prefill",
+        "shape_seconds": 0.24171253480017185,
+        "baseline": {
+          "cycles": 13697871.0,
+          "host_total_seconds": 3.2020775582641363,
+          "native_seconds": 1.7781396,
+          "preparation_seconds": 1.405543189495802,
+          "compile_seconds": 8.586421608924866e-05,
+          "process_seconds": 1.7959119323641062,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "evolved": {
+          "cycles": 1433417.0,
+          "host_total_seconds": 2.378470866009593,
+          "native_seconds": 1.002938629,
+          "preparation_seconds": 1.3581956885755062,
+          "compile_seconds": 8.171424269676208e-05,
+          "process_seconds": 1.019778909161687,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 573,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "baseline_program_and_cycles_checked": true
+      },
+      {
+        "position": 7,
+        "phase": "prefill",
+        "shape_seconds": 0.24410572089254856,
+        "baseline": {
+          "cycles": 13698123.0,
+          "host_total_seconds": 3.2100496776401997,
+          "native_seconds": 1.77986471,
+          "preparation_seconds": 1.4134998321533203,
+          "compile_seconds": 8.74549150466919e-05,
+          "process_seconds": 1.795956177636981,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "evolved": {
+          "cycles": 1434509.0,
+          "host_total_seconds": 2.396821428090334,
+          "native_seconds": 1.001701716,
+          "preparation_seconds": 1.3770133834332228,
+          "compile_seconds": 8.339807391166687e-05,
+          "process_seconds": 1.0191749408841133,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 573,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "baseline_program_and_cycles_checked": true
+      },
+      {
+        "position": 8,
+        "phase": "prefill",
+        "shape_seconds": 0.25162331387400627,
+        "baseline": {
+          "cycles": 13699747.0,
+          "host_total_seconds": 3.214217431843281,
+          "native_seconds": 1.789152598,
+          "preparation_seconds": 1.4076665192842484,
+          "compile_seconds": 8.893944323062897e-05,
+          "process_seconds": 1.8060273192822933,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "evolved": {
+          "cycles": 1438205.0,
+          "host_total_seconds": 2.3808649238198996,
+          "native_seconds": 1.005684673,
+          "preparation_seconds": 1.3566456958651543,
+          "compile_seconds": 8.242577314376831e-05,
+          "process_seconds": 1.0237106159329414,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 573,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "baseline_program_and_cycles_checked": true
+      },
+      {
+        "position": 9,
+        "phase": "prefill",
+        "shape_seconds": 0.248907208442688,
+        "baseline": {
+          "cycles": 13700139.0,
+          "host_total_seconds": 3.1992417089641094,
+          "native_seconds": 1.777891072,
+          "preparation_seconds": 1.4024239592254162,
+          "compile_seconds": 8.198432624340057e-05,
+          "process_seconds": 1.7961772847920656,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "evolved": {
+          "cycles": 1438457.0,
+          "host_total_seconds": 2.367398552596569,
+          "native_seconds": 0.999003355,
+          "preparation_seconds": 1.3577023893594742,
+          "compile_seconds": 8.448772132396698e-05,
+          "process_seconds": 1.00914073176682,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 573,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "baseline_program_and_cycles_checked": true
+      },
+      {
+        "position": 10,
+        "phase": "prefill",
+        "shape_seconds": 0.2503646593540907,
+        "baseline": {
+          "cycles": 13700867.0,
+          "host_total_seconds": 3.1681120451539755,
+          "native_seconds": 1.789331609,
+          "preparation_seconds": 1.361469665542245,
+          "compile_seconds": 8.740462362766266e-05,
+          "process_seconds": 1.8061418663710356,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "evolved": {
+          "cycles": 1438989.0,
+          "host_total_seconds": 2.436791868880391,
+          "native_seconds": 1.006464211,
+          "preparation_seconds": 1.4124574586749077,
+          "compile_seconds": 8.925795555114746e-05,
+          "process_seconds": 1.0238292329013348,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 573,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "baseline_program_and_cycles_checked": true
+      },
+      {
+        "position": 11,
+        "phase": "prefill",
+        "shape_seconds": 0.24675053171813488,
+        "baseline": {
+          "cycles": 13701259.0,
+          "host_total_seconds": 3.158896252512932,
+          "native_seconds": 1.781661648,
+          "preparation_seconds": 1.3595458436757326,
+          "compile_seconds": 8.377060294151306e-05,
+          "process_seconds": 1.7987577356398106,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "evolved": {
+          "cycles": 1439605.0,
+          "host_total_seconds": 2.4540947563946247,
+          "native_seconds": 1.017494841,
+          "preparation_seconds": 1.4182592127472162,
+          "compile_seconds": 9.226612746715546e-05,
+          "process_seconds": 1.035262644290924,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 573,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "baseline_program_and_cycles_checked": true
+      },
+      {
+        "position": 12,
+        "phase": "prefill",
+        "shape_seconds": 0.24902991950511932,
+        "baseline": {
+          "cycles": 13701987.0,
+          "host_total_seconds": 3.186729818582535,
+          "native_seconds": 1.802713765,
+          "preparation_seconds": 1.364965420216322,
+          "compile_seconds": 8.928030729293823e-05,
+          "process_seconds": 1.8211984559893608,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "evolved": {
+          "cycles": 1441817.0,
+          "host_total_seconds": 2.450524181127548,
+          "native_seconds": 1.02028589,
+          "preparation_seconds": 1.4119035713374615,
+          "compile_seconds": 9.260326623916626e-05,
+          "process_seconds": 1.0380434840917587,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 573,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "baseline_program_and_cycles_checked": true
+      },
+      {
+        "position": 13,
+        "phase": "prefill",
+        "shape_seconds": 0.24039922840893269,
+        "baseline": {
+          "cycles": 13702435.0,
+          "host_total_seconds": 3.1769109182059765,
+          "native_seconds": 1.802137244,
+          "preparation_seconds": 1.3564444351941347,
+          "compile_seconds": 8.545070886611938e-05,
+          "process_seconds": 1.8198943361639977,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "evolved": {
+          "cycles": 1444197.0,
+          "host_total_seconds": 2.415232816711068,
+          "native_seconds": 1.030998938,
+          "preparation_seconds": 1.3657321371138096,
+          "compile_seconds": 8.810870349407196e-05,
+          "process_seconds": 1.0489302929490805,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 573,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "baseline_program_and_cycles_checked": true
+      },
+      {
+        "position": 14,
+        "phase": "prefill",
+        "shape_seconds": 0.2982691526412964,
+        "baseline": {
+          "cycles": 13703163.0,
+          "host_total_seconds": 3.194330383092165,
+          "native_seconds": 1.801531246,
+          "preparation_seconds": 1.3744011502712965,
+          "compile_seconds": 8.518993854522705e-05,
+          "process_seconds": 1.8193565346300602,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "evolved": {
+          "cycles": 1445009.0,
+          "host_total_seconds": 2.409974165260792,
+          "native_seconds": 1.01990525,
+          "preparation_seconds": 1.3711128402501345,
+          "compile_seconds": 8.492916822433472e-05,
+          "process_seconds": 1.0382525715976954,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 573,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "baseline_program_and_cycles_checked": true
+      },
+      {
+        "position": 15,
+        "phase": "prefill",
+        "shape_seconds": 0.24407114647328854,
+        "baseline": {
+          "cycles": 13703555.0,
+          "host_total_seconds": 3.253253534436226,
+          "native_seconds": 1.804342633,
+          "preparation_seconds": 1.4306635688990355,
+          "compile_seconds": 9.314343333244324e-05,
+          "process_seconds": 1.8220602925866842,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "evolved": {
+          "cycles": 1446997.0,
+          "host_total_seconds": 2.433769991621375,
+          "native_seconds": 1.028678262,
+          "preparation_seconds": 1.3861441295593977,
+          "compile_seconds": 8.313916623592377e-05,
+          "process_seconds": 1.0470551569014788,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 573,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "baseline_program_and_cycles_checked": true
+      },
+      {
+        "position": 16,
+        "phase": "decode",
+        "shape_seconds": 0.2572353482246399,
+        "baseline": {
+          "cycles": 13705403.0,
+          "host_total_seconds": 3.2402438167482615,
+          "native_seconds": 1.800815252,
+          "preparation_seconds": 1.421200979501009,
+          "compile_seconds": 8.667446672916412e-05,
+          "process_seconds": 1.8185241427272558,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "evolved": {
+          "cycles": 1449237.0,
+          "host_total_seconds": 2.414733273908496,
+          "native_seconds": 1.019702166,
+          "preparation_seconds": 1.3779704123735428,
+          "compile_seconds": 8.017197251319885e-05,
+          "process_seconds": 1.0361098628491163,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 573,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "baseline_program_and_cycles_checked": true
+      },
+      {
+        "position": 17,
+        "phase": "decode",
+        "shape_seconds": 0.25536834076046944,
+        "baseline": {
+          "cycles": 13705795.0,
+          "host_total_seconds": 3.2325962968170643,
+          "native_seconds": 1.794990467,
+          "preparation_seconds": 1.4191047195345163,
+          "compile_seconds": 8.698366582393646e-05,
+          "process_seconds": 1.812956515699625,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "evolved": {
+          "cycles": 1451533.0,
+          "host_total_seconds": 2.4228488318622112,
+          "native_seconds": 1.018714505,
+          "preparation_seconds": 1.3857338204979897,
+          "compile_seconds": 8.443184196949005e-05,
+          "process_seconds": 1.036596143618226,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 573,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "baseline_program_and_cycles_checked": true
+      },
+      {
+        "position": 18,
+        "phase": "decode",
+        "shape_seconds": 0.26389618031680584,
+        "baseline": {
+          "cycles": 13706523.0,
+          "host_total_seconds": 3.203436581417918,
+          "native_seconds": 1.807945012,
+          "preparation_seconds": 1.3764801919460297,
+          "compile_seconds": 8.289515972137451e-05,
+          "process_seconds": 1.8263604920357466,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "evolved": {
+          "cycles": 1451981.0,
+          "host_total_seconds": 2.466843916103244,
+          "native_seconds": 1.025215162,
+          "preparation_seconds": 1.4231836590915918,
+          "compile_seconds": 8.543208241462708e-05,
+          "process_seconds": 1.0430405139923096,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 573,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "baseline_program_and_cycles_checked": true
+      },
+      {
+        "position": 19,
+        "phase": "decode",
+        "shape_seconds": 0.24464191682636738,
+        "baseline": {
+          "cycles": 13706915.0,
+          "host_total_seconds": 3.182765321806073,
+          "native_seconds": 1.797491016,
+          "preparation_seconds": 1.3677697200328112,
+          "compile_seconds": 8.605420589447021e-05,
+          "process_seconds": 1.8143955450505018,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "evolved": {
+          "cycles": 1453521.0,
+          "host_total_seconds": 2.473586793988943,
+          "native_seconds": 1.025075057,
+          "preparation_seconds": 1.430700020864606,
+          "compile_seconds": 8.453987538814545e-05,
+          "process_seconds": 1.042307335883379,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 573,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "baseline_program_and_cycles_checked": true
+      },
+      {
+        "position": 20,
+        "phase": "decode",
+        "shape_seconds": 0.24591369554400444,
+        "baseline": {
+          "cycles": 13707643.0,
+          "host_total_seconds": 3.18838775344193,
+          "native_seconds": 1.797855227,
+          "preparation_seconds": 1.372363444417715,
+          "compile_seconds": 8.969008922576904e-05,
+          "process_seconds": 1.8154631666839123,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "evolved": {
+          "cycles": 1455537.0,
+          "host_total_seconds": 2.4966568555682898,
+          "native_seconds": 1.027940306,
+          "preparation_seconds": 1.4497914128005505,
+          "compile_seconds": 8.923746645450592e-05,
+          "process_seconds": 1.046204499900341,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 573,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "baseline_program_and_cycles_checked": true
+      },
+      {
+        "position": 21,
+        "phase": "decode",
+        "shape_seconds": 0.2546186000108719,
+        "baseline": {
+          "cycles": 13708035.0,
+          "host_total_seconds": 3.177620828151703,
+          "native_seconds": 1.795561933,
+          "preparation_seconds": 1.3646486960351467,
+          "compile_seconds": 9.294413030147552e-05,
+          "process_seconds": 1.8123563323169947,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "evolved": {
+          "cycles": 1457917.0,
+          "host_total_seconds": 2.449968546628952,
+          "native_seconds": 1.023976868,
+          "preparation_seconds": 1.415184874087572,
+          "compile_seconds": 8.601322770118713e-05,
+          "process_seconds": 1.0342138335108757,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 573,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "baseline_program_and_cycles_checked": true
+      },
+      {
+        "position": 22,
+        "phase": "decode",
+        "shape_seconds": 0.24950168654322624,
+        "baseline": {
+          "cycles": 13708847.0,
+          "host_total_seconds": 3.1908926852047443,
+          "native_seconds": 1.801414312,
+          "preparation_seconds": 1.3709630630910397,
+          "compile_seconds": 8.719414472579956e-05,
+          "process_seconds": 1.819282265380025,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "evolved": {
+          "cycles": 1458701.0,
+          "host_total_seconds": 2.491069681942463,
+          "native_seconds": 1.034081032,
+          "preparation_seconds": 1.4383181761950254,
+          "compile_seconds": 9.310618042945862e-05,
+          "process_seconds": 1.0521718673408031,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 573,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "baseline_program_and_cycles_checked": true
+      },
+      {
+        "position": 23,
+        "phase": "decode",
+        "shape_seconds": 0.24635739997029305,
+        "baseline": {
+          "cycles": 13708763.0,
+          "host_total_seconds": 3.185265263542533,
+          "native_seconds": 1.805873833,
+          "preparation_seconds": 1.3608200252056122,
+          "compile_seconds": 8.438900113105774e-05,
+          "process_seconds": 1.8238371275365353,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 574,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "evolved": {
+          "cycles": 1460717.0,
+          "host_total_seconds": 2.400944136083126,
+          "native_seconds": 1.029802646,
+          "preparation_seconds": 1.3535002376884222,
+          "compile_seconds": 8.634291589260101e-05,
+          "process_seconds": 1.0468861740082502,
+          "cache_hit": true,
+          "rollbacks": 0,
+          "net": {
+            "transitions": 15,
+            "places": 573,
+            "completion_flag_banks": 513,
+            "command_slots": 32,
+            "matrix_engines_per_slice": 1,
+            "instructions_per_slice": [
+              11055
+            ]
+          }
+        },
+        "baseline_program_and_cycles_checked": true
+      }
+    ],
+    "baseline_cycles": 328851748.0,
+    "evolved_cycles": 34627828.0,
+    "shape_compilation_seconds": 6.001839458942413,
+    "simulator_seconds": 134.70068685896695,
+    "cycle_speedup": 9.496747760211816
+  },
+  "status": "complete"
+}

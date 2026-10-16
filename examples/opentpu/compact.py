@@ -8,7 +8,7 @@ from bisect import bisect_left
 from math import ceil, gcd
 from lpnlang_mlir import InputArray
 
-from .model import OpenTPU, DRAM
+from .model import OpenTPU, DRAM, bank_write_cycles
 from .components import CommandInterface, CommandTiming, ExecutionUnit, MatrixEngine
 
 
@@ -150,6 +150,8 @@ class CompactOpenTPU(OpenTPU):
     deps,dram_deps = dependencies(commands,I,W,t.matrix_engines)
     kinds,latencies,services,port_ids = [],[],[],[]
     batches,chunkses,scale_flags,kbs,ns,row_services,tails = [],[],[],[],[],[],[]
+    scale_bytes = []
+    write_full,write_tail = [],[]
     barriers,dispatch_delays,pipeline_delays = [],[],[]
     last_register = nsig
     for idx,c in enumerate(commands):
@@ -185,7 +187,10 @@ class CompactOpenTPU(OpenTPU):
       ns.append(n)
       row_services.append(row_service)
       tails.append(tail)
-    parameter_values = [latencies,services,port_ids,batches,chunkses,scale_flags,kbs,ns,row_services,tails]
+      scale_bytes.append(max(4,w[6]) if ins.op==I.MM and scaled else 0)
+      write_full.append(bank_write_cycles(batch,m,w[5]&65535,cfg.LANES) if ins.op==I.MM else 0)
+      write_tail.append(bank_write_cycles(n%batch or batch,m,w[5]&65535,cfg.LANES) if ins.op==I.MM else 0)
+    parameter_values = [latencies,services,port_ids,batches,chunkses,scale_flags,kbs,ns,row_services,tails,scale_bytes,write_full,write_tail]
     parameters = CommandTiming(*(self._table(prefix+"_"+name,values)
         for name,values in zip(CommandTiming.__dataclass_fields__,parameter_values)))
     metadata = self._table(prefix+"_metadata",[ncommands,

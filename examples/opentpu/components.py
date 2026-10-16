@@ -33,6 +33,9 @@ class CommandTiming:
   rows: list
   row_services: list
   tails: list
+  scale_bytes: list
+  write_full: list
+  write_tail: list
 
 
 class ExecutionUnit:
@@ -91,6 +94,8 @@ class MatrixEngine:
     offsets,indices = interface.compute_offsets,interface.compute_indices
     rows,batches,chunks = parameters.rows,parameters.batches,parameters.chunks
     scaled,kbs = parameters.scaled,parameters.kb
+    scale_bytes = parameters.scale_bytes
+    write_full,write_tail = parameters.write_full,parameters.write_tail
     row_services,tails = parameters.row_services,parameters.tails
 
     if buffer_metadata is not None:
@@ -132,12 +137,18 @@ class MatrixEngine:
       width = select(row+batch<n,batch,n-row)
       take(resources.buffers)
       bus = take(memory.b)
-      service = sitofp(divi(muli(muli(width,chunk),cfg.D)+t.dram_bytes_per_cycle-1,t.dram_bytes_per_cycle))
+      bytes_per_row = muli(chunk,cfg.D)
+      if t.unified_dram:
+        bytes_per_row = addi(bytes_per_row,array(scale_bytes)[idx])
+      transfer_cycles = divi(muli(width,bytes_per_row)+t.dram_bytes_per_cycle-1,t.dram_bytes_per_cycle)
+      scale_cycles = divi(muli(muli(width,array(kbs)[idx]),needs_scale)+t.scale_lanes-1,t.scale_lanes)
+      service = sitofp(transfer_cycles)
       emit(memory.b,bus,delay=service)
       if needs_scale>0:
         scale_port = take(memory.a)
-        emit(memory.a,scale_port,delay=sitofp(muli(width,array(kbs)[idx])))
-      emit(ready,token.set("width",width),delay=service+float(t.dram_latency+4))
+        emit(memory.a,scale_port,delay=sitofp(scale_cycles))
+      arrival = sitofp(select(transfer_cycles>scale_cycles,transfer_cycles,scale_cycles))
+      emit(ready,token.set("width",width),delay=arrival+float(t.dram_latency+4))
       if row+batch<n:
         emit(request,token.set("row",row+batch),delay=service)
       else:
@@ -155,7 +166,9 @@ class MatrixEngine:
       guard(enabled)
       token = take(ready)
       port = take(resources.compute)
-      service = sitofp(muli(token.get("width"),array(row_services)[idx]))
+      compute_cycles = muli(divi(token.get("width")+t.matrix_row_lanes-1,t.matrix_row_lanes),array(row_services)[idx])
+      write_cycles = select(token.get("width")==array(batches)[idx],array(write_full)[idx],array(write_tail)[idx])
+      service = sitofp(select(compute_cycles>write_cycles,compute_cycles,write_cycles))
       emit(resources.compute,port,delay=service)
       emit(resources.buffers,create())
       if token.get("row")+array(batches)[idx]>=array(rows)[idx]:

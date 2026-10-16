@@ -10,6 +10,15 @@ from math import ceil, gcd
 from lpnlang_mlir import NetBuilder
 
 
+def bank_write_cycles(width,columns,stride,lanes):
+  """One write per TMEM bank per cycle, including strided column collisions."""
+  banks=[0]*lanes
+  for row in range(width):
+    for column in range(columns):
+      banks[(row+column*stride)%lanes]+=1
+  return max(banks,default=0)
+
+
 @dataclass(frozen=True)
 class Timing:
   dram_latency: int = 8
@@ -21,6 +30,12 @@ class Timing:
   quant_buffer_chunks: int = 1024
   batch_rows: int = 1
   matrix_engines: int = 1
+  # Hypothetical FPGA datapaths; defaults preserve the validated RTL model.
+  matrix_row_lanes: int = 1
+  dram_port_bytes: int = 0
+  scale_lanes: int = 1
+  unified_dram: bool = False
+  scalar_store_bytes: int = 0
 
   def __post_init__(self):
     if min(self.dram_latency,self.dram_bytes_per_cycle,self.window,self.fifo_chunks,
@@ -30,6 +45,10 @@ class Timing:
       raise ValueError("matrix_engines must be an integer")
     if self.quant_buffer_chunks<0:
       raise ValueError("quant buffer size must be nonnegative")
+    for name in ('matrix_row_lanes','scale_lanes','dram_port_bytes','scalar_store_bytes'):
+      value=getattr(self,name)
+      if not isinstance(value,int) or value<(0 if name in ('dram_port_bytes','scalar_store_bytes') else 1):
+        raise ValueError(f'{name} must be an integer in its valid range')
 
 
 class DRAM:
@@ -37,7 +56,7 @@ class DRAM:
     self.spec = timing
     self.b = net.place(prefix+"_port_b",initial_tokens=1)
     self.a = net.place(prefix+"_port_a",initial_tokens=1)
-    self.sw = net.place(prefix+"_scalar_write",initial_tokens=1)
+    self.sw = self.b if timing.unified_dram else net.place(prefix+"_scalar_write",initial_tokens=1)
 
 
 class SystolicArray:
@@ -61,7 +80,7 @@ class OpenTPU:
     cfg,t = workload.config,self.timing
     if cfg.SEQ_WC:
       raise ValueError("the timing model currently requires the range-scoreboard sequencer")
-    if t.dram_bytes_per_cycle>cfg.D:
+    if t.dram_bytes_per_cycle>(t.dram_port_bytes or cfg.D):
       raise ValueError("bandwidth exceeds the simulated DRAM port width")
     self.net = net = NetBuilder("fesens_opentpu")
     self.finished = net.place("program_completed",observable=True)
@@ -174,7 +193,9 @@ class OpenTPU:
       rows,kb = w[3]&65535,w[3]>>16
       elems = kb*cfg.D
       width = 4 if w[6]==1 else 1
-      latency = rows*(ceil(elems/cfg.LANES)+ceil(elems/width)+60)
+      store = (ceil(elems*(4 if w[6]==1 else 1)/t.scalar_store_bytes)
+               if t.scalar_store_bytes else ceil(elems/width))
+      latency = rows*(ceil(elems/cfg.LANES)+store+60)
       port,service = memory.sw,latency
     elif ins.op==I.VOP:
       rows,cols = w[3]&65535,w[3]>>16
@@ -247,6 +268,9 @@ class OpenTPU:
     # interval: read/modify/write is pipelined alongside subsequent rows.
     pipeline = min(cfg.D//8,t.chain_length)+cfg.MCOLS+5+9+(6 if flags&I.F_ACC else 0)
     row_service = max(steps*groups,drain)
+    write_full = bank_write_cycles(batch,m,w[5]&65535,cfg.LANES)
+    write_tail = bank_write_cycles(n%batch or batch,m,w[5]&65535,cfg.LANES)
+    row_bytes = chunks*cfg.D+(max(4,w[6]) if scaled and t.unified_dram else 0)
     name = prefix+f"_mm_{idx}"
     buffers = array.buffers
     request,ready = net.place(name+"_request"),net.place(name+"_ready")
@@ -277,12 +301,15 @@ class OpenTPU:
       width = select(row+batch<n,batch,n-row)
       take(buffers)
       bus = take(memory.b)
-      service = sitofp(divi(muli(width,chunks*cfg.D)+t.dram_bytes_per_cycle-1,t.dram_bytes_per_cycle))
+      transfer_cycles = divi(muli(width,row_bytes)+t.dram_bytes_per_cycle-1,t.dram_bytes_per_cycle)
+      scale_cycles = divi(muli(muli(width,kb),scaled)+t.scale_lanes-1,t.scale_lanes)
+      service = sitofp(transfer_cycles)
       emit(memory.b,bus,delay=service)
       if scaled:
         scales = take(memory.a)
-        emit(memory.a,scales,delay=sitofp(muli(width,kb)))
-      emit(ready,token.set("width",width),delay=service+float(t.dram_latency+4))
+        emit(memory.a,scales,delay=sitofp(scale_cycles))
+      arrival = sitofp(select(transfer_cycles>scale_cycles,transfer_cycles,scale_cycles))
+      emit(ready,token.set("width",width),delay=arrival+float(t.dram_latency+4))
       if row+batch<n:
         emit(request,token.set("row",row+batch),delay=service)
       else:
@@ -300,7 +327,9 @@ class OpenTPU:
       token = take(ready)
       take(compute_cursor)
       port = take(array.compute)
-      service = sitofp(muli(token.get("width"),row_service))
+      compute_cycles = muli(divi(token.get("width")+t.matrix_row_lanes-1,t.matrix_row_lanes),row_service)
+      write_cycles = select(token.get("width")==batch,write_full,write_tail)
+      service = sitofp(select(compute_cycles>write_cycles,compute_cycles,write_cycles))
       emit(array.compute,port,delay=service)
       emit(buffers,create())
       if token.get("row")+batch<n:
