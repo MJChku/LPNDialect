@@ -164,7 +164,7 @@ generation validation is still in progress. It uses D=128, a 2 GiB memory, the s
 behavioral memory latency/ports as the earlier runs, and a larger command-table
 capacity of 32768. Real Llama 3.2 remains unvalidated.
 
-Six Qwen generation cases have completed all eight requested new tokens.
+Seven Qwen generation cases have completed all eight requested new tokens.
 Each full LPN-only regeneration matches every input hash, logit result,
 generated token and predicted cycle count. All baseline steps passed bit-exact
 DRAM/TMEM validation. Complete LPN process time includes real numerical
@@ -180,13 +180,14 @@ measurements ran alongside other baseline cases.
 | [Robot story](validation/qwen17/completed_robot.json) | 15 | 11077.29 s | 27.74 s | 211.38 s | 52.40x |
 | [Mountain village](validation/qwen17/completed_mountain.json) | 13 | 9516.14 s | 24.08 s | 182.42 s | 52.17x |
 | [Translation prompt](validation/qwen17/completed_translation.json) | 15 | 11144.52 s | 27.68 s | 213.33 s | 52.24x |
+| [Arithmetic prompt](validation/qwen17/completed_arithmetic.json) | 13 | 9632.62 s | 24.01 s | 182.87 s | 52.68x |
 
 The [batch observations](validation/qwen17/overnight_progress.json) now contain
-123 passing token comparisons; four generation cases are still running.
+131 passing token comparisons; three generation cases are still running.
 The [completed replay summary](validation/qwen17/completed_replays_summary.json)
-covers 1,062,784,158 RTL cycles across 78 token steps and 48 generated tokens.
+covers 1,239,914,795 RTL cycles across 91 token steps and 56 generated tokens.
 Native timing throughput is 7.37 million RTL-equivalent cycles/s; whole LPN
-process throughput, including functional work and I/O, is 0.952 million/s.
+process throughput, including functional work and I/O, is 0.955 million/s.
 These rates use summed per-case processing times, not concurrent batch wall time.
 
 The [Qwen guard-cache comparison](validation/qwen17/guard_cache_ablation.json)

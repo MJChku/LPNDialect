@@ -1,5 +1,5 @@
 {
-  "captured_utc": "2026-10-16T06:17:19.422138+00:00",
+  "captured_utc": "2026-10-16T06:45:30.391911+00:00",
   "status": "partial_batch",
   "scope": "Completed generation replays only. The driver measured whole LPN processes one at a time alongside concurrent RTL cases. Complete process time includes numerical execution, initialization, compilation, input serialization, hashing and process cleanup. RTL-equivalent throughput divides recorded RTL cycles by measured LPN seconds. Totals sum per-case processing times, not concurrent batch wall time. The whole batch remains unfinished.",
   "model": "Qwen/Qwen3-1.7B",
@@ -70,20 +70,31 @@
       "external_process_seconds": 213.333175804466,
       "complete_process_speedup_vs_rtl_core": 52.23997522619122,
       "artifact_sha256": "ec43201526dd3867f880188524e9c4e8326e12d22b558d9eefb83aefc2071510"
+    },
+    "arithmetic": {
+      "steps": 13,
+      "generated_tokens": 8,
+      "rtl_cycles": 177130637,
+      "rtl_core_seconds": 9632.620120892,
+      "rtl_process_seconds": 10757.111299492419,
+      "lpn_core_seconds": 24.013524414,
+      "external_process_seconds": 182.86848750337958,
+      "complete_process_speedup_vs_rtl_core": 52.675123267008914,
+      "artifact_sha256": "47cd272f1040d6429387dc2ab5b803d29cfecafcd0ffd5f137a2df3c2891ab1a"
     }
   },
   "aggregate": {
-    "steps": 78,
-    "generated_tokens": 48,
-    "rtl_cycles": 1062784158,
-    "rtl_core_seconds": 57443.824299579,
-    "rtl_process_seconds": 64214.8552302476,
-    "lpn_core_seconds": 144.11206597,
-    "external_process_seconds": 1115.8019021917135,
-    "native_speedup_vs_rtl_core": 398.6052376179046,
-    "complete_process_speedup_vs_rtl_core": 51.48209927474132,
-    "complete_process_speedup_vs_rtl_process": 57.5504084588076,
-    "rtl_equivalent_cycles_per_second_native": 7374706.280466766,
-    "rtl_equivalent_cycles_per_second_complete_process": 952484.6264488585
+    "steps": 91,
+    "generated_tokens": 56,
+    "rtl_cycles": 1239914795,
+    "rtl_core_seconds": 67076.444420471,
+    "rtl_process_seconds": 74971.96652974002,
+    "lpn_core_seconds": 168.125590384,
+    "external_process_seconds": 1298.670389695093,
+    "native_speedup_vs_rtl_core": 398.96629815406413,
+    "complete_process_speedup_vs_rtl_core": 51.65009147257101,
+    "complete_process_speedup_vs_rtl_process": 57.72978819309358,
+    "rtl_equivalent_cycles_per_second_native": 7374931.990829155,
+    "rtl_equivalent_cycles_per_second_complete_process": 954757.1153070735
   }
 }
