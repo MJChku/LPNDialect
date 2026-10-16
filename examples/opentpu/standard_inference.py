@@ -36,6 +36,9 @@ def run_engine(spec,cfg,cap,prompt,max_new,backend_factory,weights=None):
     engine=Engine(spec,weights,cap,cfg,backend=backend_factory,
                   pipeline=False,resident=False)
   generated=engine.generate(prompt,max_new=max_new)
+  save=getattr(engine.backend,'save_previous',None)
+  if save is not None:
+    save(engine.pos)
   return engine,generated
 
 
@@ -56,7 +59,6 @@ def make_backend(output,prompt_length,compiler=None,options=None,capacity=65536)
         self.cfg=cfg
         self.records=[]
       self.engine=None
-      self.input_rows=1
       self.runner=(ReusableTiming(compiler,output/'timing-cache',capacity=capacity)
                    if compiler is not None and options is None else None)
 
@@ -64,16 +66,23 @@ def make_backend(output,prompt_length,compiler=None,options=None,capacity=65536)
       self.engine=engine
 
     def write(self,s,addr,data):
-      if self.engine is not None and addr==self.engine.image.io['x']:
-        self.input_rows=max(1,np.asarray(data).nbytes//(4*self.engine.spec.hidden))
       if options is not None:
         super().write(s,addr,data)
+
+    def save_previous(self,position_after):
+      if self.records:
+        record=self.records[-1]
+        rows=record.get('rows',position_after-record['position_before'])
+        if rows>0:
+          record['input_rows']=rows
+        atomic_json(output/'kernels'/f"{record['kernel_index']:04d}"/'record.json',record)
 
     def read(self,s,addr,nbytes):
       if self.records:
         logits=self.engine.image.io['logits']
         if logits<=addr<logits+4*self.engine.spec.vocab*self.engine.rows:
           self.records[-1]['logit_rows_read']+=nbytes//(4*self.engine.image.v_loc)
+          self.save_previous(self.engine.pos)
       if options is not None:
         return super().read(s,addr,nbytes)
       # Fixed scheduling placeholders: argmax 0, not a predicted model output.
@@ -83,6 +92,7 @@ def make_backend(output,prompt_length,compiler=None,options=None,capacity=65536)
     def run(self,programs,args=None):
       index=len(self.records)
       before=self.engine.pos
+      self.save_previous(before)
       directory=output/'kernels'/f'{index:04d}'
       directory.mkdir(parents=True,exist_ok=True)
       for sid,program in enumerate(programs):
@@ -90,7 +100,9 @@ def make_backend(output,prompt_length,compiler=None,options=None,capacity=65536)
           [ins.encode() for ins in program])+'\n')
       observed=dict(kernel_index=index,position_before=before,
         phase='prefill' if before<prompt_length else 'decode',
-        input_rows=self.input_rows,logit_rows_read=0,
+        # Device-resident inputs need no host embedding write. Observe rows
+        # from upstream stats/position advancement after the run, not writes.
+        input_rows=None if before<prompt_length else 1,logit_rows_read=0,
         program_sha256=[program_hash(p) for p in programs],args=list(args or []))
       atomic_json(output/'progress.json',dict(status='running',pid=os.getpid(),
           completed_kernels=index,active_kernel=observed))
@@ -107,7 +119,8 @@ def make_backend(output,prompt_length,compiler=None,options=None,capacity=65536)
         workload=resolve_static(self.cfg,programs,args)
         result=dict(instructions=[len(c) for c in workload.commands])
         if self.runner is not None:
-          result['lpn']=measure(self.runner,workload,Timing(batch_rows=8),directory)
+          result['lpn']=measure(self.runner,workload,
+              Timing(batch_rows=8,dram_bytes_per_cycle=min(128,self.cfg.D)),directory)
         self.records.append(result)
       result.update(observed)
       atomic_json(directory/'record.json',result)
