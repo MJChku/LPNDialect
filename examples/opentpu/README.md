@@ -181,8 +181,13 @@ The active batch is under `~/lpn-runs/qwen3-1.7b-parallel`: eight independent
 generation cases, four concurrent processes, each requesting up to eight new
 tokens. `batch.json` records PIDs, commands, progress and failures. Large active
 files/snapshots live under `/dev/shm/lpn-qwen3-17-validation`; reports and logs
-are mirrored to disk, and the latest snapshot is archived when each case ends.
-Active RAM snapshots do not survive a reboot. Each case freezes RTL/observer
+are mirrored to disk. The separate `overnight_monitor.py` process copies and
+hash-verifies each completed token's latest snapshot into `recovery/<case>`
+using content-addressed files and an atomically selected manifest. It publishes
+`overnight-summary.json` and `overnight-records.csv` with paired RTL/LPN data.
+The supervisor archives a final snapshot when each case ends; the monitor then
+removes its duplicate backup. RAM snapshots do not survive a reboot, so only
+verified disk recovery snapshots are durable. Each case freezes RTL/observer
 source hashes as well as the upstream revision in its resume identity.
 
 `e2e.py` runs the upstream model compiler and Engine with real checkpoint

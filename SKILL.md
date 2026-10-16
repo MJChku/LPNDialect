@@ -187,7 +187,11 @@ FeSens worktree described in the openTPU README. Use the installed Verilator
 5.052 with both `VERILATOR_ROOT` and `PATH` set. The active parallel batch's
 manifest is `~/lpn-runs/qwen3-1.7b-parallel/batch.json`; inspect it and the case
 logs before launching duplicate jobs. RAM scratch holds active large snapshots;
-only finished snapshots are archived to disk. Freeze the RTL/observer source
+the separate overnight monitor backs up completed-token snapshots to
+`recovery/<case>` and publishes `overnight-summary.json`/`overnight-records.csv`.
+Check the monitor PID and verified recovery manifest rather than assuming that
+a RAM checkpoint is durable. Finished snapshots are archived to `results`.
+Freeze the RTL/observer source
 hashes in run identities; the pinned commit alone does not identify local
 simulation patches. Do not modify the separate frozen SmolLM2 baseline tree.
 
