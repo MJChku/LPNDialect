@@ -1,5 +1,18 @@
 # Weight-free FPGA architecture exploration
 
+**Workload correction:** the studies below used a custom token-by-token prompt
+loop, including a vocabulary-head execution at every prompt position. They are
+historical architecture microbenchmarks, **not results for openTPU's normal
+inference workload**. Their 11x/8.23x reductions must not be used to claim normal
+end-to-end inference speedup. LPN models hardware; upstream inference code must
+own batching, tiling and decode order. Use
+[standard_inference.py](standard_inference.py), which calls the unmodified
+upstream `Engine.generate()`, for the corrected shared-backend path described
+in [README.md](README.md). Architecture predictions for that path still need
+to be measured and validated.
+The archived microbenchmark results used revision `bc97ee3`; later vector timing
+and dependency fixes can change predictions when those historical streams are rerun.
+
 `fpga_dse.py` compiles Qwen3-1.7B dimensions into real upstream openTPU
 instructions, resolves their static scalar loops/register addresses, and feeds
 the command footprints into the existing event-driven LPN. It loads no
@@ -28,7 +41,7 @@ flowchart LR
   T -. dependency readiness .-> W
 ```
 
-## Reproduce
+## Reproduce the historical microbenchmark
 
 Build LPN using the root README, and install NumPy in the environment for the
 pinned FeSens checkout described in [README.md](README.md). Verilator and model
@@ -56,7 +69,7 @@ resource reserves and MACs per DSP. Every report separates hardware cycles,
 assumed-clock hardware seconds and simulator wall time. Reports include source
 and compiler hashes; output directories should be separate for each study.
 
-For a **complete 1,024-input + 8-output** workload, use the resumable sequence
+For the **historical token-by-token 1,024-input + 8-output microbenchmark**, use the resumable sequence
 runner. It compares the original architecture with both 32-row and 64-row
 narrow-array candidates at every position:
 
@@ -184,7 +197,7 @@ The evolved 24-step simulation took about
 host times exclude the architecture sweep, baseline comparisons and Python
 startup. No matrix arithmetic or weight loading occurred.
 
-## Complete 1,024-input + 8-output workload
+## Historical token-by-token 1,024-input + 8-output microbenchmark
 
 The full prescribed sequence completed: **1,032 positions and 3,096 native LPN
 simulations**, including all three architectures at every position. All had zero

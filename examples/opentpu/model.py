@@ -68,6 +68,32 @@ class SystolicArray:
     self.spec = timing
 
 
+VECTOR_DRAIN_RANK=100
+
+
+def vector_rank(ins,I):
+  """RTL n_slots ordering; reductions additionally require an empty pipeline."""
+  function=(ins.w[5]>>16)&255
+  if function in I.REDUCE:
+    return VECTOR_DRAIN_RANK
+  return {I.V_ADD:1,I.V_SUB:1,I.V_RSUB:1,I.V_MUL:1,I.V_OUTER:1,
+          I.V_EXP2:9,I.V_EXP2SUB:9,I.V_RECIP:6,I.V_RSQRT:10,I.V_LOG2:10}.get(function,0)
+
+
+class VectorPipeline:
+  """Track live VOPs: reductions drain, shorter tap paths wait for longer ones."""
+  def __init__(self,net,prefix):
+    self.state=state=net.place(prefix+'_state',initial_tokens=1)
+    self.completed=completed=net.place(prefix+'_completed')
+
+    @net.transition(prefix+'_retire')
+    def retire():
+      guard(count(completed)>0)
+      take(completed)
+      token=take(state)
+      emit(state,token.set('live',token.get('live')-1))
+
+
 class OpenTPU:
   supports_multiple_matrix_engines = False
 
@@ -115,25 +141,22 @@ class OpenTPU:
         packet_sizes.append(chunks*batch)
     array = SystolicArray(net,prefix+"_mxu",t,max(packet_sizes))
     units = [net.place(prefix+f"_unit_{u}",initial_tokens=1) for u in range(5)]
+    vector = VectorPipeline(net,prefix+'_vpu')
     window = net.place(prefix+"_window",initial_tokens=t.window)
     order = [net.place(prefix+f"_order_{i}",initial_tokens=int(i==0)) for i in range(len(commands)+1)]
     dispatched = [net.place(prefix+f"_dispatched_{i}") for i in range(len(commands))]
     done = [net.place(prefix+f"_done_{i}") for i in range(len(commands))]
     compute_order,prefetch_order,register_barrier = None,None,None
-    last_unit = {}
     for idx,command in enumerate(commands):
       ins,fp = command.instruction,command.footprint
       unit = W.UNIT.get(ins.op,-1)
       predecessors = [j for j,c in enumerate(commands[:idx])
-          if W.conflict(fp,c.footprint) and (unit!=W.UNIT.get(c.instruction.op,-2) or unit==W.U_VPU)]
+          if W.conflict(fp,c.footprint) and
+          (unit!=W.U_MXU or W.UNIT.get(c.instruction.op,-2)!=W.U_MXU)]
       # HALT drains all units, including independent work without memory conflicts.
       if ins.op==I.HALT:
         predecessors = list(range(idx))
       dependencies = [done[j] for j in predecessors]
-      if unit>=0 and unit not in (W.U_MXU,W.U_VPU) and unit in last_unit:
-        dependencies.append(last_unit[unit])
-      if unit>=0:
-        last_unit[unit] = done[idx]
       self._dispatch(prefix,idx,ins,order,dispatched,window,I,register_barrier)
       if ins.op==I.RLD:
         register_barrier = done[idx]
@@ -144,7 +167,7 @@ class OpenTPU:
             window,memory,array,dependencies,dram_deps,compute_order,prefetch_order)
       elif unit>=0:
         self._simple(prefix,idx,ins,dispatched[idx],done[idx],window,
-                     units[unit],memory,dependencies,I)
+                     units[unit],memory,dependencies,I,vector if unit==W.U_VPU else None)
       else:
         trigger,result = dispatched[idx],done[idx]
 
@@ -212,7 +235,12 @@ class OpenTPU:
       if function==I.V_OUTER:
         latency += max(2,ceil(cols/cfg.LANES))
       if function in I.REDUCE:
-        latency += rows*(64//cfg.LANES+12)
+        # The RTL folding tree streams rows and drains once per instruction.
+        if function in (I.V_RSUM,I.V_RSSQ,I.V_RDOT):
+          latency = rows*ceil(cols/64)*(64//cfg.LANES)+12
+        latency += 64//cfg.LANES+12
+        if function==I.V_RDOT and rows<=256:
+          latency += ceil(rows/cfg.LANES)
       port,service = None,0
     elif ins.op==I.RLD:
       latency,port,service = 4,None,0
@@ -225,9 +253,26 @@ class OpenTPU:
       raise ValueError(f"unsupported timing opcode {ins.op:#x}")
     return latency,port,service
 
-  def _simple(self,prefix,idx,ins,trigger,result,window,unit,memory,deps,I):
+  def _vector_interval(self,ins,I):
+    rows,cols=ins.w[3]&65535,ins.w[3]>>16
+    function=(ins.w[5]>>16)&255
+    lanes=self.workload.config.LANES
+    if lanes==8 and vector_rank(ins,I)>1:
+      # COMP8 has three shared stages and a 25-cycle recirculation loop.
+      # This is its aggregate issue bandwidth; return-slot collisions are
+      # approximated rather than advancing one simulator event per clock.
+      passes={I.V_EXP2:3,I.V_EXP2SUB:3,I.V_RECIP:2,I.V_RSQRT:4,I.V_LOG2:4}[function]
+      return rows*ceil(cols/lanes)*passes+2
+    if vector_rank(ins,I)>1:
+      lanes=max(1,lanes//4)
+    return rows*ceil(cols/lanes)+2+(max(2,ceil(cols/self.workload.config.LANES))
+        if function==I.V_OUTER else 0)
+
+  def _simple(self,prefix,idx,ins,trigger,result,window,unit,memory,deps,I,vector=None):
     net = self.net
     latency,port,service = self._simple_timing(ins,memory,I)
+    rank=vector_rank(ins,I) if vector is not None else 0
+    interval=(self._vector_interval(ins,I) if vector is not None and rank<VECTOR_DRAIN_RANK else latency)
 
     @net.transition(prefix+f"_execute_{idx}")
     def execute():
@@ -237,9 +282,19 @@ class OpenTPU:
         guard(count(dep)>0)
       if port is not None:
         guard(count(port)>0)
+      if vector is not None:
+        state=peek(vector.state)
+        if rank==VECTOR_DRAIN_RANK:
+          guard(state.get('live')==0)
+        else:
+          guard(select(state.get('live')==0,True,state.get('rank')<=rank,typ='i1'))
       take(trigger)
       credit = take(unit)
-      emit(unit,credit,delay=float(latency))
+      emit(unit,credit,delay=float(interval))
+      if vector is not None:
+        state=take(vector.state)
+        emit(vector.state,state.set('live',state.get('live')+1).set('rank',rank))
+        emit(vector.completed,create(),delay=float(latency))
       if port is not None:
         bus = take(port)
         emit(port,bus,delay=float(service))

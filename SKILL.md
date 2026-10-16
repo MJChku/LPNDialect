@@ -80,7 +80,17 @@ The new Timing knobs default to the original RTL behavior. Preserve shared
 memory contention, scale readiness, output-bank limits and dependencies when
 adding parallel lanes. Whole-image addresses above 4 GiB require a different
 mapping; do not silently wrap addresses for a larger model.
-For complete prescribed-length sequences, use `examples.opentpu.sequence_timing`.
+Correction: the existing FPGA sweeps and sequence runner use a historical custom
+token-by-token prefill stream, including logits at every prompt position. They
+are microbenchmarks, not normal inference results; do not quote their 11x/8.23x
+cycle reductions as inference gains. LPN must model hardware only. Inference
+batching/tiling/decode choices belong to the upstream runner/compiler. Use
+`examples.opentpu.standard_inference` for the unmodified `Engine.generate()`
+entrypoint shared by planning and real ISA/LPN/Verilator validation. Planning
+uses explicit numerical placeholders; actual validation uses real weights and
+checks identical inputs/device memories. Architecture experiments must consume
+the resulting commands rather than inventing their own inference schedule.
+For historical token-by-token microbenchmarks only, use `examples.opentpu.sequence_timing`.
 It compares original/32-row/64-row architectures across every position without
 weights. Independent HALT-drained kernels run in separate host processes; the
 LPN scheduler remains sequential and hardware sequence cycles are summed.
@@ -197,8 +207,15 @@ and numerical memory state against RTL after changing those assumptions.
 Report cycles/second, core wall medians, and preparation/compilation costs
 separately. Do not extrapolate kernel accuracy to whole Llama inference.
 
-Use `examples.opentpu.e2e` for real trained-model generation with persistent
-KV state and per-token RTL checks. Follow the pinned public-checkpoint command
+Use `examples.opentpu.standard_inference` for normal upstream inference.
+`Engine.generate()` owns batched prompt prefill and autoregressive decode;
+both RTL and LPN receive its programs and persistent device state. The backend
+adapter must not decide inference batching, tiling, or token order. The small
+synthetic numerical fixture is not full-checkpoint accuracy validation.
+
+To reproduce the historical custom token loop, `examples.opentpu.e2e` retains
+real trained-model numerical execution with persistent KV state and per-step RTL
+checks. Follow the pinned public-checkpoint command
 in the openTPU README; install its additional CPU Torch/safetensors/tokenizer
 dependencies. `--max-steps 3` provides a bring-up checkpoint and `--resume`
 continues with identical sources/configuration and verified snapshot hashes.

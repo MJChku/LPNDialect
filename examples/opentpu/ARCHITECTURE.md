@@ -3,6 +3,9 @@
 The functional prepass resolves the instruction stream, values, effective
 addresses and memory footprints. LPN components then consume commands and
 resource tokens to determine timing. No RTL timestamps drive the simulation.
+The upstream inference runner and compiler own batching, prefill/decode scheduling
+and tiling. `standard_inference.py` observes their unmodified `Engine.generate()`
+path; LPN receives the resulting hardware commands.
 
 `compact.py` connects the command window and completion tracker to the
 components in `components.py`. Each `ExecutionUnit` owns its availability
@@ -50,7 +53,18 @@ TMEM and ACT footprints, plus barriers and HALT drain. With multiple matrix
 engines, MM-to-MM conflicts become explicit completion dependencies because
 engine-local FIFO order cannot synchronize separate engines. The single-engine
 RTL model relies on its in-order matrix pipeline for same-engine hazards.
-Other units retain their existing ordering and timing contracts.
+DMA and quantizer commands wait for actual memory dependencies and unit credits;
+an independent younger ready command can execute while an older command waits
+for another component. Artificial same-unit completion chains would prevent
+that RTL behavior.
+
+The vector component returns its issue credit separately from result completion.
+It counts live instructions and records the last pipeline tap rank, following
+RTL's rule: a shorter elementwise path waits for longer live paths, and a
+reduction drains the pipeline. Reduction rows stream through one folding tree
+and pay its drain once per instruction. COMP8 uses aggregate recirculation
+bandwidth rather than one event per cycle; exact return-slot collisions remain
+an approximation. Shared memory footprints continue to gate data hazards.
 
 ## Run the same stream with a different engine count
 
@@ -70,16 +84,19 @@ resource changes. Existing Verilator measurements validate one engine only.
 
 `model.statistics()` reports declared places and transitions, separately from
 the number of executed instructions. For the saved 5,811-instruction SmolLM2
-prefill step, the original net had 14 transitions and 186 places. The refactor
-has 14 transitions and 151 places: 91 completion-flag banks, 32 command slots,
+legacy token-loop step, the original net had 14 transitions and 186 places. The original refactor
+had 14 transitions and 151 places: 91 completion-flag banks, 32 command slots,
 and 28 remaining queue/resource/control places. A second engine adds three
 transitions and six places, giving 17 transitions and 157 places for that trace.
 Counts grow with slice count, command-window size and completion-flag banks.
+The current vector pipeline adds one retirement transition and two state/queue
+places per slice: that stream now has 15 transitions and 153 places with one
+matrix engine.
 
 The optional [reusable timing interface](NATIVE_INTERFACE.md) fixes a command
 capacity instead of sizing flags for one stream. With capacity 8192, one
-engine uses 15 transitions and 190 places: 129 flag banks, 32 command slots,
-and 29 other places. Its extra transition/place initializes buffer credits
+engine now uses 16 transitions and 192 places: 129 flag banks, 32 command slots,
+and 31 other places. Its extra initialization transition/place initializes buffer credits
 from runtime metadata once per simulation. This extra capacity allows changing
 command counts without recompiling.
 

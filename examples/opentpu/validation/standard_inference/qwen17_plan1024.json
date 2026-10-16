@@ -1,0 +1,5142 @@
+{
+  "status": "complete",
+  "mode": "plan",
+  "entrypoint": "opentpu.llm.qwen3.Engine.generate",
+  "scheduling": "Unmodified upstream prefill_chunks/fit_chunk and autoregressive decode; default PREFILL_ROWS. Host compile pipeline disabled; resident device decode disabled.",
+  "scope": "Weight-free fixed-token placeholders; no text, logits, EOS or RTL accuracy claim.",
+  "source_sha256": "cecf7f899c522682682c724f1672b5d7a1492fa5c9f7c9013dcc3ae7fde16ca6",
+  "model": {
+    "hidden": 2048,
+    "layers": 28,
+    "n_q": 16,
+    "n_kv": 8,
+    "head_dim": 128,
+    "ffn": 6144,
+    "vocab": 151936,
+    "eps": 1e-06,
+    "theta": 1000000.0,
+    "tied": true,
+    "bos": 151643,
+    "eos": [
+      151645,
+      151643
+    ],
+    "qk_norm": true,
+    "qk_smooth": true,
+    "nope": [],
+    "rotary": 0,
+    "rope_div": [],
+    "rope_scale": 1.0,
+    "ctx": 0,
+    "embed": "f32",
+    "formats": "",
+    "mix": ""
+  },
+  "config": {
+    "S": 1,
+    "D": 128,
+    "MCOLS": 4,
+    "ACT_BLOCKS": 64,
+    "TMEM_WORDS": 65536,
+    "DRAM_BYTES": 2147483648,
+    "IMEM_WORDS": 32768,
+    "LANES": 8,
+    "PAIR": false,
+    "DSTEP": false,
+    "STREAM": false,
+    "ACT_ROWS": 16,
+    "SEQ_WC": false
+  },
+  "model_directory": null,
+  "prompt_ids": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "prompt_tokens": 1024,
+  "requested_output_tokens": 8,
+  "returned_output_tokens": 8,
+  "final_position": 1032,
+  "engine_default_rows": 8,
+  "host_seconds": 207.22851547412574,
+  "kernels": [
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 0,
+      "position_before": 0,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "ecf39f5815c33db84b3fe581c2eb61873e3cf42494daec58bc538d003a2bf0fd"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 1,
+      "position_before": 4,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "3199cc20932cfeaeeed0eebdf0f5b603cdb6c4360155ea9d957ea3148825589d"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 2,
+      "position_before": 8,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "9e573838ca569e15bc9f140f387934604019c7fb449e985ee92f39bc04bda709"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 3,
+      "position_before": 12,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "3713f58255c7ad56582e7854ba1db423aaf02be911dc20541cda0ed91d2f22a8"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 4,
+      "position_before": 16,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "6d8898d4cff6fa5d51204c75c67b2118b8ff1464c8fd448bf768ed6e341a886b"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 5,
+      "position_before": 20,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "4ca5b3206c20f1d7b6218ff45d5b28680888a887add6b23ebaae3f60d6ae648e"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 6,
+      "position_before": 24,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "ceb47dccca748ec9216eb4286305a7016ab05a1abcfefda16fed7f45b5e3bbcd"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 7,
+      "position_before": 28,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "1824f04d6f0986e5a49c05d60d2a9f0063367426d50ad43c6999b86650d89970"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 8,
+      "position_before": 32,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "da7155551258b1908fcbc3ada3a4d46703fda2e8c8cad2a175acc4a9a9b63fca"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 9,
+      "position_before": 36,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "5712372b686d8f7734f4f0b182aeb5667f68ba3bd3d8fb681c5f0b33dc6c7bd2"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 10,
+      "position_before": 40,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "4042783f68ea66289a5a27c4f62b71f9a6b0cec5a901e1f23d77a7ba04438d46"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 11,
+      "position_before": 44,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "53e5e4d1cfb9d1adfe15b1402cfc4eb593c3d778e11bf6036a342d4f29cb1c76"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 12,
+      "position_before": 48,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "07b6bd6aff4f2fdff0f485a8e606f3c6885cfd47415bc0e71fd7b47cccfdf577"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 13,
+      "position_before": 52,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "65463dfb4a248bdd578321a9d62b199a8ba5c22b1d741b1211f489ad000d6a88"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 14,
+      "position_before": 56,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "c69eec2c21c7772c2ff1d7a23ad7ee9fb7ad5703e6c8d911ed7e3025d8d206fd"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 15,
+      "position_before": 60,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "8dad103e2fcfc56d2aa765cd1e1c16c7707150e7245f63512992a2815e7dbdf2"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 16,
+      "position_before": 64,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "2aa2faee33d8f690c6cbfad5234047b14ee8c105125b6a86e5a04271a4a57c87"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 17,
+      "position_before": 68,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "2b3647715ef5ce21517a201cade6758c2156e630682777224255bd3409181dc5"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 18,
+      "position_before": 72,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "3413a21e11adba7b2051a05e2fdf257c3f6c956bdaf9ffcf28ed38473c437918"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 19,
+      "position_before": 76,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "1bc9fdfb5099598469a52c61448f19b9b7f39659d443d208f55af08152461a53"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 20,
+      "position_before": 80,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "e2e2e8f74e9573974b3ae10f5156201a4e97c8a1b5c5a830c8f7020ea99fb690"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 21,
+      "position_before": 84,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "81308bbe836c0cfe84f337f5b5eeb800d19756c2dbe84514911a52ace5ad43d7"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 22,
+      "position_before": 88,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "f6136192d90a0c5a2e025e8e34938f57f4b985f39c2c516a8c732b7f4ab279a1"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 23,
+      "position_before": 92,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "ba7d925ffb5537609054c65322d06155cd47c35b68826861204f163d4bf5879e"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 24,
+      "position_before": 96,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "bee16fece734c48032bb87aeade2d44e6f77a3be3330bccf7620c72f52e8d8da"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 25,
+      "position_before": 100,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "27a054712ac1b8f4e873a2a9ea5aba32ccb31d0c7e43a8cce8295c476d0d0cfb"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 26,
+      "position_before": 104,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "ea27e287ad9e6e0a841f0c4b6457f7a553cdbafa6bb6332f50e1a219538b605a"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 27,
+      "position_before": 108,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "04a735133d0f2af687429436c033f96832015567af9cd0a827a6c1f3b64a5882"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 28,
+      "position_before": 112,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "0d65d18a17489eaa441ad0adb2e3ae3bd2434ab406cfe537fb551e63e6e1e182"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 29,
+      "position_before": 116,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "07cc4c70e0542e85aa67dccb0eaef7a97ff41b17897c7a5eca78666ea8bf6727"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 30,
+      "position_before": 120,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "fe753946984321ecc9c2b8218495ae69e23c9e0e15db2f74531f33cebd189d8d"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        24815
+      ],
+      "kernel_index": 31,
+      "position_before": 124,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "5a13840a2ae3d17427cede8be96621aaf6b12b3e8aa474622dd1db4d6d72db89"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 32,
+      "position_before": 128,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "2c7ce9809e36731eac4d0648d7ff98b2c4b08bed3d21994d79495fab986153ce"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 33,
+      "position_before": 132,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "b8146a587deece91d3c8ac9b12643161fbb57baa7e1a0086e7c525482ebe47f0"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 34,
+      "position_before": 136,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "1b5146a057198fd2653ae2c45efd50bdd1c27ad3e5f45f98f7f2cb8686eb529e"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 35,
+      "position_before": 140,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "51d79113fa1e15a020cea619103aee45099e6c7658f7fbd7b4d91a28818d1c36"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 36,
+      "position_before": 144,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "c3f1eec71b4a92b1aa1596404b6ba773e794bc578ea30b86ed2d20651cabfeeb"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 37,
+      "position_before": 148,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "3096b6047d8e4654bb4c547ded24fbd89f5565291e59018e19472079f08b2e46"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 38,
+      "position_before": 152,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "9a6965475a7d7cf2f0f28ea70e26da569f9f69ca4b90632c55b388414f4393bd"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 39,
+      "position_before": 156,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "2872d368d4817b90cc6d9e2544499ee12c0f187afe8419c97f1109675882f7e6"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 40,
+      "position_before": 160,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "83c635eb2424869d7445af9b1ddd38e95c2a992663ed3772b1d18b1079f7a581"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 41,
+      "position_before": 164,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "00f934f8289a1fd8b2e33f0fdfb4daf058560acf63069804d7ee84fdcff8c6ee"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 42,
+      "position_before": 168,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "ff99a2fd5c64f6001ad5f7e8bef00c68ed8125cc604020b6332c520bf009667a"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 43,
+      "position_before": 172,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "38c992294d7da2e944c1f193064b0441af4d25a79c30e44d0fd49f29c5d79659"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 44,
+      "position_before": 176,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "75d6bec8ddc60c83606e3423e01fdf1c2c51b71457938431e665faa37079b582"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 45,
+      "position_before": 180,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "5f5e42540d2afd8409689f2df9c7c8d74c91638cf645d4d87f5dbaf8ed0eac4e"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 46,
+      "position_before": 184,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "b5d7cdeda16ba8bd72f9cdd60dfd6369430ba7fba40e00297b8a456d2f6e5a11"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 47,
+      "position_before": 188,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "06f025769b229aadc57d785bff82167f9a5a77ed4ea41bb3f98b4629530f393d"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 48,
+      "position_before": 192,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "8e0b3d258f9c01001d3665947447780bb1a37846fafd57e5332696f94f6c1fcc"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 49,
+      "position_before": 196,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "503a72a6fa002b98b5745f3c37fcbb9dc6f543c5782f90792f33f387b3900529"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 50,
+      "position_before": 200,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "7dab9ee8be172961fdee1d641d305f23a53d62042710447bbe96aa3454329ea3"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 51,
+      "position_before": 204,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "abc68efb2d57c8c35fd74f24d6865ee5ec3241d9bb140d5b2328ec0eeb7404fb"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 52,
+      "position_before": 208,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "9e513b4da5fe2e5f31e82cc53365825a02d51a550f31fbd8232e7f41ae730ddd"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 53,
+      "position_before": 212,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "e07b55def63b5862c8835cccd9e33962a0ec411c6d0dbc1cb3fb7016faef39b8"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 54,
+      "position_before": 216,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "3b7dc54d39f383b73c15be47668160ae7886d04747f8a81c2b52dc92b300d82b"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 55,
+      "position_before": 220,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "321cd814eb137be2de77812b6d6e9deaee305d392304d0b2a2a861603fae2d8e"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 56,
+      "position_before": 224,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "8dd7675d4d4f38aa23bc276b38d8bf677ead295f8f145be097b83d8976eb7a30"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 57,
+      "position_before": 228,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "8feafaeed161c4a68c33e35cbe4ec2f1697a8e653ce58b623c3c88be4b957e72"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 58,
+      "position_before": 232,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "3b771571391d68588da8cd84b8be1905bfd4578bde6124081c42b28ffec60071"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 59,
+      "position_before": 236,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "1b485e1ed62c1db6b318ad4f76ad796ccd8d7af79aad29d380a05246327595d6"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 60,
+      "position_before": 240,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "519ea95b9656d14a7ba35eaba0596b801a78b12ac7fd39cb80ee6ae7bafff9ae"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 61,
+      "position_before": 244,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "f117dd49a794491cdaa5efcc0705bb274ae5b0984431489b9a0fd45010daf567"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        25263
+      ],
+      "kernel_index": 62,
+      "position_before": 248,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "8355768078f77bd13fa1bf363763ace1746b9936f27a7d939db982d1723d095e"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        24815
+      ],
+      "kernel_index": 63,
+      "position_before": 252,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "0461e8cccf07815d414c3ecbdc551cce6e8f672795007e51cb410aeaa559a97b"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 64,
+      "position_before": 256,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "7bcf8222b9b83ea6124f6a3b364f4da6af7fc06cd5df063382b058d81a7e0a2c"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 65,
+      "position_before": 260,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "3a2513a5ee3fd25385531988e8e814d41b6a05c47c382e97d917355ea488dc59"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 66,
+      "position_before": 264,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "88cad79daae9882b0fb787cef544e8887cb47ff6050060ae534441e92ccb18ce"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 67,
+      "position_before": 268,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "ab23c184153218f1e90ef1a435cbc5899c278e0181a98e6f80cf6e3f4b261a8f"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 68,
+      "position_before": 272,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "91329aa315f629f2b747f0d9b823316d05a46c7aed7fe96da926485bdf8e0a09"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 69,
+      "position_before": 276,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "b062ed123804478ff318ca55b55657a4b5ea7f95c03d39a59e4c5bdfb9e8dce3"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 70,
+      "position_before": 280,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "d365523c8a1528838e697571221d5db96358db7d15d0038776e1831aa8574eef"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 71,
+      "position_before": 284,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "cc5040aec707410d39177ed6e9ac954a540c043ce1bb870ff00c438ab41880bd"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 72,
+      "position_before": 288,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "70133dd489b4a332608b57a1adee492f9bb09dd48868a6a3606baa6cc119e9cf"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 73,
+      "position_before": 292,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "b1565dcfd9f665f3b7814264bcae7776494ecd5734c9c7c1ca71df26538814d2"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 74,
+      "position_before": 296,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "fe6210c0e2a23173ca5a63410f00a128d26e2ebc721ce6f90c873b4d505d3041"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 75,
+      "position_before": 300,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "46b5141fefde383dc34dfb94278a52defc568ef92703b5ee272b955327929933"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 76,
+      "position_before": 304,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "7842e8b9cfd61da14d690de4659ed898e0b56accd9cc564ccc62f40a19803c50"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 77,
+      "position_before": 308,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "75040ed3df4a28c8cdef851b77abd03a56ed2d915aab6980fce3ef5d556a6404"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 78,
+      "position_before": 312,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "16586cd1371029e397449cc193d0f17eeba5dd54684f6c7d22e0a3f1370fe810"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 79,
+      "position_before": 316,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "65b9020b229b5547a5d912aa15cace99e96eee33838e5ee7fa8ddc6c3896a866"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 80,
+      "position_before": 320,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "babc59dad3ce26cc13e95f53e6b2e4e856961d2ff686934de6adc4c069a8a23a"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 81,
+      "position_before": 324,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "7fd7b3a60f9ec455935cab7380673074daac43b01d67ff467b5ce1562061f2a0"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 82,
+      "position_before": 328,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "575f53dac3806b932711d617cee8d09ac71dfc2ddad7d31508599123b57bfa51"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 83,
+      "position_before": 332,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "642afa3042b934b0270cbd058c441ce5c0e8ea6327f17b697ef45a260b2e8842"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 84,
+      "position_before": 336,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "7bd50b65ac8b437f2648783c1e6866831e966cc639a5cf581d2203c6a644fc4f"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 85,
+      "position_before": 340,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "b71579191e39226ac3fab7b73d585c0d881eb5b1905f88fe3ebf4f2b09c7ffac"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 86,
+      "position_before": 344,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "458720e6b36f007c834c202c23ae76a298ecc889cbcfa227f1e1892f550bce11"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 87,
+      "position_before": 348,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "96bf394ec541a532e82354ec377ef98248d2c36f3bf7e1ef87f615c5bede7b2d"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 88,
+      "position_before": 352,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "9218ef0574f83959b1fe7a9cce640624f86ecb124d9596bd8b0652ce4776d68e"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 89,
+      "position_before": 356,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "f3d0471c27d91ca603e6c4aa74790e7c84bd180f276eaaff396c925cdd7ad97c"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 90,
+      "position_before": 360,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "874006a675b450470009fa75e6e34aa63992f9c84880170d569a22b0ae7c19d4"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 91,
+      "position_before": 364,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "d389a95c40c7ec2bb87855f70669d910be21fc8bcd13981b47fa51b227e83941"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 92,
+      "position_before": 368,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "195b372646a8bcb1fb6bc60d67c58049aaf7461789b1869726dc60991d7f22d6"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 93,
+      "position_before": 372,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "79ca2a6d7ed4a66d836e66be3d5f381f4788a65fecb43d930f209163fe50e55d"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 94,
+      "position_before": 376,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "667d02764df3494cde540d8b9e43492f83b175f7efc363c084de7386c2b02352"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        34671
+      ],
+      "kernel_index": 95,
+      "position_before": 380,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "b5dc53f033ab0f7840531e6c67ecdba04cd507b63808390e87c4344f7088fdc2"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 96,
+      "position_before": 384,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "fdd33e7147729f575ff68c6f9cf41a374342c1f4f1dc2250b1ab480e659b6581"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 97,
+      "position_before": 388,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "ee4f2ff6315906e91036c48737fbe42669e4f4a20c40b139ef41776f6c7ff6bb"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 98,
+      "position_before": 392,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "28db83ab06ded000f2271c04cc5990960576770f660baa385ec66613eb1683a1"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 99,
+      "position_before": 396,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "584d6a4e73515b0016502299c3aa37499cf23cb481440e7a6838bb2ff26eaf12"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 100,
+      "position_before": 400,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "0a06936a354ba059d7a4f2bae47b34f2473cfc8ce92046e08962f8993f780ac0"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 101,
+      "position_before": 404,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "a4eb88fe5cfd0fce868889ba55e0fc046b5e9a928043bb6cf6f26bf39fd4b8f1"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 102,
+      "position_before": 408,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "cc907f8a27117b0ad731ecf55dcd39dbb62b974b7919c9c7a5c0beb1135b476f"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 103,
+      "position_before": 412,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "4a147693967eefbf773d1e7c2c72c771b01ebc1845b24c649df73f6537ae4bf3"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 104,
+      "position_before": 416,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "8bff06a4efbaa4bd4bbe2784ce15d59593e2024f02b8c36b6b78a7419e9cef21"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 105,
+      "position_before": 420,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "e41b2289e3cfbc54bcb514d23868cd6cc42e3d6187d50bed1bd811f96f07c581"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 106,
+      "position_before": 424,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "3f91de128799cd5308ae589922240cdb6da4a66e26a738664721da057fc149b4"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 107,
+      "position_before": 428,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "272f1344d8067b1087379bf779118f9f99216f3ebfaaaecd5d033806b2cbb6f5"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 108,
+      "position_before": 432,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "d22628dcac65099d4fcee85e706029f6affb89c1274275eca9da174aa1df58e0"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 109,
+      "position_before": 436,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "66fa5eedd390691cd1a314bfa39196a00b0e94b3549561b49533e191ea62c127"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 110,
+      "position_before": 440,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "c71571e9a14b2f876b47c6cc3e98f5db077f6ebfc762361eb4754797d2596d55"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 111,
+      "position_before": 444,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "6605212432618cf575b60544e40eb56f6d2ceea51df4d83841cd77906101606f"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 112,
+      "position_before": 448,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "929229aa2f6af32dc293ad8f99a99324a7f619ddd91f5d997e959f143eba8c0e"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 113,
+      "position_before": 452,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "cc0e6df2b433b24298193104bd0c9a48e3cc7380d8a718fadad406ee237bcd4c"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 114,
+      "position_before": 456,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "6922ee3e6f43209d43ad363f452fa46380d0b36c6977f0c7b811eb5c567ad3d9"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 115,
+      "position_before": 460,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "c4989955c13e6ed3fb1057b4f9c4e0d5ad434b9251eea52d8107076433c1bfeb"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 116,
+      "position_before": 464,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "259400002165128b0077999aefc5204efa35bac6af5a3df82712a3e55867f3d4"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 117,
+      "position_before": 468,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "38686758ade4864cf0191eba9793e59d4f41f9ca4e09444d016983868d8e5047"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 118,
+      "position_before": 472,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "abe636fb7ed13b8589a90536851307684bee383fcb31623990086b415a9eec2d"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 119,
+      "position_before": 476,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "fac22a60ae0da7621947ad21c46f52e29971b9d354dca3c596c2a00a2ae319ed"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 120,
+      "position_before": 480,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "24a4f6aa2accc56ac4d8b60ec57c90dd739fd5a91c050c4799d8a71281ee9005"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 121,
+      "position_before": 484,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "53e9143520720014b5ac670fb795ce0761d9aa7f58f282ee8e895812a069d15e"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 122,
+      "position_before": 488,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "dce7d34d59a54656ccf7c6a47b7bfe193f1e43fcb176202caeabe07288460235"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 123,
+      "position_before": 492,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "2820478edc4b278b390127adb5d1daf109f2e12e8b980e63a756b6f4310a3fe8"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 124,
+      "position_before": 496,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "92d33cfee3b1a58716880097c82693b5eea2146311130e5d18045a9c5ced093a"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 125,
+      "position_before": 500,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "81b60e5e11c94528a96e0246a01c5f7dd7e06ed29fb11f0c64df244f13447a01"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        35119
+      ],
+      "kernel_index": 126,
+      "position_before": 504,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "63796a1451b69b0517da767c4cbf008c729a8414d8378d9b6044eb88d85eab65"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        34671
+      ],
+      "kernel_index": 127,
+      "position_before": 508,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "32cef92b8f39c5c2fbb74d06abb79046795e7ad78ae809bf0e884ceb2c3c195c"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 128,
+      "position_before": 512,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "ab719d989311cb65c4b5cbb4266d393b68eed32fb36d92a5610369e0ee055d08"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 129,
+      "position_before": 516,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "f68a659dcee39b64c0826e0536c624eff10ce458a1cefd6b034a7f9d36464c02"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 130,
+      "position_before": 520,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "3e5532e1246b80a04bb4459f2c6a0089715b0536f2f8eb7e5bde98a6691e738e"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 131,
+      "position_before": 524,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "e3d9bd4044c25d05ea362ed314c3fae7cc1dfa90f2245804ede43aa566736157"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 132,
+      "position_before": 528,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "d4c66dcb2fd8838544aaeef7776caa185702d9053e661bc253aabafaa53a70b1"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 133,
+      "position_before": 532,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "6254ec86b7e6587f7638d17e5dc6c3616190786a76242e0c34c9c4bd89f658e1"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 134,
+      "position_before": 536,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "e2ee545434f3abee08f4fc721abdc090af8a3b4e802ecff9a0f1050bfa4b9f20"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 135,
+      "position_before": 540,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "f468da8ea377f4548787621fbe9e6b4143ed0fd59ddf00e2d6688116b084d96e"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 136,
+      "position_before": 544,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "aae413bd32aa3014ff6e519257c572d7ee869a1afd554351f5eb32cd7c8fe838"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 137,
+      "position_before": 548,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "e62798ca175abf709e81f01b05add54f562f365405959230125b0f75ce2ffb66"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 138,
+      "position_before": 552,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "f2234ce4942f43993328b8129298c49939cc082f4796547174f97f34a25ac5fb"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 139,
+      "position_before": 556,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "8de2d3363b1147fbb5388cfd14952c5c02b858a3e1bb81d6201563051614986f"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 140,
+      "position_before": 560,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "09852d7d376d12d16625fdd4707093424ee1a02c73eb540738bed950f00012fc"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 141,
+      "position_before": 564,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "60c9bb0ec95d6e42e78aaa645f016a6210dc7694627b01d7a7694509cf87f3d8"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 142,
+      "position_before": 568,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "410c4e82ada40858caf72cf1f963fcafb3676929277b65758efa57fd426d6596"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 143,
+      "position_before": 572,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "adc104d1cbc432f37141bd3b6e7466f0eebb49bac0544545ca41011c3ad4a7b6"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 144,
+      "position_before": 576,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "b36a95bcec5068dfc58bc86085ef8a752972d51d9bae7240953187c180f229d5"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 145,
+      "position_before": 580,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "3f55c96748474ba9988bca9ceb7a865b8fd3b49a71983a7f21686f1ef66e97cd"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 146,
+      "position_before": 584,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "e6411fa10679fc39fa6d783e73728067138d36b8c1a161e702de11dacfddf734"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 147,
+      "position_before": 588,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "f1da60a1221d948cf293f56d9fb13041c72b9b84517f5f7d323a0d6f843d03b0"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 148,
+      "position_before": 592,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "721a76e5c9dff39d9987d4c1a613c433df56f2539aa686ede04ba4886c9f1e75"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 149,
+      "position_before": 596,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "4a8fcaf9ca6b0e0b00c43f609b738a50564c1d5876df1aad3b9f449202fa2517"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 150,
+      "position_before": 600,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "b1af014abd3fb8629f54d3be1ed9ec0de66d691dbe061d9525310a002df61225"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 151,
+      "position_before": 604,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "6e7a62d930c3326ba2db66c24624ae065964f7d6a8779084d055a2752c92cbef"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 152,
+      "position_before": 608,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "f8352f3f4c2477c01f2c4731ebfb7fca0dd43cab36020585da950c69a4bd4682"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 153,
+      "position_before": 612,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "7093a5f01835c6089d91784d87a9b3fce12152809fd89ea2f99a05bef934be9b"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 154,
+      "position_before": 616,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "68edafcec8543dd9480cec79782a7e84c341e041b2a0337f246dfaabbd961306"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 155,
+      "position_before": 620,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "175d872891210a8c2a75efc66eb0fa479cce1558b8000a967e5beefae84f498e"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 156,
+      "position_before": 624,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "400db5f24c4e5ce9ba6f941695ef469042435d74f6d28df10db058596a298a20"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 157,
+      "position_before": 628,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "50eddd00c26809219ef8f03eb5d4b1046598902dfa2372ad70c94f60736c33bb"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 158,
+      "position_before": 632,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "58589b8047594853bbedf2fe474bedca0854f9440c106361037a9b33df071a2c"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44527
+      ],
+      "kernel_index": 159,
+      "position_before": 636,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "95a3974851d47b67158034f489f6cda1a2fe61e4c28c1518c29e819e4cdfc010"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 160,
+      "position_before": 640,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "7fabee47cc1cada023b75f443a7bfdaec733550add6b5861166c36a41e6f1e82"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 161,
+      "position_before": 644,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "bbd4881ebb95cd2808e4b0a4d60403d9f70880dd996c15c095ec266a8b04de6f"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 162,
+      "position_before": 648,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "cc5604116bff27f66699b694fb64a7e402efa1f860bf64a66e3368db16d73182"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 163,
+      "position_before": 652,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "5e10c4a1aa2224c933a5b319350c93585b96e02f62557b9885e0b4efdba80dc4"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 164,
+      "position_before": 656,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "cb0aaaaedf7ccb83958c36ede8f2005a6b26e3998a23da67e46b8448191e214a"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 165,
+      "position_before": 660,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "437382d362a046b2147fa9ac7347b1c618ea9b85338016ed8e58b369c839fc2e"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 166,
+      "position_before": 664,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "45d2813728dc675d8c00aaf101b1dec11bb3337b2caaa888015f70f70f2db040"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 167,
+      "position_before": 668,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "0fb147117a4f4b02bb76465c746c44ef28b4c5e6448c9619023fc5312aec969d"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 168,
+      "position_before": 672,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "0dc34cd9847faa731adec1548e7f4214fbb395798d92dbb7a8f0dc6aeb77cc86"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 169,
+      "position_before": 676,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "b131a074d65beee2caed5df758ef9f33f4ef7d5f2f92797383b3b0b4bfeb42ff"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 170,
+      "position_before": 680,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "fb8742f748f7c96b4f869421b54ef0e9f0aa251942c9f3a40a99bd3c6509a374"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 171,
+      "position_before": 684,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "6873dcf8c62ee3aa8b73fda17b879643bc7c4943d9c003a14a94dd702ed80fc4"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 172,
+      "position_before": 688,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "bffa07fb79089799928cd02ae9c1215bde873ce797cc35868e384bfdf0a4a742"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 173,
+      "position_before": 692,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "774901c55d525a3bc0734894fbc56f6694ec9a3dd4f46917f88875956587dece"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 174,
+      "position_before": 696,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "7325f5585bc4f146cd0fe1c56796219e05b06f4d69b86091b68b4ffa599140de"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 175,
+      "position_before": 700,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "95e0e5298a949f6d77b421d405b8f3f15be8f624eccaeabedd7cc2859ddd7a49"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 176,
+      "position_before": 704,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "ccf03133fc352689cbc2304fb5cff525cba9988a31e9f874a5714be9e26ddfdc"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 177,
+      "position_before": 708,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "82a2b9da874972306ca849145bbf58e07bae51311e36e528b8282076defff094"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 178,
+      "position_before": 712,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "9f8b831c1acca1f591eb510562af2455aeacb57424021bb2e16d2673137a3ef3"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 179,
+      "position_before": 716,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "e84e45742393919bae70ca365dcadc93a97e18d0460695703c404bc5e454c07c"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 180,
+      "position_before": 720,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "ff213b4e014ce5808b0bb77ec191e59217922fb13b05ba345e18a91be50de59b"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 181,
+      "position_before": 724,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "3373cdca4194825b2fa6b88aa199ecd74008ffcf07ae6c201891a9577317c898"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 182,
+      "position_before": 728,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "f82c00a2e3d98835dd3cdc5119bf1e23a6d54698e9ec793a9335b0c3e45a7933"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 183,
+      "position_before": 732,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "2039c1a8ef055790f4f3d575026b26cd8d0721c200c89fbc9f955d8c30022848"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 184,
+      "position_before": 736,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "afa7b532eb47a7666b8e727e78bd918b8c0e3fb29b33ea0f91f26d04dfa21e5d"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 185,
+      "position_before": 740,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "0b3a92c27914c4d339eef57da0c91993583eb6f863f0395ca9d0916754e182fd"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 186,
+      "position_before": 744,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "c471fc2092b5e05e8a78fc9ce4f5bab024a55a79f9ba7954753a9cd69cc6a4ff"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 187,
+      "position_before": 748,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "f94d3b9f3dee5714b16b073476b5ee80b77fd5de639b5ea333133cbf9d14fd82"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 188,
+      "position_before": 752,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "c5e24ba73c2f968f6ff0b34bb341d63f7feaa5599382f16832c351075ad9b29b"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 189,
+      "position_before": 756,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "9d3393854ad254b165d67b65adf71f6ed948a7ad7c8c8e59a7fb1fbaec4edef7"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44975
+      ],
+      "kernel_index": 190,
+      "position_before": 760,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "ba458145760f975290583f898fb1fc80ddc2b7f060a4ecf0ed78e381923a2c4b"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        44527
+      ],
+      "kernel_index": 191,
+      "position_before": 764,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "545e0eac0e02e182c87ec318c87aae4fe145f9baf848bd88cdd88ab8b33c170d"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 192,
+      "position_before": 768,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "231bd8131ee034dfca8a673a3b4997c3c1e933d4c1138661a63154793c9f517a"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 193,
+      "position_before": 772,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "029fa382d7a060de7847bab47aec49729bd23b9af1e9610d2f6dc062f05263d3"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 194,
+      "position_before": 776,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "bb4bc401761faefa64fac504f640862baaf83567ebc15a380d610f0567d7c423"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 195,
+      "position_before": 780,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "4fe12b3f5f6d406e177110d174cfb329a0b09b520148557ef84612b6616f5141"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 196,
+      "position_before": 784,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "c906e57d2c5bdbfcdb912ba21aaef9a2c86a7c8f5e113dbb8c58ea7f66a3a8dc"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 197,
+      "position_before": 788,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "09ac313732eca0cf0f6467567eca58a71ab26c021f82f03f73afefc55dcb3408"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 198,
+      "position_before": 792,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "1833ec596ce1103dcbe29ea51bd97b13020bf95457547c6da9758644e458a954"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 199,
+      "position_before": 796,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "c0d1a919e026471266a0fef51f856696153adf4a9fe5cbd4356a5be111b1e6ac"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 200,
+      "position_before": 800,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "7ab9534f05b4bc0b51646c0d9069b80990b5a7d28c9860828da4d8193e8a95c8"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 201,
+      "position_before": 804,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "ccf6a11fd50d2c40d52974cd4a508981fce65d4677e3f0cd564d7472c8b868d8"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 202,
+      "position_before": 808,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "a73b9c5b1f57f4f42e65efc41870118884629b1e1a98486aa45b0b78872e291b"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 203,
+      "position_before": 812,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "d7e54fb90229eef622c1c5af786721619651ce74a8b1e9516f0b033b8004dd55"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 204,
+      "position_before": 816,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "33a9d18dfa3302ee05747c60a50b6d87d946744963ecf0bda2afa8d837c0fef7"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 205,
+      "position_before": 820,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "b01ecc7ca006022ded0be4f4bba1034c4a64e88e93539a09fc4d3711f0fca0df"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 206,
+      "position_before": 824,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "54e2e2447b6bd8715f41c6fc4ffeb4ec191999c612c86865d442abc684c1e193"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 207,
+      "position_before": 828,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "bace4c54a85e04b5abc941a0294f4ac0c6b42c31039456caa46953b26ea059ae"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 208,
+      "position_before": 832,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "7cf813c55596de1604653c1362042f78825d01cb892944effe60addd1f179184"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 209,
+      "position_before": 836,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "0f9ad78c38bc9fd5de0bf95d6e9c10ad6a97f105127d875a52debc75124d3ecb"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 210,
+      "position_before": 840,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "024d2107f3ee2a9498c1b498b6a8039973d5cf3fc51b5ffb8bb8bd16aeb137f7"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 211,
+      "position_before": 844,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "0da7ed9308a35ff17c042791671ce1cfa24a88c3fc4863721bb960174ea1958d"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 212,
+      "position_before": 848,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "126a7bed94545c09533f634fff0a4006c601ab3490de2bab50d55d6bdfce6aae"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 213,
+      "position_before": 852,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "f10352ce30aca3fce43cd6f80c2be41448996488408a312c94235be9c0e59898"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 214,
+      "position_before": 856,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "ea92886d35cf9fe0a1c8d7ef05282a6aa4820bf270f78d5140fe801d8d42dfe1"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 215,
+      "position_before": 860,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "09131223ae5107d61dbce81bd2e4a50d2aa16b3427137b08c8b91b6f153cae87"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 216,
+      "position_before": 864,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "91ba1f2b7d357efb90ce1357c18e61a7e2f1ea122d118847ffb11a3c5ca79c5a"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 217,
+      "position_before": 868,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "d5647de04f2e81768305bb9cbee591ef7f563e6877c9f23c4b922d481fe8abd0"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 218,
+      "position_before": 872,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "fa095ecd65f7ab9f37ea3f5b2a31af0ec45f6d8bae814e2fe512dd2a04764e75"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 219,
+      "position_before": 876,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "3ca35707c1383a906f6f6e5c0c198ef6fb5f936859b7146f70d6eb7b42d9bccd"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 220,
+      "position_before": 880,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "b7f484bbd3c58dc09dc2dc98b34fc1d50a3695af5ec54796c45c176ab7a11ada"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 221,
+      "position_before": 884,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "e33390d1270cc9cb103d4cb1d3ab30e137638bb0e4b1175188b19b348714ef7f"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 222,
+      "position_before": 888,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "85a4f3e5d8c19c6beccddd8aca9465727e3cb03e9d98da28c8c6545a95090074"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54383
+      ],
+      "kernel_index": 223,
+      "position_before": 892,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "f1739fc9c47155e47e9182f6fb342f455cb92ae62f6263091b5834a0df8474a8"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 224,
+      "position_before": 896,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "50b96815e154eec632643b282ceb6c7f112e8c5f56943145885a83a9ce4f092c"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 225,
+      "position_before": 900,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "fbbada0181b59d09e5f6c38dbaeb047cc55734b247fae4ad54f77f5d14d40a84"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 226,
+      "position_before": 904,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "f9647ad3433efba7e88ab62dd8bb15111adf3af244d1577e87ef0ef124b61493"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 227,
+      "position_before": 908,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "2f629268d3e67696085bea83e4e2975350c57f29c280236c60f69e4f1d68652a"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 228,
+      "position_before": 912,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "32fe052d016214a5d719d831b3fa66dcba68553d1472cb152c94fb92c8cb940f"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 229,
+      "position_before": 916,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "0db30e9e7dc03f62042efbb203d0b9ee57412597265914ed89363c4779a66fc7"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 230,
+      "position_before": 920,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "77c889f574201aa99fe321357e41063de951227bf98e19f2d69f42e93319ba27"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 231,
+      "position_before": 924,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "bc2196b1ec1dd21bb3e46d766bfeb539d535dedf7e0f27f6a4c7790d4df2c637"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 232,
+      "position_before": 928,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "0bc4f2faf0f5b8db387c99d6d2f88995952d0f8f7df9922d71e4cfde27283c09"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 233,
+      "position_before": 932,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "eb613289eba0c38d635b0d15923ec95d586fa38837bcd1b544db506795e68b3f"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 234,
+      "position_before": 936,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "b0b323d284da71dfc27eab2c5b4f35b6ee3b83d6bcc8e14cd22c5f3e83c7e757"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 235,
+      "position_before": 940,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "82de5e5860e834cace2e360d7179442161854b4c8d0d7c342e63da374ff6f73f"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 236,
+      "position_before": 944,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "d65a957f4609d0dd9168091dfa5c39ef19c077cb98a9ae5d2c95ed97da15cdfd"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 237,
+      "position_before": 948,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "0da5af59f528b77a817b6caa9d7edb319c401558bb40ea3c1485792fd830888d"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 238,
+      "position_before": 952,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "d14f94bcc3d12d723c42330af6fb2ad0de87ff370a77d87375b797780acc690d"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 239,
+      "position_before": 956,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "5d5bffd955fc4df629e3aeddcb2c6cfb60b954972d8e455c0ec3f2a81cd61b02"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 240,
+      "position_before": 960,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "3663a3f117cde8d28c4fd1d23821658f304a151a965d2cf1f92b246f0e3b3ae2"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 241,
+      "position_before": 964,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "f2a76626c584dec51b3d9252f7ff54ca983485a80f3795d9bcdf2f9bb59e0c18"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 242,
+      "position_before": 968,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "da651d02d0a9ed8d64d97b846fe9f12fda6b6d3ba57af5dd7c14b4607c5c153c"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 243,
+      "position_before": 972,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "18c73fbec76a453e3652da426c4e7a87bb29de3dcc28dadb5caa317b3b284302"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 244,
+      "position_before": 976,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "3b9dcf20885d0c3674d7b2439729ba2782a60349dc1d6ee046f8be0f871cfb86"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 245,
+      "position_before": 980,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "fa3d1aa4640365ddef2346bf869e0b3f9a6eb04c720e3f1018400e2dc180aabb"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 246,
+      "position_before": 984,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "cc2b269138fc44705561749c819fa99d74deba57d9bc91c821f225d3b495a438"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 247,
+      "position_before": 988,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "31884a4fbbea3a0d9c713b14456a9b3b7cd899a82aa3c1b0ba4e97a43e122f6c"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 248,
+      "position_before": 992,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "103c0e2f88f3ef497e7faaade9db09440b7e188d25b6dc47a37d78ff553f1b07"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 249,
+      "position_before": 996,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "ab5c54021c8ee94ae7887cd8ced43f459b891557f418f2df136f5fef2bfcd8e3"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 250,
+      "position_before": 1000,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "f41e563954e32da7329fc1b87815abdaadd9c04ee82a2b93b29a1f9cec4dccd8"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 251,
+      "position_before": 1004,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "397424b74d90f7520da503b6bd630bda3e955be0e8837a486273d8ac298a41ac"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 252,
+      "position_before": 1008,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "0b797ba514de88312ad6d564c861acd9a204e58427dac90643145d1352b5602e"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 253,
+      "position_before": 1012,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "8107f3f3fc466512f2fbfb67a916f62ddae1c08dfe26bd6fe26325e5ca3afe09"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54831
+      ],
+      "kernel_index": 254,
+      "position_before": 1016,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 0,
+      "program_sha256": [
+        "b43113d50c92b5f007493cd7e657119d921b80a6e674a7bad761a2014f0c6e5f"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        54427
+      ],
+      "kernel_index": 255,
+      "position_before": 1020,
+      "phase": "prefill",
+      "input_rows": 4,
+      "logit_rows_read": 1,
+      "program_sha256": [
+        "e58bc72de77bf17c7249c1f4f3a9ec7fb4b245b52da8990bbb939154436853fe"
+      ],
+      "args": [],
+      "rows": 4
+    },
+    {
+      "instructions": [
+        20911
+      ],
+      "kernel_index": 256,
+      "position_before": 1024,
+      "phase": "decode",
+      "input_rows": 1,
+      "logit_rows_read": 1,
+      "program_sha256": [
+        "36089e15662295296baaa3bdaf3fc898e20e72a87c8275df9f559d853096d5fd"
+      ],
+      "args": []
+    },
+    {
+      "instructions": [
+        20911
+      ],
+      "kernel_index": 257,
+      "position_before": 1025,
+      "phase": "decode",
+      "input_rows": 1,
+      "logit_rows_read": 1,
+      "program_sha256": [
+        "238c81f74f5a8b614594d878a3c1dec3b96af1942fb31cab9f2350a0187716df"
+      ],
+      "args": []
+    },
+    {
+      "instructions": [
+        20911
+      ],
+      "kernel_index": 258,
+      "position_before": 1026,
+      "phase": "decode",
+      "input_rows": 1,
+      "logit_rows_read": 1,
+      "program_sha256": [
+        "526283bedea5dc918dc5a18c7af95fdfe5668bd49b5a8405bddfac33f109d47a"
+      ],
+      "args": []
+    },
+    {
+      "instructions": [
+        20911
+      ],
+      "kernel_index": 259,
+      "position_before": 1027,
+      "phase": "decode",
+      "input_rows": 1,
+      "logit_rows_read": 1,
+      "program_sha256": [
+        "b999b5a27172ac358f5114d5c9952152a8c252dba8152219523ddee5e7395530"
+      ],
+      "args": []
+    },
+    {
+      "instructions": [
+        20911
+      ],
+      "kernel_index": 260,
+      "position_before": 1028,
+      "phase": "decode",
+      "input_rows": 1,
+      "logit_rows_read": 1,
+      "program_sha256": [
+        "8c41db8d5a9df903d4e142021f0a662f9405ea982b5a38c2d2504e931b4b8d48"
+      ],
+      "args": []
+    },
+    {
+      "instructions": [
+        20911
+      ],
+      "kernel_index": 261,
+      "position_before": 1029,
+      "phase": "decode",
+      "input_rows": 1,
+      "logit_rows_read": 1,
+      "program_sha256": [
+        "5aa3f10b27095b4d7a988734e1e6e9bd98fca3ff2509d24ce9baf202d7f8323e"
+      ],
+      "args": []
+    },
+    {
+      "instructions": [
+        20911
+      ],
+      "kernel_index": 262,
+      "position_before": 1030,
+      "phase": "decode",
+      "input_rows": 1,
+      "logit_rows_read": 1,
+      "program_sha256": [
+        "6872459be8e65b47063ce0601a7ef6ea709e7015bda3fa11e5ffab6fc93bb47e"
+      ],
+      "args": []
+    },
+    {
+      "instructions": [
+        20911
+      ],
+      "kernel_index": 263,
+      "position_before": 1031,
+      "phase": "decode",
+      "input_rows": 1,
+      "logit_rows_read": 1,
+      "program_sha256": [
+        "b4e3f9f4562e55bf5fbc6945650969c87a9077f5a55749a092b6fb09d915aa7f"
+      ],
+      "args": []
+    }
+  ],
+  "project_python_sha256": {
+    "__init__.py": "fb999eb42cdbe19911b40a095d1a7ce5aff15a709a8a659bc74ddf391e5ec4b3",
+    "benchmark.py": "271f116924ee90bed5dbf3b7d8cda3f53bdb156a1086105ca8cf837517355943",
+    "benchmark_reuse.py": "11a58a68a73609122525a6338c99f013349cbe8bb2a561daf47c093ddf6cdf85",
+    "benchmark_scalar.py": "e99ff51dacb96e9eb4365c467ec44fb4f7d3c2503acfcb994bc3c99816d54761",
+    "check_memory_storage.py": "c2b3529422ad94c712439e9ddebefd73b36dbfa4c4ca74d7b592b6c52945c1b4",
+    "compact.py": "36982135cc9f8dbc620681bc7bbbbfa0e967bf0993e39e5a5b3f9d39f3da3bbd",
+    "components.py": "a3fa93582618af59972b20e5481904323b24cc93a0daf71067187ac18c29ab89",
+    "e2e.py": "4e4fc623d65d4069f31524172464911be99f5331430d85ced61624eb9c8205ae",
+    "fpga_dse.py": "66248c034551fa4a6ea9ab7c26b63c399a3d251a74edeff553185e5d3f507ee8",
+    "model.py": "db747e124378972084cfadebfed459fae4354a708b3f767092bd699a1793de8f",
+    "native_scalar.py": "c1cc88c59d4d60ea1f306521dd27959bf25e5d4093e78219156e4e9d731272cd",
+    "native_timing.py": "b5dc4aa68dc70190c67f93a06e04fc054f4a1951533e9d4b26d3f5ea6a7ac496",
+    "replay_e2e.py": "06cc71bd62e3c1f603ef499b38798592ca5d047a153a2519c86921d6cd52c1fc",
+    "run.py": "d8777f44f7b68223ad66dd2880625b88eef65581d031a99f1784c4d179575265",
+    "sequence_timing.py": "311b8481496b6be341400a3b684d1815932a39f71e6397e25603550717b1ede9",
+    "shape_workload.py": "d0f1db9e2bba7f3b1b1b119e9483b7ebc7ce17823d343ac135b26e5e51b91169",
+    "standard_inference.py": "cecf7f899c522682682c724f1672b5d7a1492fa5c9f7c9013dcc3ae7fde16ca6",
+    "workload.py": "1381a9859c9da158bc3675398cfa3edc4432672998927fa3e69b6cf05fa6a2fc"
+  },
+  "compiler_sha256": null,
+  "runtime_sha256": null,
+  "upstream_python_sha256": {
+    "opentpu/__init__.py": "61aed8b1d8520b9e1f033fd9b83878abea3e12592a8f6a3d1c4932a0b9ca01ff",
+    "opentpu/compiler.py": "cb5141b6aa89bb2ac4868bdfeefa1140ee93a44cd0ca869f24b9c4925c7cc572",
+    "opentpu/fp32.py": "3f7be0284fabfe73bab735344f23d0dfe32385b5ad9aedb6bca1804f0121c28a",
+    "opentpu/host/__init__.py": "79a1d7ad85b43cec3aa02841948d2ed3d0901f8bcaf9cceddbf76265ae491012",
+    "opentpu/host/board.py": "8eff72168dbc9823c6237c6a6b900581be409bdb2b2622e81258cbc3d66254ea",
+    "opentpu/host/bpi_image.py": "6ffcace0e83d01448fb9104d94757483eee53cd8943c82608c806865a1279afc",
+    "opentpu/host/chat.py": "d7b479b06a0270b51085e3c80800af583c248fc8cca23793d0937adbd86dc19e",
+    "opentpu/host/chat_tui.py": "4d7f24e1d1a7a38892b75edf86a4844c6e41e981dcdaee877821f1380149c966",
+    "opentpu/host/checks.py": "a651541f350302e0d57a5e7257fa5a90193d3ecb6b8a17ea9c0ac8470eed4eac",
+    "opentpu/host/ddr4.py": "947ae06368f1b9aab48bc2743de5b9a7873f65903fdb0c394066ce80c359c537",
+    "opentpu/host/ddrcal.py": "7195d9c0427ccccea4e2224c9dd55ef116f89a0c653d8f42adb3eee3065d9e26",
+    "opentpu/host/diag.py": "7b16798fb9835795deaafe0d6d0c7242b6c8390225e31a64bee7beb99c4ad7c4",
+    "opentpu/host/fake.py": "210e445924dcb180e173bf057eadd5cd0a1e59541f6ee6492815d5b21db40667",
+    "opentpu/host/fake_i2c.py": "2ccca9aacb31608f7ef95201727e02e435a0c706a59039ad0428f1059b00002c",
+    "opentpu/host/gen_warm.py": "eaa207c2673f6cf5cbfbe54906aaf77aa2b8c3f8d4f3ff24e1f4af79c06934aa",
+    "opentpu/host/hwlens.py": "a42542156ddd91f1b37f18c976287edc9e0957668661afdb294b611a01b0c84b",
+    "opentpu/host/i2c.py": "cec3840a245e2015a8e655e1417fdbc9f3770b9bb807dec095fa3b15600acc22",
+    "opentpu/host/litedram/sdram_init.py": "f89cec0d178c7af6c14849e590c1421fb7ad19a32477f1364cf7e5476e1634fb",
+    "opentpu/host/litedram4/sdram_init.py": "2caca524d6790cf9db8e6ec6ad7d6014f185d54279b6fa30de14cd37b885f07a",
+    "opentpu/host/memcal.py": "781dd9b7ca7fce477e7091638e935cf537dbfc38a6ec55207dc18586181b8ce7",
+    "opentpu/host/memtest.py": "4b1ed5f49bb17500202ad6ca028827d04024ca33a4437bfd3860f6edb6dd61de",
+    "opentpu/host/offload.py": "2241ff1df9154f6e91055735f7cd65684dce41630509ab69abf1fb48408f3da3",
+    "opentpu/host/opchecks.py": "10dfb0b28bbdfcbc437ba30c92391bcc67b3d7cadf73e9fde48a064c4dcfaa30",
+    "opentpu/host/pcie_setup.py": "8f2662fba6864ec035cf0efc7d25e313fb4b0619c95b01a9e0712ce3eaef7088",
+    "opentpu/host/power.py": "333890229d7460b91b3f85e461b2341844c062f09bd3dd0eae23d46cbd90df6d",
+    "opentpu/host/prebuild.py": "5679c4881356c1565f29be887f07a38fe72c06ad8724f603ce36124d42648f31",
+    "opentpu/host/regs.py": "d93ffae5236cc9ca70589f076fc2064f37c131e9bb36707f4281080bfb89bfdf",
+    "opentpu/host/runstate.py": "b80a2337702db879e8770dfcf1c69dae65fcdc6d06d3741bed20d757a9b5e5bf",
+    "opentpu/host/selfcal.py": "08b5e1c9b0cbf6a9463aeb4e1a451fe6f320295a7336e79de4bc20ac5df1f823",
+    "opentpu/host/selftest.py": "a468b980ba9b48de9bd87361d8a3f30157d77665ae55c1b6dff266f51932509e",
+    "opentpu/host/smi.py": "2c9d727ce0e4b8593f8f96d29fecac6fcd17df657addbd6e555613d44d5f84ba",
+    "opentpu/host/streamed.py": "754ec00716106ad656df1819805a5f8bc87fba0d20956e6197394e8b69f09770",
+    "opentpu/host/vision_warm.py": "6937042fe0fafa33a509c6f9c2c2aba7d48212870adf82c1df16f00fe203a379",
+    "opentpu/hwtrace.py": "57aebc0f036cf62977a8ec553cb87a0147ced0304f76ad81021c23334ccc805b",
+    "opentpu/imgcache.py": "2c52037b8d245ed5ba68952330469e6bc29bb3d49e587aba45d2eacb0ad38396",
+    "opentpu/isa.py": "6ff71f284c38804ed127ff0eae185a0fbdc3bee229c451db6fba96d51810543c",
+    "opentpu/isasim.py": "d0fc7a987213fb2334d4e869743f940516319753a5d714d77c254ec59b413666",
+    "opentpu/kernels/__init__.py": "b94e2b05a22069885ef32ee1ba2e6d6f637ad9bd665904f1f83dfe0f96c5befe",
+    "opentpu/kernels/attention.py": "69cff970c5f60a81d26f98f7bcb9f37d93e53ee6d83979b1b64b9393fa62a827",
+    "opentpu/kernels/deltanet.py": "06679f92d12f46ae1908658cef11b748b21855771685f4e775b0ca924b9ce837",
+    "opentpu/kernels/gather.py": "bf1c14ca537d1ae94dcecf7aa491b46373558c112b4a3b90ddcb5423aeba5eef",
+    "opentpu/kernels/layouts.py": "21a6a8f829dd0b09bdfdca7654bf81c6d99a09552ced6ae7d4034664475b7dd9",
+    "opentpu/kernels/lib.py": "b5a1f136c6d1ac9169539c97d6b55b9f95d6340065cddcf43307324ee77d9502",
+    "opentpu/kernels/mailbox.py": "78c4727efba00deee5caf7d4d1b7d5c1787d17a50dcad2bde48f13a0d0d5d599",
+    "opentpu/kernels/mlp.py": "2485d838221c828c6780b104d8a3d29d4eae2f197e20ba9045bad8840d466dbb",
+    "opentpu/kernels/pieces.py": "d63689701da5283f0d3352802e648769773b6800498cad3d932f035d6ebf2312",
+    "opentpu/kernels/vit.py": "ab5e5d69a630a75fe295c0d5b2e545f12f08d0bb3bb80bfdb4250e4498a643fd",
+    "opentpu/language.py": "81a5a192ae69fad247be7307e3fb888d9d613d16cc52898cc9a872360f8a0d92",
+    "opentpu/lens.py": "ac68ac2e6c663fb21c9ea1d5a1863df456cb8a7d774b5b95c5002028e80ef7e4",
+    "opentpu/llm/__init__.py": "69d260e747c50a7032f603d3489c0336b6dd40f0e9919096952eae969bf2a296",
+    "opentpu/llm/batch.py": "56e3b81375a6036fb5e0f99171a728cd3c2c4e04ed5c23cf5fdbc45da1d64588",
+    "opentpu/llm/formats.py": "eed13e6b2c43095305ed5a2ba3588e100ea5c7a292627ee7d3353530473e819e",
+    "opentpu/llm/gemma4.py": "4db5a692fd4b6c3571239e04a6674e22a09ca5dc4467468bf0cb50b77e4bbc5b",
+    "opentpu/llm/generate.py": "ed8d20bd2af33720d8ca456318e327edae2d09fb59e5a1d508bd19421c233bed",
+    "opentpu/llm/lfm2.py": "25b0b9260144f94f917b34146ae3c0ad877c41a8f83dd23f84a3bc87b18e8729",
+    "opentpu/llm/llama.py": "90670ead841e5d25a2058557cfe6795a681109fb71e8e0982bc175905db4a18d",
+    "opentpu/llm/minicpmv.py": "14cada2d9c4eddc4ea4d28cb4d6e5d631e8e2d8738161df971878aacdb9e1217",
+    "opentpu/llm/moe.py": "90e526bf92285e04247b4e7a2a596fe3b2d8a71511aa4522e75f228352e60482",
+    "opentpu/llm/mtp.py": "d9e08fd3d1ec5b67850dc5bc72c45793241398d6827aff6f833aeef8055edd95",
+    "opentpu/llm/prefill.py": "e8c46f45a339808c7c3eace1537e619f2d34a53a495ac23bde814e87f4bb5712",
+    "opentpu/llm/qwen3.py": "952d26a813c4d5741c935247d067fb575be14fa3029ce750d9aade2a1968a31f",
+    "opentpu/llm/qwen35.py": "8a9ee3c26670b9b7793c72adaacd33a1a5cd374ea212ecc7e5d172fb14aeaece",
+    "opentpu/llm/rtl_backend.py": "c54a4dd983ada452ec2a4e654dba001beab7f564a5fd0d4da6cfa8b35255c123",
+    "opentpu/llm/snapshot.py": "96320c1e55397ba52a8c6a23564960c602997e3f787f5bc458a13a99b4a87ee3",
+    "opentpu/llm/tiled.py": "b02ef0fb79c4393c49471b5492fea9f337e1e03264e68530d83e1e604181cf12",
+    "opentpu/profile.py": "b9af80978d2895fb3ff2bc73119161aa4bbcea93f19a8bcbc85e56d91627da7f",
+    "opentpu/progcache.py": "4de5540082d6e745ad80534cacd72dda6614de501eeaf831d832b350657ce4de",
+    "opentpu/qcache.py": "ac79372fa8b86a1e08e301fd4eb012405efc213d3324a6e025459eb58546f925",
+    "opentpu/quant.py": "4af67cf5abd511e4ac7d1d78587def88d84ce28f6a2530b83b049717859292a7",
+    "opentpu/reference.py": "e0454770a4af3496e37c90fe11500cd7dd98873bf612b18cc7d090fd7b949687",
+    "opentpu/rtlsim.py": "214fb48abe5168e8c9b61ea84b5d95d993b57ff1ddfe53a23866928f7da01a84",
+    "opentpu/runtime.py": "2c323697e1bd2e99bd25ba01d2c4c4bd31f5318a10cbc491cb6c3ca9577e5b89",
+    "opentpu/serve/__init__.py": "5488ebb44ebdfeb42981ef5f8e4e677a3032133c5c34740250cc176ddcc682ba",
+    "opentpu/serve/api.py": "c34b8ce591ef8d8e52443b86a3ccf94de190b47c25ccd758d1d126856afc3d36",
+    "opentpu/serve/batching.py": "6e942766cbde55fb18b85575fd04149c539ab02edbc8c9db584c8ae16b275775",
+    "opentpu/serve/kvio.py": "91187631cc363b42946e2dd27d59960ad9be9871aeaae19bc1729b6087706dea",
+    "opentpu/serve/scheduler.py": "b88fb2fb80cc167f36f7123e8abe7e9922d83906cf85b4bc0a2d79812b42ca26",
+    "opentpu/serve/store.py": "51a74d83aba3334e6c917d057378e216fb5527564879375261f4c73ebc552392",
+    "opentpu/simtmp.py": "67dc58fcb441b283a238822ed49470d65d614905cace9b6e48452f9f9e1c6402",
+    "opentpu/target.py": "5d034fda4d748206bc21b375472e8074e782ee02d790ba1f4da9d169fdc1c84a",
+    "opentpu/waits.py": "d21159d7bd934d9675dc775b3160503600591a08a8926a1269e9ef6fbf6497a7"
+  }
+}

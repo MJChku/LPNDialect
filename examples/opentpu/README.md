@@ -1,5 +1,13 @@
 # FeSens/openTPU LPN model
 
+**Inference workload correction:** earlier `e2e.py`, `replay_e2e.py` and
+weight-free FPGA sequence results used a custom token-by-token prompt loop.
+Their checked numerical/cycle comparisons remain measurements of those streams,
+but their speedups do not represent openTPU's normal batched-prefill inference
+path. Inference scheduling belongs to the upstream runner, not the LPN model.
+Use `standard_inference.py` below to observe `Engine.generate()` and feed its
+emitted commands to the backends.
+
 See [ARCHITECTURE.md](ARCHITECTURE.md) for component boundaries, explicit
 dependencies, matrix-engine experiments and net-size/CPU-parallelism details.
 See [NATIVE_INTERFACE.md](NATIVE_INTERFACE.md) for runtime input tables,
@@ -23,6 +31,87 @@ to determine control flow and effective addresses and to check numerical
 results. No observed RTL timestamps enter the LPN model.
 
 ## Setup and run
+
+### Normal upstream inference entrypoint
+
+`standard_inference.py` calls upstream `Engine.generate()` without replacing
+its prefill, fit/chunk selection or decode methods. The backend receives the
+resulting programs. `plan` mode replaces weight/image materialization and
+numerical readbacks with explicit placeholders; it does not predict text or EOS.
+The upstream scheduler and compiler remain unchanged. The existing configuration
+has eight-row input capacity, and the upstream fit logic may choose fewer rows
+per kernel to fit its instruction and tensor memories.
+
+```sh
+PYTHONPATH=. ../FeSens-openTPU/.venv/bin/python -m examples.opentpu.standard_inference \
+  --opentpu-root ../FeSens-openTPU --mode plan \
+  --prompt-tokens 16 --output-tokens 8 --cap 128 --output /tmp/qwen-standard-plan
+```
+
+To check actual numerical inference on identical ISA/LPN/Verilator inputs:
+
+```sh
+OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 PYTHONPATH=. \
+  ../FeSens-openTPU/.venv/bin/python -m examples.opentpu.standard_inference \
+  --opentpu-root ../FeSens-openTPU-qwen --mode validate-rtl \
+  --model-dir ../FeSens-openTPU/models/Qwen3-1.7B \
+  --compiler build/tools/lpn-compile/lpn-compile \
+  --prompt 'Once upon a time' --output-tokens 8 --cap 128 \
+  --output /tmp/qwen-standard-validation
+```
+
+The numerical path uses real checkpoint values, the same upstream
+`Engine.generate()` and shared `CheckedBackend` for ISA/LPN/RTL comparisons.
+It retains the real KV state across kernels and verifies complete device
+memories. It runs Verilator and needs the pinned checkout, model dependencies
+and RTL patches documented below. This initial adapter records complete runs;
+it does not resume a partially completed generation. Planning can optionally
+run LPN on each upstream-emitted kernel with `--compiler`. Kernel program words,
+hashes, selected row counts and logit-readback counts are recorded separately
+from hardware timing.
+
+At this pin, upstream `generate()` also calls `step()` after selecting the last
+requested output, unless EOS/capacity stops it. The adapter preserves that final
+decode kernel in both backends rather than silently changing the runner.
+
+The [numerical fixture](validation/standard_inference/fixture16.json) checks a
+small synthetic transformer using two eight-token prefill chunks and two decode
+steps. ISA and RTL device memories are bit-exact on every kernel; RTL totals
+29,595 cycles and LPN 29,218 cycles, with a worst per-kernel error of 2.64%.
+This establishes that small shared path, not full Qwen3-1.7B RTL accuracy.
+The [regression log](validation/standard_inference/regression.txt) records the
+20 accelerator checks, including recorded RTL fixtures. Run the numerical check
+with the Verilator environment described below:
+
+```sh
+OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 PYTHONPATH=. \
+  ../FeSens-openTPU/.venv/bin/python test/test_standard_inference.py \
+  --opentpu-root ../FeSens-openTPU-qwen \
+  --compiler build/tools/lpn-compile/lpn-compile --rtl \
+  --artifacts /tmp/opentpu-standard-fixture
+```
+
+The [1,024-input/8-output Qwen3-1.7B planning report](validation/standard_inference/qwen17_plan1024.json)
+records upstream selecting 256 four-token prefill kernels, one prompt-logit
+readback, and eight decode kernels. Its 207.23 seconds are host planning and
+compilation time, with no numerical tensor execution, LPN timing simulation or
+Verilator run. The logical memories, instruction fit and chunk size are choices
+of the configured upstream runner/compiler. The report includes source hashes
+and every emitted program hash; it establishes the schedule rather than an
+architecture speedup.
+
+The [16-input/8-output weight-free LPN run](validation/standard_inference/qwen17_plan16_lpn.json)
+executes the full Qwen3-1.7B shapes on the original architecture: four four-token
+prefill kernels and eight upstream decode kernels. It predicts 159,799,171
+cycles with zero rollbacks. Host time was 117.33 seconds, including 38.31 seconds
+of native timing and 74.42 seconds of model/table preparation. This is a
+single-run observation; there is no paired Verilator measurement for this
+full-size batched stream yet. Add `--compiler` to the planning command above
+to reproduce this mode.
+
+The legacy token-by-token artifacts below are retained for reproducibility.
+
+### Compiler and RTL setup
 
 Build LPN following the root README. Install a recent Verilator; the recorded
 runs use **5.052**. Ubuntu's Verilator 5.020 fails to elaborate this pinned
@@ -167,7 +256,7 @@ completed generation campaign below uses D=128, a 2 GiB memory, the same
 behavioral memory latency/ports as the earlier runs, and a larger command-table
 capacity of 32768. Real Llama 3.2 remains unvalidated.
 
-Ten Qwen generation cases completed: eight generated eight tokens each, and
+Ten legacy token-by-token Qwen generation cases completed: eight generated eight tokens each, and
 two generated twelve each. Each case executes every transformer layer and the
 vocabulary head with persistent KV state. Prompt tokens and generated tokens
 each require one full forward step; the RTL runner launches a separate

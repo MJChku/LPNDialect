@@ -135,7 +135,7 @@ class OpenTPUTest(unittest.TestCase):
           sim = model.net.python_simulator()
           cycles = sim.run(max_time=100000)
           self.assertEqual(sim.place_dicts("program_completed"),[{}])
-          self.assertEqual(model.statistics()["transitions"],14+3*(engines-1))
+          self.assertEqual(model.statistics()["transitions"],15+3*(engines-1))
           self.assertEqual(len(model.components[0]["matrix_engines"]),engines)
           if self.tool:
             ir,binary = out/"multi.mlir",out/"multi.native"
@@ -169,6 +169,41 @@ class OpenTPUTest(unittest.TestCase):
     compute,dram = dependencies(commands,I,W,matrix_engines=2)
     self.assertEqual(compute[2],[1])
     self.assertEqual(dram[2],[1])
+
+  def test_ready_scalar_units_keep_hazards_without_false_fifo_edges(self):
+    from examples.opentpu.workload import Command
+    from opentpu import isa as I,waits as W
+    region=((W.SP_TMEM,0,8),)
+    for ins in (I.ld(0,0,8),I.qact(0,1,0,1,128)):
+      for hazard in ('independent','RAW','WAR','WAW'):
+        first=W.Fp(rd=region) if hazard=='WAR' else W.Fp(wr=region)
+        second=(W.Fp() if hazard=='independent' else
+                W.Fp(rd=region) if hazard=='RAW' else W.Fp(wr=region))
+        compute,_=dependencies([Command(0,ins,first),Command(1,ins,second)],I,W)
+        self.assertEqual(compute[1],[] if hazard=='independent' else [0],hazard)
+
+  def test_vector_overlap_drains_for_reductions_and_shorter_paths(self):
+    from examples.opentpu.workload import Workload,Command
+    from opentpu import Config,isa as I,waits as W
+    cfg=Config(D=128,MCOLS=4,LANES=8)
+    def cycles(second,dependent=False):
+      first=I.vop(I.V_EXP2,0,128,0,1,8,8,8,0)
+      tail=I.vop(second,8,0 if dependent else 256,0,1,8,8,8,0)
+      program=[first,tail,I.halt()]
+      commands=[Command(i,ins,W.footprint(ins,[(0,0)]*16,cfg.D,cfg.S))
+                for i,ins in enumerate(program)]
+      workload=Workload(cfg,[program],[],[commands],None,{},[])
+      predictions=[]
+      for cls in (OpenTPU,CompactOpenTPU):
+        sim=cls(workload).net.python_simulator()
+        predictions.append(sim.run(max_time=10000))
+        self.assertEqual(sim.place_dicts('program_completed'),[{}])
+      self.assertEqual(*predictions)
+      return predictions[0]
+    parallel=cycles(I.V_EXP2)
+    self.assertLess(parallel,cycles(I.V_EXP2,dependent=True))
+    self.assertLess(parallel,cycles(I.V_RSUM))
+    self.assertGreater(cycles(I.V_COPY),parallel)
 
   def test_matrix_admission_cannot_overtake_an_older_blocked_command(self):
     from examples.opentpu.workload import Command,Workload

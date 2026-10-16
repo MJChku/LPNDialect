@@ -6,7 +6,7 @@ Engines share only their command interface, dependency tracker and DRAM ports.
 
 from dataclasses import dataclass
 
-from .model import SystolicArray
+from .model import SystolicArray, VectorPipeline, VECTOR_DRAIN_RANK
 
 
 @dataclass
@@ -40,11 +40,14 @@ class CommandTiming:
 
 class ExecutionUnit:
   """One scalar/control, DMA, quantization, vector or collective unit."""
-  def __init__(self,net,prefix,kind,interface,parameters,memory):
+  def __init__(self,net,prefix,kind,interface,parameters,memory,ranks=None):
     self.resource = resource = net.place(prefix+"_resource",initial_tokens=1)
     slots,pending,window = interface.slots,interface.pending[kind],interface.window
     select_ready,publish = interface.select_ready,interface.publish
     latencies,port_ids,services = parameters.latencies,parameters.port_ids,parameters.services
+    vector=VectorPipeline(net,prefix+'_pipeline') if ranks is not None else None
+    self.pipeline=vector
+    intervals=services if vector is not None else latencies
     ports = [memory.b,memory.sw]
 
     @net.transition(prefix+"_execute")
@@ -59,12 +62,21 @@ class ExecutionUnit:
       bus_id = array(port_ids)[idx]
       buses = array(ports)
       guard(select(bus_id>=0,count(buses[select(bus_id>=0,bus_id,0)])>0,True,typ="i1"))
+      if vector is not None:
+        state=peek(vector.state)
+        rank=array(ranks)[idx]
+        guard(select(state.get('live')==0,True,
+            select(rank==VECTOR_DRAIN_RANK,False,state.get('rank')<=rank,typ='i1'),typ='i1'))
       token = take(slot_places[chosen])
       take(pending)
       emit(slot_places[chosen],create())
       latency = sitofp(array(latencies)[idx])
       credit = take(resource)
-      emit(resource,credit,delay=latency)
+      emit(resource,credit,delay=sitofp(array(intervals)[idx]))
+      if vector is not None:
+        state=take(vector.state)
+        emit(vector.state,state.set('live',state.get('live')+1).set('rank',array(ranks)[idx]))
+        emit(vector.completed,create(),delay=latency)
       if bus_id>=0:
         bus = take(buses[bus_id])
         emit(buses[bus_id],bus,delay=sitofp(array(services)[idx]))

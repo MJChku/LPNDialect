@@ -8,7 +8,7 @@ from bisect import bisect_left
 from math import ceil, gcd
 from lpnlang_mlir import InputArray
 
-from .model import OpenTPU, DRAM, bank_write_cycles
+from .model import OpenTPU, DRAM, bank_write_cycles, vector_rank, VECTOR_DRAIN_RANK
 from .components import CommandInterface, CommandTiming, ExecutionUnit, MatrixEngine
 
 
@@ -25,7 +25,7 @@ def dependencies(commands,I,W,matrix_engines=1):
   bounds = [sorted(b) for b in boundaries]
   reads = [[set() for _ in b] for b in bounds]
   writes = [[set() for _ in b] for b in bounds]
-  ancestors,compute,dram,last_unit = [],[],[],{}
+  ancestors,compute,dram = [],[],[]
   barrier = None
 
   def segments(ranges):
@@ -60,12 +60,13 @@ def dependencies(commands,I,W,matrix_engines=1):
         conflicts.add(barrier)
         dc.add(barrier)
     if c.instruction.op!=I.HALT:
-      # A single in-order unit enforces its own hazards. Multiple MM engines
-      # share ACT/TMEM, so all RAW/WAR/WAW hazards between them must be explicit.
-      conflicts = {j for j in conflicts if unit!=W.UNIT.get(commands[j].instruction.op,-2)
-                   or unit==W.U_VPU or (unit==W.U_MXU and matrix_engines>1)}
-    if unit in last_unit and unit not in (W.U_MXU,W.U_VPU):
-      conflicts.add(last_unit[unit])
+      # The RTL sequencer can send a younger ready command to a unit while an
+      # older command waits for another unit. Preserve actual memory hazards,
+      # without inventing completion edges between unrelated commands.
+      # One matrix engine already orders its own prefetch and compute streams.
+      conflicts = {j for j in conflicts if unit!=W.U_MXU
+                   or W.UNIT.get(commands[j].instruction.op,-2)!=W.U_MXU
+                   or matrix_engines>1}
     compute.append(reduce_edges(conflicts))
     dram.append(reduce_edges(dc))
     complete_deps = conflicts | (dc if unit==W.U_MXU else set())
@@ -73,8 +74,6 @@ def dependencies(commands,I,W,matrix_engines=1):
     for j in complete_deps:
       ancestry |= ancestors[j]|(1<<j)
     ancestors.append(ancestry)
-    if unit>=0:
-      last_unit[unit] = idx
     if c.footprint.all:
       barrier = idx
       reads = [[set() for _ in b] for b in bounds]
@@ -148,7 +147,7 @@ class CompactOpenTPU(OpenTPU):
     pending = [net.place(prefix+f"_pending_{u}") for u in range(6)]
     ports = [memory.b,memory.sw]
     deps,dram_deps = dependencies(commands,I,W,t.matrix_engines)
-    kinds,latencies,services,port_ids = [],[],[],[]
+    kinds,latencies,services,port_ids,ranks = [],[],[],[],[]
     batches,chunkses,scale_flags,kbs,ns,row_services,tails = [],[],[],[],[],[],[]
     scale_bytes = []
     write_full,write_tail = [],[]
@@ -165,6 +164,10 @@ class CompactOpenTPU(OpenTPU):
         last_register = idx
       latency,port,service = (0,None,0) if u in (W.U_MXU,5) else self._simple_timing(ins,memory,I)
       latencies.append(latency)
+      rank=vector_rank(ins,I) if ins.op==I.VOP else 0
+      ranks.append(rank)
+      if ins.op==I.VOP:
+        service=self._vector_interval(ins,I) if rank<VECTOR_DRAIN_RANK else latency
       port_ids.append(ports.index(port) if port is not None else -1)
       services.append(service)
       batch,chunks,scaled,kb,n,row_service,tail = 1,1,0,1,1,1,0
@@ -273,7 +276,9 @@ class CompactOpenTPU(OpenTPU):
 
     interface = CommandInterface(slots,pending,window,select_ready,is_done,publish,
         compute_offsets,compute_indices)
-    units = [ExecutionUnit(net,prefix+f"_unit_{u}",u,interface,parameters,memory)
+    vector_ranks=self._table(prefix+'_vector_ranks',ranks)
+    units = [ExecutionUnit(net,prefix+f"_unit_{u}",u,interface,parameters,memory,
+                 vector_ranks if u==W.U_VPU else None)
              for u in (W.U_DMA,W.U_Q,W.U_VPU,W.U_COLL,5)]
     matrices = [MatrixEngine(net,prefix+f"_mxu_{engine}",cfg,t,interface,
         parameters,memory,W.U_MXU,
