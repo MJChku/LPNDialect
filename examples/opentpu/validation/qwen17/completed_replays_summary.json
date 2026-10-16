@@ -1,12 +1,13 @@
 {
-  "captured_utc": "2026-10-16T07:32:23.994846+00:00",
-  "status": "partial_batch",
-  "scope": "Completed generation replays only. The driver measured whole LPN processes one at a time alongside concurrent RTL cases. Complete process time includes numerical execution, initialization, compilation, input serialization, hashing and process cleanup. RTL-equivalent throughput divides recorded RTL cycles by measured LPN seconds. Totals sum per-case processing times, not concurrent batch wall time. The whole batch remains unfinished.",
+  "captured_utc": "2026-10-16T08:04:18.620303+00:00",
+  "status": "complete",
+  "scope": "Completed generation replays only. Baselines ran with up to six concurrent workers. The driver measured whole LPN processes one at a time; earlier replays ran alongside baselines, and the last replay ran after baselines finished. Complete process time includes numerical execution, initialization, compilation, input serialization, hashing and process cleanup. RTL-equivalent throughput divides recorded RTL cycles by measured LPN seconds. Totals sum per-case processing times, not concurrent batch wall time. The full ten-case campaign is complete.",
   "model": "Qwen/Qwen3-1.7B",
   "checkpoint_revision": "70d244cc86ccca08cf5af4e1e306ecf908b1ad5e",
   "cases": {
     "once": {
       "steps": 9,
+      "prompt_tokens": 1,
       "generated_tokens": 8,
       "rtl_cycles": 122626193,
       "rtl_core_seconds": 6634.795353848,
@@ -14,10 +15,13 @@
       "lpn_core_seconds": 16.669555925,
       "external_process_seconds": 140.73965553939342,
       "complete_process_speedup_vs_rtl_core": 47.14233048546081,
+      "complete_process_speedup_vs_rtl_process": 52.65625537552249,
+      "max_absolute_relative_cycle_error": 0.005409201396062047,
       "artifact_sha256": "4ee0d53235ff104fdbc42b0d24aa3c5c256baa98338a1e456edcacbbf58c1652"
     },
     "france": {
       "steps": 13,
+      "prompt_tokens": 5,
       "generated_tokens": 8,
       "rtl_cycles": 177130637,
       "rtl_core_seconds": 9541.933803911,
@@ -25,10 +29,13 @@
       "lpn_core_seconds": 23.97291539,
       "external_process_seconds": 183.9699830710888,
       "complete_process_speedup_vs_rtl_core": 51.86679720584555,
+      "complete_process_speedup_vs_rtl_process": 57.99095397144248,
+      "max_absolute_relative_cycle_error": 0.005565327205705017,
       "artifact_sha256": "005ad138123f61642be4d9c2d89fc6ab39bd4098f45e4b35be7320a996a3d5de"
     },
     "sky": {
       "steps": 13,
+      "prompt_tokens": 5,
       "generated_tokens": 8,
       "rtl_cycles": 177130637,
       "rtl_core_seconds": 9529.142470784,
@@ -36,10 +43,13 @@
       "lpn_core_seconds": 23.97265167,
       "external_process_seconds": 183.9543474689126,
       "complete_process_speedup_vs_rtl_core": 51.801670370385665,
+      "complete_process_speedup_vs_rtl_process": 57.95537538344857,
+      "max_absolute_relative_cycle_error": 0.005565327205705017,
       "artifact_sha256": "156b1d5e3d4c98a45dcc951a773b539874ab5cf365c522241195d28b977dd38a"
     },
     "robot": {
       "steps": 15,
+      "prompt_tokens": 7,
       "generated_tokens": 8,
       "rtl_cycles": 204383027,
       "rtl_core_seconds": 11077.294352915,
@@ -47,10 +57,13 @@
       "lpn_core_seconds": 27.744608121,
       "external_process_seconds": 211.38464573584497,
       "complete_process_speedup_vs_rtl_core": 52.40349560089452,
+      "complete_process_speedup_vs_rtl_process": 58.56562409773447,
+      "max_absolute_relative_cycle_error": 0.005647498875145596,
       "artifact_sha256": "c4b11e0f37cec70d4ee8a309a7b9807e7fff0a82c59002e2538e12d2bf9d997a"
     },
     "mountain": {
       "steps": 13,
+      "prompt_tokens": 5,
       "generated_tokens": 8,
       "rtl_cycles": 177130637,
       "rtl_core_seconds": 9516.138499171,
@@ -58,10 +71,13 @@
       "lpn_core_seconds": 24.075915916,
       "external_process_seconds": 182.42009457200766,
       "complete_process_speedup_vs_rtl_core": 52.166064936528386,
+      "complete_process_speedup_vs_rtl_process": 58.36219360488772,
+      "max_absolute_relative_cycle_error": 0.005565327205705017,
       "artifact_sha256": "a50ecdf208da8cf089d58bc9fddd73dccb0c40ae321d37c2ee465a88013651cb"
     },
     "translation": {
       "steps": 15,
+      "prompt_tokens": 7,
       "generated_tokens": 8,
       "rtl_cycles": 204383027,
       "rtl_core_seconds": 11144.51981895,
@@ -69,10 +85,13 @@
       "lpn_core_seconds": 27.676418948,
       "external_process_seconds": 213.333175804466,
       "complete_process_speedup_vs_rtl_core": 52.23997522619122,
+      "complete_process_speedup_vs_rtl_process": 58.349964928564155,
+      "max_absolute_relative_cycle_error": 0.005647498875145596,
       "artifact_sha256": "ec43201526dd3867f880188524e9c4e8326e12d22b558d9eefb83aefc2071510"
     },
     "arithmetic": {
       "steps": 13,
+      "prompt_tokens": 5,
       "generated_tokens": 8,
       "rtl_cycles": 177130637,
       "rtl_core_seconds": 9632.620120892,
@@ -80,10 +99,13 @@
       "lpn_core_seconds": 24.013524414,
       "external_process_seconds": 182.86848750337958,
       "complete_process_speedup_vs_rtl_core": 52.675123267008914,
+      "complete_process_speedup_vs_rtl_process": 58.82430289851671,
+      "max_absolute_relative_cycle_error": 0.005565327205705017,
       "artifact_sha256": "47cd272f1040d6429387dc2ab5b803d29cfecafcd0ffd5f137a2df3c2891ab1a"
     },
     "why12": {
       "steps": 13,
+      "prompt_tokens": 1,
       "generated_tokens": 12,
       "rtl_cycles": 177130637,
       "rtl_core_seconds": 9606.724813004,
@@ -91,10 +113,13 @@
       "lpn_core_seconds": 23.87466595,
       "external_process_seconds": 184.20877422764897,
       "complete_process_speedup_vs_rtl_core": 52.15128787042366,
+      "complete_process_speedup_vs_rtl_process": 58.27857105138988,
+      "max_absolute_relative_cycle_error": 0.005565327205705017,
       "artifact_sha256": "254b8ebca4110a73cf7943d29e63d88c2c7918914b3bdc1a94ef0bf64bad79cb"
     },
     "hello12": {
       "steps": 13,
+      "prompt_tokens": 1,
       "generated_tokens": 12,
       "rtl_cycles": 177130637,
       "rtl_core_seconds": 9708.612164678,
@@ -102,21 +127,37 @@
       "lpn_core_seconds": 23.941113938,
       "external_process_seconds": 181.83703107386827,
       "complete_process_speedup_vs_rtl_core": 53.391831726146236,
+      "complete_process_speedup_vs_rtl_process": 59.55618812460139,
+      "max_absolute_relative_cycle_error": 0.005565327205705017,
       "artifact_sha256": "bd9552acf02320f3fe9358cb1f632f039f77b89984c11c6efbc5a6b12fc1fc0b"
+    },
+    "fibonacci": {
+      "steps": 26,
+      "prompt_tokens": 18,
+      "generated_tokens": 8,
+      "rtl_cycles": 354283926,
+      "rtl_core_seconds": 19143.519106113,
+      "rtl_process_seconds": 21397.686264939606,
+      "lpn_core_seconds": 48.113791406,
+      "external_process_seconds": 372.40770848095417,
+      "complete_process_speedup_vs_rtl_core": 51.40473376396838,
+      "complete_process_speedup_vs_rtl_process": 57.45768891900887,
+      "max_absolute_relative_cycle_error": 0.006096574417266298,
+      "artifact_sha256": "9e127434d4e660884a313055a03dc2089b072e808ecc8d905ffea1c34b1b2e4b"
     }
   },
   "aggregate": {
-    "steps": 117,
-    "generated_tokens": 80,
-    "rtl_cycles": 1594176069,
-    "rtl_core_seconds": 86391.781398153,
-    "rtl_process_seconds": 96536.91109750979,
-    "lpn_core_seconds": 215.941370272,
-    "external_process_seconds": 1664.7161949966103,
-    "native_speedup_vs_rtl_core": 400.07054363568136,
-    "complete_process_speedup_vs_rtl_core": 51.895801613396884,
-    "complete_process_speedup_vs_rtl_process": 57.99001138311528,
-    "rtl_equivalent_cycles_per_second_native": 7382448.610898292,
-    "rtl_equivalent_cycles_per_second_complete_process": 957626.3352224107
+    "steps": 143,
+    "generated_tokens": 88,
+    "rtl_cycles": 1948459995,
+    "rtl_core_seconds": 105535.300504266,
+    "rtl_process_seconds": 117934.59736244939,
+    "lpn_core_seconds": 264.055161678,
+    "external_process_seconds": 2037.1239034775645,
+    "native_speedup_vs_rtl_core": 399.67141650864676,
+    "complete_process_speedup_vs_rtl_core": 51.80602923764587,
+    "complete_process_speedup_vs_rtl_process": 57.892697229227835,
+    "rtl_equivalent_cycles_per_second_native": 7378988.47580959,
+    "rtl_equivalent_cycles_per_second_complete_process": 956475.9373123025
   }
 }

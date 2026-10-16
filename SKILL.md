@@ -184,7 +184,7 @@ hashed model/compiler sources while a resumable validation is running.
 
 Larger Qwen3-1.7B runs need the behavioral memory storage patch and isolated
 FeSens worktree described in the openTPU README. Use the installed Verilator
-5.052 with both `VERILATOR_ROOT` and `PATH` set. The active parallel batch's
+5.052 with both `VERILATOR_ROOT` and `PATH` set. The completed parallel campaign's
 manifest is `~/lpn-runs/qwen3-1.7b-parallel/batch.json`; inspect it and the case
 logs before launching duplicate jobs.
 The batch expanded from four to six concurrent cases using a verified scheduler
@@ -195,10 +195,22 @@ validated from its terminal report and snapshot, with unknown original exit
 status explicitly recorded rather than invented as zero.
 After four completed generations, a second verified handoff added `hello12`
 and `why12`, each requesting twelve generated tokens. The batch now has ten
-cases and still permits six concurrent workers. See
+cases with a limit of six concurrent workers. See
 `validation/qwen17/queue_extension.json` under `examples/opentpu` for preserved
 worker identities; `supervisor_v3.py` is the recorded successor. Continue to
 read the live manifest instead of assuming either historical scheduler owns it.
+All ten baselines and complete LPN replays have now passed: 143 token steps,
+88 generated tokens. Terminal `batch.json`, `overnight-summary.json` and
+`lpn-replays.json` record completion; missing historical controller PIDs are
+expected after completion and must not trigger a restart. Results, raw CSV,
+an independent archive audit and measured functional overhead are under
+`examples/opentpu/validation/qwen17`. Recheck disk snapshots, final logits,
+source fingerprints and all paired/replay observations with
+`audit_completed.py --root RUN_ROOT --project-root "$PWD" --opentpu-root FESENS_ROOT
+--expected-cases 10 --output /tmp/qwen-completion-audit.json`, using the NumPy
+environment. The audit is read-only except for its output and rejects an
+unfinished campaign. Report whole-process speedup separately from native
+timing speedup; functional frontend time does not isolate pure matrix compute.
 RAM scratch holds active large snapshots; the separate overnight monitor
 backs up completed-token snapshots to
 `recovery/<case>` and publishes `overnight-summary.json`/`overnight-records.csv`.

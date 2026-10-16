@@ -1,0 +1,28 @@
+{
+  "scope": "Measured complete Qwen3-1.7B replay with 18 prompt and 8 generated tokens. Functional frontend executes the ISA and derives timing metadata; its timer does not isolate pure GEMM. Other time is the residual, including initialization, verification and process overhead.",
+  "source_artifact": "completed_fibonacci.json",
+  "source_artifact_sha256": "9e127434d4e660884a313055a03dc2089b072e808ecc8d905ffea1c34b1b2e4b",
+  "steps": 26,
+  "external_process_seconds": 372.40770848095417,
+  "stage_seconds": {
+    "functional_frontend_seconds": 183.48427875339985,
+    "input_serialization_seconds": 55.8215574324131,
+    "input_hash_seconds": 33.9195765722543,
+    "model_build_seconds": 36.65311746113002,
+    "native_compile_seconds": 0.3035658821463585,
+    "lpn_core_seconds": 48.113791406,
+    "other_seconds": 14.11182097361052
+  },
+  "stage_fraction": {
+    "functional_frontend_seconds": 0.49269731687840096,
+    "input_serialization_seconds": 0.14989366804491897,
+    "input_hash_seconds": 0.09108183262535509,
+    "model_build_seconds": 0.0984220160496612,
+    "native_compile_seconds": 0.0008151439275642265,
+    "lpn_core_seconds": 0.12919655074341904,
+    "other_seconds": 0.037893471730680445
+  },
+  "hypothetical_zero_functional_frontend_seconds": 188.92342972755432,
+  "hypothetical_zero_functional_frontend_speedup": 1.9712097595200433,
+  "bound_scope": "Arithmetic upper bound assuming the entire functional frontend disappears, other stages unchanged; not a measured optimization. Functional numerical execution is still required for data-dependent generation."
+}

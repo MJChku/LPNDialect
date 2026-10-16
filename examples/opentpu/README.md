@@ -159,39 +159,74 @@ cover four concurrent cases, each executing all 28 layers and the vocabulary
 head: 54,499,684 aggregate RTL cycles, 0.53% timing error, and bit-exact full
 DRAM/TMEM results. Measured aggregate RTL core time was 2954.02 s, native LPN
 timing 7.31 s (403.86x), and full LPN pipeline 38.65 s (76.43x versus RTL core).
-These are first-token observations with RTL command-path tracing; complete
-generation validation is still in progress. It uses D=128, a 2 GiB memory, the same
+These historical first-token observations use RTL command-path tracing. The
+completed generation campaign below uses D=128, a 2 GiB memory, the same
 behavioral memory latency/ports as the earlier runs, and a larger command-table
 capacity of 32768. Real Llama 3.2 remains unvalidated.
 
-Nine Qwen generation cases have completed their requested output tokens:
-seven cases generated eight tokens each, and two generated twelve each.
-Each full LPN-only regeneration matches every input hash, logit result,
-generated token and predicted cycle count. All baseline steps passed bit-exact
-DRAM/TMEM validation. Complete LPN process time includes real numerical
-execution and input I/O; RTL core time excludes loading and dumping memory.
-Whole RTL process times are also preserved in the linked reports. These
-measurements ran alongside other baseline cases.
+Ten Qwen generation cases completed: eight generated eight tokens each, and
+two generated twelve each. Each case executes every transformer layer and the
+vocabulary head with persistent KV state. Prompt tokens and generated tokens
+each require one full forward step; the RTL runner launches a separate
+Verilator process per step. All baseline steps passed bit-exact full DRAM/TMEM
+validation. Every complete LPN-only regeneration matched all program/input
+hashes, logits, generated tokens and predicted cycle counts.
 
-| Completed case | Steps | RTL core | Native LPN timing | Complete LPN process | Speedup vs RTL core |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| [Once](validation/qwen17/completed_once.json) | 9 | 6634.80 s | 16.67 s | 140.74 s | 47.14x |
-| [France](validation/qwen17/completed_france.json) | 13 | 9541.93 s | 23.97 s | 183.97 s | 51.87x |
-| [Sky](validation/qwen17/completed_sky.json) | 13 | 9529.14 s | 23.97 s | 183.95 s | 51.80x |
-| [Robot story](validation/qwen17/completed_robot.json) | 15 | 11077.29 s | 27.74 s | 211.38 s | 52.40x |
-| [Mountain village](validation/qwen17/completed_mountain.json) | 13 | 9516.14 s | 24.08 s | 182.42 s | 52.17x |
-| [Translation prompt](validation/qwen17/completed_translation.json) | 15 | 11144.52 s | 27.68 s | 213.33 s | 52.24x |
-| [Arithmetic prompt](validation/qwen17/completed_arithmetic.json) | 13 | 9632.62 s | 24.01 s | 182.87 s | 52.68x |
-| [Why (12 tokens)](validation/qwen17/completed_why12.json) | 13 | 9606.72 s | 23.87 s | 184.21 s | 52.15x |
-| [Hello (12 tokens)](validation/qwen17/completed_hello12.json) | 13 | 9708.61 s | 23.94 s | 181.84 s | 53.39x |
+The table compares summed whole Verilator process times with whole LPN replay
+process times. LPN time includes functional computation, preparation, compilation,
+serialization, hashing, initialization and process cleanup. Baselines ran with
+up to six concurrent workers; LPN replays ran one at a time. Earlier replays
+overlapped baselines, and the last replay ran after all baselines finished.
 
-The [batch observations](validation/qwen17/overnight_progress.json) now contain
-141 passing token comparisons; the longest generation case is still running.
-The [completed replay summary](validation/qwen17/completed_replays_summary.json)
-covers 1,594,176,069 RTL cycles across 117 token steps and 80 generated tokens.
-Native timing throughput is 7.38 million RTL-equivalent cycles/s; whole LPN
-process throughput, including functional work and I/O, is 0.958 million/s.
-These rates use summed per-case processing times, not concurrent batch wall time.
+| Completed case | Input / output tokens | Whole RTL processes | Native LPN timing | Whole LPN process | Whole-process speedup | Worst cycle error |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| [Once](validation/qwen17/completed_once.json) | 1 / 8 | 2.06 h | 16.67 s | 140.74 s | 52.66x | 0.541% |
+| [France](validation/qwen17/completed_france.json) | 5 / 8 | 2.96 h | 23.97 s | 183.97 s | 57.99x | 0.557% |
+| [Sky](validation/qwen17/completed_sky.json) | 5 / 8 | 2.96 h | 23.97 s | 183.95 s | 57.96x | 0.557% |
+| [Robot story](validation/qwen17/completed_robot.json) | 7 / 8 | 3.44 h | 27.74 s | 211.38 s | 58.57x | 0.565% |
+| [Mountain village](validation/qwen17/completed_mountain.json) | 5 / 8 | 2.96 h | 24.08 s | 182.42 s | 58.36x | 0.557% |
+| [Translation prompt](validation/qwen17/completed_translation.json) | 7 / 8 | 3.46 h | 27.68 s | 213.33 s | 58.35x | 0.565% |
+| [Arithmetic prompt](validation/qwen17/completed_arithmetic.json) | 5 / 8 | 2.99 h | 24.01 s | 182.87 s | 58.82x | 0.557% |
+| [Why](validation/qwen17/completed_why12.json) | 1 / 12 | 2.98 h | 23.87 s | 184.21 s | 58.28x | 0.557% |
+| [Hello](validation/qwen17/completed_hello12.json) | 1 / 12 | 3.01 h | 23.94 s | 181.84 s | 59.56x | 0.557% |
+| [Fibonacci](validation/qwen17/completed_fibonacci.json) | 18 / 8 | 5.94 h | 48.11 s | 372.41 s | 57.46x | 0.610% |
+
+The [completed batch observations](validation/qwen17/overnight_progress.json)
+contain 143 passing token comparisons and 88 generated tokens. The
+[full replay summary](validation/qwen17/completed_replays_summary.json)
+covers 1,948,459,995 RTL cycles. Aggregate speedup is
+**57.89x** comparing whole processes, or **51.81x** comparing whole
+LPN processes with RTL core time alone. Native timing alone is **399.67x** faster.
+Worst per-step cycle error is **0.610%**. Native timing throughput is
+7.38 million RTL-equivalent cycles/s; whole LPN process throughput is
+0.956 million/s. These rates use summed per-case processing times, not
+concurrent batch wall time. Accuracy applies to this fixed behavioral-memory
+RTL configuration; it does not establish physical DDR-controller accuracy.
+
+The [raw observations](validation/qwen17/overnight_records.csv) preserve every
+paired measurement. The [completion audit](validation/qwen17/completion_audit.json)
+verifies all ten durable snapshot hashes and final logits, complete generation
+replays, raw CSV records, and checkpoint/model/compiler/runtime/RTL fingerprints.
+The [audit program](validation/qwen17/audit_completed.py) rejects unfinished
+campaigns and can recheck the archived run on icdslab2:
+
+```sh
+~/FeSens-openTPU/.venv/bin/python examples/opentpu/validation/qwen17/audit_completed.py \
+  --root ~/lpn-runs/qwen3-1.7b-parallel --project-root "$PWD" \
+  --opentpu-root ~/FeSens-openTPU-qwen --expected-cases 10 \
+  --output /tmp/qwen-completion-audit.json
+```
+
+The [measured overhead breakdown](validation/qwen17/functional_overhead.json)
+uses the 18-input/8-output Fibonacci case: 372.41 s end to end, with 183.48 s
+in the functional frontend, 89.74 s serializing/hashing inputs, 36.65 s preparing
+the timing model, and 48.11 s in native LPN timing. The frontend timer includes
+ISA execution and timing-metadata extraction; it does not isolate pure GEMM.
+Eliminating that entire stage with other costs unchanged would leave 188.92 s,
+a 1.97x end-to-end upper bound for that change. This is an arithmetic bound,
+not a measured optimization; numerical results remain necessary for generation.
+At similar context lengths, 16 input plus 8 output tokens should take roughly
+5m45s with this configuration; that is an estimate, not an additional RTL case.
 
 The [Qwen guard-cache comparison](validation/qwen17/guard_cache_ablation.json)
 uses one copied timing input from an independently RTL-validated decode step.
@@ -222,7 +257,7 @@ PYTHONPATH=. ../FeSens-openTPU/.venv/bin/python -m examples.opentpu.check_memory
 
 On icdslab2, set `VERILATOR_ROOT=$HOME/.local/opt/lpn-verilator-5.052` and put
 its `bin` directory first on `PATH`. The system Verilator 5.020 is insufficient.
-The active batch is under `~/lpn-runs/qwen3-1.7b-parallel`: ten independent
+The completed campaign is under `~/lpn-runs/qwen3-1.7b-parallel`: ten independent
 generation cases, with a limit of six concurrent processes. The original eight
 request up to eight new tokens each; two added cases request twelve each.
 `batch.json` records PIDs, commands, progress and failures. Large active
@@ -273,11 +308,13 @@ The [three-step replay pilot](validation/qwen17/replay_pilot.json) covers one
 prefill and two generated-token decodes. All hashes/logits/cycles match; its
 complete replay session took 45.63 s versus 2235.28 s of recorded RTL core time.
 This is a partial-case check, not a completed eight-token generation result.
-The active `replay_completed.py` driver waits for each full batch case to end,
-then runs one LPN-only replay at a time, recording complete external process
+The `replay_completed.py` driver waited for each full batch case to end,
+then ran one LPN-only replay at a time, recording complete external process
 wall time in `~/lpn-runs/qwen3-1.7b-parallel/lpn-replays.json`. It removes only
 the replay's regenerable large input dump after verification; reports and
-validation checkpoints remain. The active RTL workers are not restarted.
+validation checkpoints remain. All ten baselines and replays are complete;
+the supervisor, collector and replay driver have exited normally. Missing
+historical controller PIDs are expected after their terminal manifests are written.
 
 `e2e.py` runs the upstream model compiler and Engine with real checkpoint
 weights and tokenizer. Every prompt/decode token executes all layers,
