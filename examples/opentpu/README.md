@@ -164,17 +164,22 @@ generation validation is still in progress. It uses D=128, a 2 GiB memory, the s
 behavioral memory latency/ports as the earlier runs, and a larger command-table
 capacity of 32768. Real Llama 3.2 remains unvalidated.
 
-The [first completed Qwen generation case](validation/qwen17/completed_once.json)
-uses the prompt `Once`, one prefill token and eight generated tokens. Its nine
-RTL-validated steps cover 122,626,193 cycles, with bit-exact DRAM/TMEM results.
-A complete LPN-only regeneration matches every input hash, logit result,
-generated token and predicted cycle count. Recorded RTL core time was 6634.80 s
-(7410.82 s including RTL process I/O); the complete replay process took 140.74 s
-(47.14x versus RTL core), including real numerical execution and input I/O.
-Native LPN timing took 16.67 s. These measurements ran alongside other baseline
-cases. The [batch observations](validation/qwen17/overnight_progress.json) now
-contain 48 passing token comparisons; the remaining generation cases are still
-running or queued.
+Three Qwen generation cases have completed all eight requested new tokens.
+Each full LPN-only regeneration matches every input hash, logit result,
+generated token and predicted cycle count. All baseline steps passed bit-exact
+DRAM/TMEM validation. Complete LPN process time includes real numerical
+execution and input I/O; RTL core time excludes loading and dumping memory.
+Whole RTL process times are also preserved in the linked reports. These
+measurements ran alongside other baseline cases.
+
+| Completed case | Steps | RTL core | Native LPN timing | Complete LPN process | Speedup vs RTL core |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| [Once](validation/qwen17/completed_once.json) | 9 | 6634.80 s | 16.67 s | 140.74 s | 47.14x |
+| [France](validation/qwen17/completed_france.json) | 13 | 9541.93 s | 23.97 s | 183.97 s | 51.87x |
+| [Sky](validation/qwen17/completed_sky.json) | 13 | 9529.14 s | 23.97 s | 183.95 s | 51.80x |
+
+The [batch observations](validation/qwen17/overnight_progress.json) now contain
+66 passing token comparisons; five generation cases are still running.
 
 The [Qwen guard-cache comparison](validation/qwen17/guard_cache_ablation.json)
 uses one copied timing input from an independently RTL-validated decode step.
