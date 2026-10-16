@@ -14,6 +14,17 @@ def alive(pid):
     except FileNotFoundError:
         return False
 
+def observation_row(case,record,failed=False):
+    row={'case':case,'observation_status':'timing_failed' if failed else 'passed'}
+    row.update({k:record.get(k) for k in [
+        'position','phase','input_token','rtl_cycles','lpn_cycles','relative_cycle_error',
+        'rtl_core_seconds','rtl_process_seconds','lpn_core_seconds','lpn_process_seconds',
+        'functional_frontend_seconds','model_build_seconds','native_compile_seconds',
+        'single_use_lpn_seconds','all_dram_and_tmem_bit_exact','identical_input_files',
+        'zero_rollbacks','timing_cache_hit']})
+    if row['position'] is None:row['position']=record.get('step')
+    return row
+
 def preserve_checkpoint(case,archive):
     source=Path(case['scratch_output'])
     state_path=source/'state.json'
@@ -74,28 +85,30 @@ def main():
                 if report_path.exists():
                     report=json.loads(report_path.read_text())
                     for record in report['records']:
-                        rows.append({'case':job['id'],**{k:record.get(k) for k in [
-                            'position','phase','input_token','rtl_cycles','lpn_cycles','relative_cycle_error',
-                            'rtl_core_seconds','rtl_process_seconds','lpn_core_seconds','lpn_process_seconds',
-                            'functional_frontend_seconds','model_build_seconds','native_compile_seconds',
-                            'single_use_lpn_seconds','all_dram_and_tmem_bit_exact','identical_input_files',
-                            'zero_rollbacks','timing_cache_hit']}})
+                        rows.append(observation_row(job['id'],record))
                 failure=dest/'failed-step.json'
-                if failure.exists():case['failed_step']=json.loads(failure.read_text())
+                if failure.exists():
+                    case['failed_step']=json.loads(failure.read_text())
+                    failed=observation_row(job['id'],case['failed_step'],failed=True)
+                    if not any(r['case']==job['id'] and r['position']==failed['position'] for r in rows):
+                        rows.append(failed)
                 if job['status']=='failed':
                     case['last_log_lines']=(root/(job['id']+'.log')).read_text().splitlines()[-20:]
                 cases.append(case)
             summary={'updated_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),
                 'monitor_pid':os.getpid(),'supervisor_pid':batch['supervisor_pid'],
                 'supervisor_live':alive(batch['supervisor_pid']),
-                'status':batch.get('status','running'),'cases':cases,'validated_token_steps':len(rows),
+                'status':batch.get('status','running'),'cases':cases,
+                'timing_observations':len(rows),
+                'validated_token_steps':sum(r['observation_status']=='passed' for r in rows),
+                'failed_timing_observations':sum(r['observation_status']=='timing_failed' for r in rows),
                 'rtl_cycles':sum(r['rtl_cycles'] for r in rows),
                 'rtl_core_seconds':sum(r['rtl_core_seconds'] for r in rows),
                 'lpn_core_seconds':sum(r['lpn_core_seconds'] for r in rows),
                 'full_lpn_seconds':sum(r['single_use_lpn_seconds'] for r in rows),
                 'max_absolute_cycle_error':max((abs(r['relative_cycle_error']) for r in rows),default=None),
-                'all_validated_steps_bit_exact':all(r['all_dram_and_tmem_bit_exact'] for r in rows) if rows else None,
-                'all_validated_steps_within_5_percent':all(abs(r['relative_cycle_error'])<=.05 for r in rows) if rows else None,
+                'all_observed_steps_bit_exact':all(r['all_dram_and_tmem_bit_exact'] for r in rows) if rows else None,
+                'all_observed_steps_within_5_percent':all(abs(r['relative_cycle_error'])<=.05 for r in rows) if rows else None,
                 'disk_free_bytes':shutil.disk_usage(root).free,
                 'scratch_free_bytes':shutil.disk_usage(batch['scratch_root']).free}
             if rows:
