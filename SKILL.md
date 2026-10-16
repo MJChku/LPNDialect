@@ -186,8 +186,15 @@ Larger Qwen3-1.7B runs need the behavioral memory storage patch and isolated
 FeSens worktree described in the openTPU README. Use the installed Verilator
 5.052 with both `VERILATOR_ROOT` and `PATH` set. The active parallel batch's
 manifest is `~/lpn-runs/qwen3-1.7b-parallel/batch.json`; inspect it and the case
-logs before launching duplicate jobs. RAM scratch holds active large snapshots;
-the separate overnight monitor backs up completed-token snapshots to
+logs before launching duplicate jobs.
+The batch expanded from four to six concurrent cases using a verified scheduler
+handoff. Read the current supervisor PID and parallelism from `batch.json`;
+the original four model/RTL workers were preserved. Do not restart a worker
+because its supervising scheduler changed. Adopted process completion is
+validated from its terminal report and snapshot, with unknown original exit
+status explicitly recorded rather than invented as zero.
+RAM scratch holds active large snapshots; the separate overnight monitor
+backs up completed-token snapshots to
 `recovery/<case>` and publishes `overnight-summary.json`/`overnight-records.csv`.
 Check the monitor PID and verified recovery manifest rather than assuming that
 a RAM checkpoint is durable. Finished snapshots are archived to `results`.

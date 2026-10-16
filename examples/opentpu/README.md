@@ -183,7 +183,7 @@ PYTHONPATH=. ../FeSens-openTPU/.venv/bin/python -m examples.opentpu.check_memory
 On icdslab2, set `VERILATOR_ROOT=$HOME/.local/opt/lpn-verilator-5.052` and put
 its `bin` directory first on `PATH`. The system Verilator 5.020 is insufficient.
 The active batch is under `~/lpn-runs/qwen3-1.7b-parallel`: eight independent
-generation cases, four concurrent processes, each requesting up to eight new
+generation cases, initially four and now six concurrent processes, each requesting up to eight new
 tokens. `batch.json` records PIDs, commands, progress and failures. Large active
 files/snapshots live under `/dev/shm/lpn-qwen3-17-validation`; reports and logs
 are mirrored to disk. The separate `overnight_monitor.py` process copies and
@@ -194,6 +194,17 @@ The supervisor archives a final snapshot when each case ends; the monitor then
 removes its duplicate backup. RAM snapshots do not survive a reboot, so only
 verified disk recovery snapshots are durable. Each case freezes RTL/observer
 source hashes as well as the upstream revision in its resume identity.
+
+After twenty passing token comparisons, `supervisor_v2.py` adopted the four
+live workers and admitted two queued cases under measured memory headroom.
+The [handoff audit](validation/qwen17/control_handoff.json) records unchanged
+worker identities and unchanged RTL PIDs. No model/RTL workers were restarted.
+The new scheduler preserves PID start times to distinguish exited processes
+from reused PIDs, checks complete numerical/timing reports before accepting an
+adopted worker's result, and hard-links an existing verified recovery snapshot
+into the final archive when available. `batch.json` records the current
+parallelism and its change history. The monitor and replay driver follow that
+manifest; do not assume the original supervisor PID is still current.
 
 `replay_e2e.py` measures an LPN-only regeneration of a recorded RTL-validated
 case, preserving real numerical execution and greedy decoding. It checks

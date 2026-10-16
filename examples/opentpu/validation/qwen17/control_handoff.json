@@ -1,0 +1,30 @@
+{
+  "old_supervisor_pid": 1886655,
+  "new_supervisor_pid": 1915005,
+  "worker_pids_unchanged": {
+    "once": {
+      "pid": 1886663,
+      "start_ticks": 1191168660
+    },
+    "france": {
+      "pid": 1886664,
+      "start_ticks": 1191168660
+    },
+    "robot": {
+      "pid": 1886665,
+      "start_ticks": 1191168660
+    },
+    "sky": {
+      "pid": 1886666,
+      "start_ticks": 1191168660
+    }
+  },
+  "rtl_pids_preserved": [
+    "1911671",
+    "1912343",
+    "1912370",
+    "1912528"
+  ],
+  "parallel_cases": 6,
+  "handoff_file": "/home/ubuntu/lpn-runs/qwen3-1.7b-parallel/control-handoff-1792115507.json"
+}
