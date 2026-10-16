@@ -191,6 +191,11 @@ the separate overnight monitor backs up completed-token snapshots to
 `recovery/<case>` and publishes `overnight-summary.json`/`overnight-records.csv`.
 Check the monitor PID and verified recovery manifest rather than assuming that
 a RAM checkpoint is durable. Finished snapshots are archived to `results`.
+The separate full-case replay driver is recorded in `lpn-replays.json`; verify
+its PID before starting another. `examples.opentpu.replay_e2e` regenerates real
+numerics from a completed report and verifies every input/logit/cycle. It
+reports session wall time separately from the summed functional/timing stages.
+Only use `--allow-partial` for an explicitly labeled unfinished snapshot.
 Freeze the RTL/observer source
 hashes in run identities; the pinned commit alone does not identify local
 simulation patches. Do not modify the separate frozen SmolLM2 baseline tree.

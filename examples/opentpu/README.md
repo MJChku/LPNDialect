@@ -195,6 +195,30 @@ removes its duplicate backup. RAM snapshots do not survive a reboot, so only
 verified disk recovery snapshots are durable. Each case freezes RTL/observer
 source hashes as well as the upstream revision in its resume identity.
 
+`replay_e2e.py` measures an LPN-only regeneration of a recorded RTL-validated
+case, preserving real numerical execution and greedy decoding. It checks
+checkpoint fingerprints, every input image/program hash, logits, instruction
+counts and predicted cycles. Timing-table capacity comes from the recorded
+case, so larger Qwen streams do not inherit SmolLM2's smaller limit. Completed
+generation reports are required by default; `--allow-partial` explicitly opts
+into a frozen unfinished snapshot and marks that scope in the result.
+
+```sh
+PYTHONPATH=. ../FeSens-openTPU/.venv/bin/python -m examples.opentpu.replay_e2e \
+  --baseline /path/to/completed/report.json --opentpu-root ../FeSens-openTPU-qwen \
+  --compiler build/tools/lpn-compile/lpn-compile --output /tmp/qwen-lpn-replay
+```
+
+The [three-step replay pilot](validation/qwen17/replay_pilot.json) covers one
+prefill and two generated-token decodes. All hashes/logits/cycles match; its
+complete replay session took 45.63 s versus 2235.28 s of recorded RTL core time.
+This is a partial-case check, not a completed eight-token generation result.
+The active `replay_completed.py` driver waits for each full batch case to end,
+then runs one LPN-only replay at a time, recording complete external process
+wall time in `~/lpn-runs/qwen3-1.7b-parallel/lpn-replays.json`. It removes only
+the replay's regenerable large input dump after verification; reports and
+validation checkpoints remain. The active RTL workers are not restarted.
+
 `e2e.py` runs the upstream model compiler and Engine with real checkpoint
 weights and tokenizer. Every prompt/decode token executes all layers,
 attention, SwiGLU, KV-cache writes/reads and the vocabulary head. Host greedy
