@@ -180,7 +180,7 @@ measurements ran alongside other baseline cases.
 | [Robot story](validation/qwen17/completed_robot.json) | 15 | 11077.29 s | 27.74 s | 211.38 s | 52.40x |
 
 The [batch observations](validation/qwen17/overnight_progress.json) now contain
-76 passing token comparisons; four generation cases are still running.
+86 passing token comparisons; six generation cases are still running.
 The [completed replay summary](validation/qwen17/completed_replays_summary.json)
 covers 681,270,494 RTL cycles across 50 token steps and 32 generated tokens.
 Native timing throughput is 7.38 million RTL-equivalent cycles/s; whole LPN
@@ -216,9 +216,10 @@ PYTHONPATH=. ../FeSens-openTPU/.venv/bin/python -m examples.opentpu.check_memory
 
 On icdslab2, set `VERILATOR_ROOT=$HOME/.local/opt/lpn-verilator-5.052` and put
 its `bin` directory first on `PATH`. The system Verilator 5.020 is insufficient.
-The active batch is under `~/lpn-runs/qwen3-1.7b-parallel`: eight independent
-generation cases, initially four and now six concurrent processes, each requesting up to eight new
-tokens. `batch.json` records PIDs, commands, progress and failures. Large active
+The active batch is under `~/lpn-runs/qwen3-1.7b-parallel`: ten independent
+generation cases, with a limit of six concurrent processes. The original eight
+request up to eight new tokens each; two added cases request twelve each.
+`batch.json` records PIDs, commands, progress and failures. Large active
 files/snapshots live under `/dev/shm/lpn-qwen3-17-validation`; reports and logs
 are mirrored to disk. The separate `overnight_monitor.py` process copies and
 hash-verifies each completed token's latest snapshot into `recovery/<case>`
@@ -239,6 +240,14 @@ adopted worker's result, and hard-links an existing verified recovery snapshot
 into the final archive when available. `batch.json` records the current
 parallelism and its change history. The monitor and replay driver follow that
 manifest; do not assume the original supervisor PID is still current.
+
+After four completed generations freed two slots, `supervisor_v3.py` adopted
+the remaining four workers and added the `Hello` and `Why` cases, each with a
+one-token prompt and twelve requested output tokens. The
+[queue extension audit](validation/qwen17/queue_extension.json) verifies that
+all existing worker identities and running RTL PIDs were preserved. The
+parallel limit remains six; the collector and replay driver follow the ten-case
+manifest. Model, compiler, runtime and RTL sources remain frozen.
 
 `replay_e2e.py` measures an LPN-only regeneration of a recorded RTL-validated
 case, preserving real numerical execution and greedy decoding. It checks

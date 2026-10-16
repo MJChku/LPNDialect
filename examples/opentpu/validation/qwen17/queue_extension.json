@@ -1,0 +1,98 @@
+{
+  "status": "committed",
+  "old_supervisor_pid": 1915005,
+  "new_supervisor_pid": 1980071,
+  "worker_identities_before": {
+    "fibonacci": {
+      "pid": 1915007,
+      "start_ticks": 1191644856
+    },
+    "mountain": {
+      "pid": 1915008,
+      "start_ticks": 1191644856
+    },
+    "translation": {
+      "pid": 1937106,
+      "start_ticks": 1191929603
+    },
+    "arithmetic": {
+      "pid": 1962903,
+      "start_ticks": 1192263544
+    }
+  },
+  "worker_identities_after": {
+    "fibonacci": {
+      "pid": 1915007,
+      "start_ticks": 1191644856
+    },
+    "mountain": {
+      "pid": 1915008,
+      "start_ticks": 1191644856
+    },
+    "translation": {
+      "pid": 1937106,
+      "start_ticks": 1191929603
+    },
+    "arithmetic": {
+      "pid": 1962903,
+      "start_ticks": 1192263544
+    }
+  },
+  "all_existing_workers_preserved": true,
+  "rtl_before": {
+    "1977486": {
+      "state": "R",
+      "start_ticks": 1192483052
+    },
+    "1977547": {
+      "state": "R",
+      "start_ticks": 1192484683
+    },
+    "1979483": {
+      "state": "R",
+      "start_ticks": 1192518840
+    },
+    "1979741": {
+      "state": "R",
+      "start_ticks": 1192524832
+    }
+  },
+  "rtl_after": {
+    "1977486": {
+      "state": "R",
+      "start_ticks": 1192483052
+    },
+    "1977547": {
+      "state": "R",
+      "start_ticks": 1192484683
+    },
+    "1979483": {
+      "state": "R",
+      "start_ticks": 1192518840
+    },
+    "1979741": {
+      "state": "R",
+      "start_ticks": 1192524832
+    }
+  },
+  "all_existing_rtl_pids_preserved": true,
+  "extra_jobs": [
+    {
+      "id": "hello12",
+      "prompt": "Hello",
+      "status": "queued",
+      "requested_generated_tokens": 12
+    },
+    {
+      "id": "why12",
+      "prompt": "Why",
+      "status": "queued",
+      "requested_generated_tokens": 12
+    }
+  ],
+  "memory_available_before_bytes": 97342509056,
+  "parallel_limit": 6,
+  "handoff": "/home/ubuntu/lpn-runs/qwen3-1.7b-parallel/queue-extension-handoff-1792124353.json",
+  "committed_unix": 1792124353.9773357,
+  "supervisor_source_sha256": "8308c9a4c5f108ec1fc1596eadbaebee1385b43a032177335bf762849184d0c7"
+}

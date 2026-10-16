@@ -193,6 +193,12 @@ the original four model/RTL workers were preserved. Do not restart a worker
 because its supervising scheduler changed. Adopted process completion is
 validated from its terminal report and snapshot, with unknown original exit
 status explicitly recorded rather than invented as zero.
+After four completed generations, a second verified handoff added `hello12`
+and `why12`, each requesting twelve generated tokens. The batch now has ten
+cases and still permits six concurrent workers. See
+`validation/qwen17/queue_extension.json` under `examples/opentpu` for preserved
+worker identities; `supervisor_v3.py` is the recorded successor. Continue to
+read the live manifest instead of assuming either historical scheduler owns it.
 RAM scratch holds active large snapshots; the separate overnight monitor
 backs up completed-token snapshots to
 `recovery/<case>` and publishes `overnight-summary.json`/`overnight-records.csv`.

@@ -1,5 +1,5 @@
 {
-  "captured_utc": "2026-10-16T04:08:44.080847+00:00",
+  "captured_utc": "2026-10-16T04:35:17.809871+00:00",
   "status": "partial_batch",
   "scope": "Completed generation replays only. The driver measured whole LPN processes one at a time alongside concurrent RTL cases. Complete process time includes numerical execution, initialization, compilation, input serialization, hashing and process cleanup. RTL-equivalent throughput divides recorded RTL cycles by measured LPN seconds. Totals sum per-case processing times, not concurrent batch wall time. The whole batch remains unfinished.",
   "model": "Qwen/Qwen3-1.7B",
