@@ -154,8 +154,13 @@ not rerun for the heartbeat replay.
 
 Qwen3-1.7B bring-up uses the official `Qwen/Qwen3-1.7B` checkpoint at
 `70d244cc86ccca08cf5af4e1e306ecf908b1ad5e`, compiled to the upstream INT8
-execution path. Validation is in progress; do not claim numerical or timing
-accuracy until its reports pass. It uses D=128, a 2 GiB memory, the same
+execution path. The [first-token reports](validation/qwen17/first_tokens.json)
+cover four concurrent cases, each executing all 28 layers and the vocabulary
+head: 54,499,684 aggregate RTL cycles, 0.53% timing error, and bit-exact full
+DRAM/TMEM results. Measured aggregate RTL core time was 2954.02 s, native LPN
+timing 7.31 s (403.86x), and full LPN pipeline 38.65 s (76.43x versus RTL core).
+These are first-token observations with RTL command-path tracing; complete
+generation validation is still in progress. It uses D=128, a 2 GiB memory, the same
 behavioral memory latency/ports as the earlier runs, and a larger command-table
 capacity of 32768. Real Llama 3.2 remains unvalidated.
 
