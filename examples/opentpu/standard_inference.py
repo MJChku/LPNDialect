@@ -9,6 +9,7 @@ the same program/DRAM files in the ISA model, LPN and Verilator.
 import argparse
 from dataclasses import asdict
 import json
+import os
 from pathlib import Path
 import time
 
@@ -42,6 +43,7 @@ def make_backend(output,prompt_length,compiler=None,options=None,capacity=65536)
   import numpy as np
   from .shape_workload import resolve_static,program_hash
   from .e2e import CheckedBackend
+  from .e2e import atomic_json
   from .fpga_dse import measure
   from .native_timing import ReusableTiming
   from .model import Timing
@@ -90,8 +92,17 @@ def make_backend(output,prompt_length,compiler=None,options=None,capacity=65536)
         phase='prefill' if before<prompt_length else 'decode',
         input_rows=self.input_rows,logit_rows_read=0,
         program_sha256=[program_hash(p) for p in programs],args=list(args or []))
+      atomic_json(output/'progress.json',dict(status='running',pid=os.getpid(),
+          completed_kernels=index,active_kernel=observed))
       if options is not None:
-        result=super().run(programs,args)
+        try:
+          result=super().run(programs,args)
+        except Exception as error:
+          atomic_json(directory/'failure.json',dict(observed,
+              error_type=type(error).__name__,error=str(error)))
+          atomic_json(output/'progress.json',dict(status='failed',pid=os.getpid(),
+              completed_kernels=index,active_kernel=observed,error=str(error)))
+          raise
       else:
         workload=resolve_static(self.cfg,programs,args)
         result=dict(instructions=[len(c) for c in workload.commands])
@@ -99,6 +110,9 @@ def make_backend(output,prompt_length,compiler=None,options=None,capacity=65536)
           result['lpn']=measure(self.runner,workload,Timing(batch_rows=8),directory)
         self.records.append(result)
       result.update(observed)
+      atomic_json(directory/'record.json',result)
+      atomic_json(output/'progress.json',dict(status='running',pid=os.getpid(),
+          completed_kernels=index+1,last_kernel=result))
       return result
   return Backend
 
@@ -115,6 +129,8 @@ def main():
       help='Prescribed placeholder token count in weight-free planning only')
   parser.add_argument('--output-tokens',type=int,default=8)
   parser.add_argument('--cap',type=int,default=128)
+  parser.add_argument('--depth',type=int,choices=(64,128),default=128,
+      help='Hardware D; SmolLM2-135M requires 64 for its 64-element attention heads')
   parser.add_argument('--rtl-timeout',type=float,default=28800)
   args=parser.parse_args()
   if args.mode=='validate-rtl' and (args.model_dir is None or args.compiler is None):
@@ -135,6 +151,8 @@ def main():
     from tokenizers import Tokenizer
     from opentpu.llm import load_spec
     from opentpu import rtlsim
+    import torch
+    torch.set_num_threads(1)
     spec=load_spec(args.model_dir)
     prompt=Tokenizer.from_file(str(args.model_dir/'tokenizer.json')).encode(args.prompt).ids
     weights=load_weights(args.model_dir)
@@ -142,7 +160,7 @@ def main():
     rtlsim.VFLAGS+=['-CFLAGS','-O3']
   if not prompt or len(prompt)+args.output_tokens>args.cap:
     parser.error('prompt plus output must fit capacity')
-  cfg=device_config(spec,args.cap,S=1,D=128,MCOLS=4,ACT_ROWS=16,
+  cfg=device_config(spec,args.cap,S=1,D=args.depth,MCOLS=4,ACT_ROWS=16,
       ACT_BLOCKS=64,LANES=8,IMEM_WORDS=32768,TMEM_WORDS=65536)
   from types import SimpleNamespace
   options=(SimpleNamespace(output=args.output,lpn_compiler=args.compiler,
@@ -155,6 +173,8 @@ def main():
   # Backend records are the dictionaries returned to Engine; upstream _run_rows
   # itself adds 'rows'. Preserve that observed choice instead of choosing it.
   for r in records:r['input_rows']=r.get('rows',r['input_rows'])
+  for index,r in enumerate(records):
+    atomic_json(args.output/'kernels'/f'{index:04d}'/'record.json',r)
   report=dict(status='complete',mode=args.mode,entrypoint='opentpu.llm.qwen3.Engine.generate',
       scheduling='Unmodified upstream prefill_chunks/fit_chunk and autoregressive decode; default PREFILL_ROWS. Host compile pipeline disabled; resident device decode disabled.',
       scope=('Weight-free fixed-token placeholders; no text, logits, EOS or RTL accuracy claim.'
@@ -164,6 +184,9 @@ def main():
       prompt_ids=prompt,
       prompt_tokens=len(prompt),requested_output_tokens=args.output_tokens,
       returned_output_tokens=len(generated),final_position=engine.pos,
+      generated_ids=generated,
+      generated_text=(Tokenizer.from_file(str(args.model_dir/'tokenizer.json')).decode(generated)
+                      if args.mode=='validate-rtl' else None),
       engine_default_rows=engine.rows,host_seconds=time.perf_counter()-start,
       kernels=records,project_python_sha256={p.name:digest(p)
         for p in sorted(Path(__file__).parent.glob('*.py'))},
@@ -172,11 +195,27 @@ def main():
       upstream_python_sha256={str(p.relative_to(args.opentpu_root)):digest(p)
         for p in sorted((args.opentpu_root/'opentpu').rglob('*.py'))})
   if args.mode=='validate-rtl':
+    rtl_cycles=sum(r['rtl_cycles'] for r in records)
+    lpn_cycles=sum(r['lpn_cycles'] for r in records)
+    rtl_core=sum(r['rtl_core_seconds'] for r in records)
+    lpn_core=sum(r['lpn_core_seconds'] for r in records)
+    report['timing_totals']=dict(rtl_cycles=rtl_cycles,lpn_cycles=lpn_cycles,
+        relative_cycle_error=lpn_cycles/rtl_cycles-1,
+        worst_kernel_cycle_error=max(abs(r['relative_cycle_error']) for r in records),
+        rtl_core_seconds=rtl_core,lpn_core_seconds=lpn_core,
+        core_speedup=rtl_core/lpn_core,
+        lpn_pipeline_seconds_excluding_input_serialization=sum(r['single_use_lpn_seconds'] for r in records),
+        rtl_process_seconds=sum(r['rtl_process_seconds'] for r in records),
+        all_device_memories_bit_exact=all(r['all_dram_and_tmem_bit_exact'] for r in records),
+        all_input_files_identical=all(r['identical_input_files'] for r in records),
+        zero_rollbacks=all(r['zero_rollbacks'] for r in records))
     report['upstream_rtl_sha256']={str(p.relative_to(args.opentpu_root)):digest(p)
       for folder in ('rtl','sim/verilator')
       for p in sorted((args.opentpu_root/folder).rglob('*'))
       if p.is_file() and p.suffix in ('.sv','.svh','.cpp','.h')}
   atomic_json(args.output/'report.json',report)
+  atomic_json(args.output/'progress.json',dict(status='complete',pid=os.getpid(),
+      completed_kernels=len(records),report='report.json'))
   print(json.dumps({k:v for k,v in report.items() if not k.endswith('_sha256') and k!='kernels'},indent=2),flush=True)
   print(json.dumps(dict(kernel_schedule=[{k:r[k] for k in
       ['position_before','phase','input_rows','logit_rows_read','instructions']} for r in records])),flush=True)

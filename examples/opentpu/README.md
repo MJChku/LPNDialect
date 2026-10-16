@@ -64,11 +64,21 @@ The numerical path uses real checkpoint values, the same upstream
 `Engine.generate()` and shared `CheckedBackend` for ISA/LPN/RTL comparisons.
 It retains the real KV state across kernels and verifies complete device
 memories. It runs Verilator and needs the pinned checkout, model dependencies
-and RTL patches documented below. This initial adapter records complete runs;
-it does not resume a partially completed generation. Planning can optionally
+and RTL patches documented below. Each completed kernel is saved under
+`kernels/<index>/record.json`; `progress.json` identifies the active process,
+completed-kernel count and failures. This adapter does not resume a partially
+completed generation. Planning can optionally
 run LPN on each upstream-emitted kernel with `--compiler`. Kernel program words,
 hashes, selected row counts and logit-readback counts are recorded separately
 from hardware timing.
+
+For the available SmolLM2-135M checkpoint, use the same command with
+`--model-dir ../FeSens-openTPU/models/SmolLM2-135M --depth 64`. Its 64-element
+attention heads require the 64-wide hardware mapping. Qwen3-1.7B uses the
+default `--depth 128`. Both use upstream batching and preserve real KV state.
+Completed reports include generated IDs/text, total and per-kernel cycle errors,
+native/RTL core time and measured LPN pipeline stages. Pipeline stage totals
+exclude input serialization; the joint validation wall time includes both engines.
 
 At this pin, upstream `generate()` also calls `step()` after selecting the last
 requested output, unless EOS/capacity stops it. The adapter preserves that final
