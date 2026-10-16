@@ -164,6 +164,18 @@ generation validation is still in progress. It uses D=128, a 2 GiB memory, the s
 behavioral memory latency/ports as the earlier runs, and a larger command-table
 capacity of 32768. Real Llama 3.2 remains unvalidated.
 
+The [first completed Qwen generation case](validation/qwen17/completed_once.json)
+uses the prompt `Once`, one prefill token and eight generated tokens. Its nine
+RTL-validated steps cover 122,626,193 cycles, with bit-exact DRAM/TMEM results.
+A complete LPN-only regeneration matches every input hash, logit result,
+generated token and predicted cycle count. Recorded RTL core time was 6634.80 s
+(7410.82 s including RTL process I/O); the complete replay process took 140.74 s
+(47.14x versus RTL core), including real numerical execution and input I/O.
+Native LPN timing took 16.67 s. These measurements ran alongside other baseline
+cases. The [batch observations](validation/qwen17/overnight_progress.json) now
+contain 42 passing token comparisons; the remaining generation cases are still
+running or queued.
+
 For Qwen's memory size, apply [verilator-large-memory.patch](verilator-large-memory.patch)
 in an isolated pinned FeSens worktree, after the observer patch. It splits the
 simulation memory's storage array into rows to avoid Verilator's range limit;
