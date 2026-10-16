@@ -84,6 +84,13 @@ visible. The scheduler's firing order and event timestamps are unchanged.
 executions, and rollback counts. Use `--no-guard-cache` for comparison/debugging.
 `--trace` reports successful transition firings with model timestamps.
 
+The [46-step SmolLM2 replay](examples/opentpu/validation/guard_heartbeats/smollm2_46.json)
+checks identical inputs, logits and timing predictions against the saved
+RTL-validated prefill segment. Heartbeats reduced native timing from 63.58 s
+to 18.12 s and the functional/preparation/compilation/timing pipeline from
+164.76 s to 119.52 s. The recorded RTL core took 3742.55 s; RTL was not rerun.
+Complete replay wall time, including initialization and file I/O, was 139.72 s.
+
 For observable reduction, `--lpn-synthesize-guards` computes separate take-ID
 metadata. Its representation is more restrictive: it rejects repeating or
 dynamic token-flow loops, effectful helpers, and data-dependent branches.
