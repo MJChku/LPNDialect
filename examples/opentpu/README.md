@@ -173,8 +173,19 @@ generated token and predicted cycle count. Recorded RTL core time was 6634.80 s
 (47.14x versus RTL core), including real numerical execution and input I/O.
 Native LPN timing took 16.67 s. These measurements ran alongside other baseline
 cases. The [batch observations](validation/qwen17/overnight_progress.json) now
-contain 42 passing token comparisons; the remaining generation cases are still
+contain 48 passing token comparisons; the remaining generation cases are still
 running or queued.
+
+The [Qwen guard-cache comparison](validation/qwen17/guard_cache_ablation.json)
+uses one copied timing input from an independently RTL-validated decode step.
+Three alternating untraced runs per mode measured median native time of
+5.388 s with `--no-guard-cache` and 1.880 s with heartbeat caching (2.87x).
+Guard evaluations dropped from 16,737,495 to 1,352,959. Separate traced runs
+matched all 526,080 firings and the final token marking exactly. This isolates
+native timing; it is not an end-to-end speedup. The accompanying
+[measurement script](validation/qwen17/guard_cache_ablation.py) accepts an
+immutable native binary and its input tables. `replay_e2e.py --mode` only labels
+a replay report; it does not select guard-cache behavior.
 
 For Qwen's memory size, apply [verilator-large-memory.patch](verilator-large-memory.patch)
 in an isolated pinned FeSens worktree, after the observer patch. It splits the
