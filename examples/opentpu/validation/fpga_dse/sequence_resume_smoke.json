@@ -1,0 +1,64 @@
+{
+  "scope": "Two-position parallel smoke and checkpoint resume. Original 128-token-capacity program hashes and predicted cycles checked against the recorded RTL-validated baseline.",
+  "status": "complete",
+  "workers_first": 2,
+  "workers_resumed": 1,
+  "steps": 2,
+  "original_program_and_lpn_cycle_positions_verified": [
+    0,
+    1
+  ],
+  "all_cycle_totals_unchanged": true,
+  "no_positions_rerun_on_resume": true,
+  "identity_sha256": "21e8a1e806254c1be3a0fc5533ccc95ac847ddd136f9755083b280aaf2899a6c",
+  "architectures": {
+    "original": {
+      "cycles": 27394706,
+      "phase_cycles": {
+        "prefill": 13697339,
+        "decode": 13697367
+      },
+      "hardware_seconds_at_assumed_clock": 0.13697353,
+      "native_seconds": 3.5526695879999997,
+      "summed_host_model_seconds": 6.9297925885766745,
+      "rollbacks": 0,
+      "cycle_speedup": 1,
+      "phase_cycle_speedup": {
+        "prefill": 1,
+        "decode": 1
+      }
+    },
+    "rows32": {
+      "cycles": 2453032,
+      "phase_cycles": {
+        "prefill": 1226376,
+        "decode": 1226656
+      },
+      "hardware_seconds_at_assumed_clock": 0.01226516,
+      "native_seconds": 1.868051137,
+      "summed_host_model_seconds": 5.240890862420201,
+      "rollbacks": 0,
+      "cycle_speedup": 11.167692064351382,
+      "phase_cycle_speedup": {
+        "prefill": 11.168955524243788,
+        "decode": 11.166428892859939
+      }
+    },
+    "rows64": {
+      "cycles": 2447916,
+      "phase_cycles": {
+        "prefill": 1223818,
+        "decode": 1224098
+      },
+      "hardware_seconds_at_assumed_clock": 0.01223958,
+      "native_seconds": 1.854881513,
+      "summed_host_model_seconds": 5.191994816064835,
+      "rollbacks": 0,
+      "cycle_speedup": 11.191031881812938,
+      "phase_cycle_speedup": {
+        "prefill": 11.19230065254801,
+        "decode": 11.189763401296302
+      }
+    }
+  }
+}

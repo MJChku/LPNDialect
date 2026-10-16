@@ -56,6 +56,35 @@ resource reserves and MACs per DSP. Every report separates hardware cycles,
 assumed-clock hardware seconds and simulator wall time. Reports include source
 and compiler hashes; output directories should be separate for each study.
 
+For a **complete 1,024-input + 8-output** workload, use the resumable sequence
+runner. It compares the original architecture with both 32-row and 64-row
+narrow-array candidates at every position:
+
+```sh
+PYTHONPATH=. PYTHONDONTWRITEBYTECODE=1 OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 \
+  ../FeSens-openTPU/.venv/bin/python -m examples.opentpu.sequence_timing \
+  --opentpu-root ../FeSens-openTPU \
+  --compiler build/tools/lpn-compile/lpn-compile \
+  --prompt-tokens 1024 --output-tokens 8 --workers 16 \
+  --output /tmp/qwen17-sequence-1024
+```
+
+Each kernel drains at HALT, so its fixed-position timing can be simulated in an
+independent host process; total hardware cycles sum the kernel cycles. This
+does not add threads to the LPN scheduler or overlap tokens on the modeled
+hardware. Prefill remains token-by-token, with weights streamed for each token;
+this is not a benchmark of tiled multi-token prefill. Model values and EOS do
+not affect this prescribed-length dense trace.
+
+`steps/<position>.json` stores each completed position atomically. `progress.json`
+reports completion counts and the owning PID. Repeat the same command to resume;
+`--workers` may change, but model/compiler/runtime/upstream source fingerprints,
+architecture parameters and lengths must match. A lock prevents duplicate runs
+in the same directory. Each worker reuses its small timing-table scratch files
+and all workers share a locked compilation cache. Summed worker times differ
+from parallel wall time; the final report records both. The 1,032-step workload
+uses KV capacity 1,152, beyond the capacity of the original RTL-validation run.
+
 The original 128-token-capacity configuration checks its program hashes and
 predicted cycles against the checked-in RTL-validated Qwen baseline. The
 16-input/8-output study checks every original-architecture step. Evolved
@@ -154,6 +183,40 @@ The evolved 24-step simulation took about
 5.9 s of shape compilation, with other study processes running. Those
 host times exclude the architecture sweep, baseline comparisons and Python
 startup. No matrix arithmetic or weight loading occurred.
+
+## Complete 1,024-input + 8-output workload
+
+The full prescribed sequence completed: **1,032 positions and 3,096 native LPN
+simulations**, including all three architectures at every position. All had zero
+rollbacks. The comparison took **15m13s wall time with 16 worker processes**.
+
+| Architecture | Total hardware cycles | Full-workload cycle reduction | Final 8 output-step cycle reduction |
+| --- | ---: | ---: | ---: |
+| Original | 14,595,614,900 | 1.000x | 1.000x |
+| 32 parallel output rows | 1,777,110,321 | 8.213x | 6.595x |
+| 64 parallel output rows | 1,774,470,465 | 8.225x | 6.603x |
+
+The 32-row candidate is only 0.149% slower overall while using half the modeled
+MXU MAC lanes. This supports choosing it before doubling the matrix datapath.
+The final output steps run at contexts 1,025 through 1,032 and are slower than
+the earlier single-step result at context 1,024. Gains vary with emitted tile
+shapes and context length; the short-context 11x result is not a universal gain.
+
+This workload uses KV capacity 1,152. Its larger memory layout changes program
+addresses, so it is not an identical-input RTL comparison. Source fingerprints,
+all 1,032 checkpoint records and every cycle sum were audited; no new numerical
+or RTL accuracy claim is made. A smaller
+[parallel/resume smoke check](validation/fpga_dse/sequence_resume_smoke.json) reproduces
+the saved original program hashes and LPN cycle counts at positions 0 and 1.
+
+![Per-position cycle predictions and reductions](validation/fpga_dse/qwen17_sequence1024.svg)
+
+[Full report](validation/fpga_dse/qwen17_sequence1024.json),
+[per-position CSV](validation/fpga_dse/qwen17_sequence1024.csv),
+[compact summary](validation/fpga_dse/qwen17_sequence1024_summary.json), and
+[completion audit](validation/fpga_dse/qwen17_sequence1024_audit.json).
+The audit verifies model/upstream/compiler/runtime fingerprints, every saved
+position, phase counts, cycle totals and the absence of RTL input dumps.
 
 ## Larger models
 

@@ -1,0 +1,58 @@
+{
+  "scope": "Every position of a prescribed-length, weight-free Qwen3-1.7B sequence. Prefill is token-by-token. Hardware kernels drain at HALT, so sequence cycles sum per-position runs. No weights, tensor arithmetic, generated text or EOS. Modified FPGA architectures and larger KV capacities are not RTL-validated.",
+  "token_steps": 1032,
+  "architectures": {
+    "original": {
+      "cycles": 14595614900.0,
+      "phase_cycles": {
+        "prefill": 14478666700.0,
+        "decode": 116948200.0
+      },
+      "hardware_seconds_at_assumed_clock": 72.9780745,
+      "native_seconds": 2312.012358578,
+      "summed_host_model_seconds": 5186.738545745611,
+      "rollbacks": 0,
+      "cycle_speedup": 1.0,
+      "phase_cycle_speedup": {
+        "prefill": 1.0,
+        "decode": 1.0
+      }
+    },
+    "rows32": {
+      "cycles": 1777110321.0,
+      "phase_cycles": {
+        "prefill": 1759377581.0,
+        "decode": 17732740.0
+      },
+      "hardware_seconds_at_assumed_clock": 8.885551605,
+      "native_seconds": 1550.301528766,
+      "summed_host_model_seconds": 4449.4112993162125,
+      "rollbacks": 0,
+      "cycle_speedup": 8.213116950323537,
+      "phase_cycle_speedup": {
+        "prefill": 8.2294254833977,
+        "decode": 6.595043969516273
+      }
+    },
+    "rows64": {
+      "cycles": 1774470465.0,
+      "phase_cycles": {
+        "prefill": 1756758189.0,
+        "decode": 17712276.0
+      },
+      "hardware_seconds_at_assumed_clock": 8.872352325,
+      "native_seconds": 1544.438560593,
+      "summed_host_model_seconds": 4440.596638819203,
+      "rollbacks": 0,
+      "cycle_speedup": 8.225335494665446,
+      "phase_cycle_speedup": {
+        "prefill": 8.241695863812478,
+        "decode": 6.602663598963792
+      }
+    }
+  },
+  "host_session_seconds": 912.7975112684071,
+  "report_sha256": "65527d58876159b918f5176e1b4f9b42734c4d8207551f485a2e1d6d719acb46",
+  "csv_sha256": "b7bb4386840dd05efdae1dd20c4e178be02530c5da3bc068762d84b3400fbba4",
+  "all_positions_and_sources_verified": true
+}

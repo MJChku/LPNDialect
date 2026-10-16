@@ -1,0 +1,32 @@
+{
+  "status": "complete",
+  "steps": 1032,
+  "native_simulations": 3096,
+  "checkpoints_verified": 1032,
+  "zero_rollbacks": true,
+  "all_source_compiler_runtime_fingerprints_verified": true,
+  "no_rtl_input_files_created": true,
+  "report_sha256": "65527d58876159b918f5176e1b4f9b42734c4d8207551f485a2e1d6d719acb46",
+  "manifest_sha256": "eb98866c95dfcb230001fa3f9bdfbddded86274a28285f3777abf911e532b275",
+  "external_process_observation": {
+    "returncode": 0,
+    "external_process_seconds": 913.3932619206607,
+    "command": [
+      "/home/ubuntu/FeSens-openTPU/.venv/bin/python",
+      "-m",
+      "examples.opentpu.sequence_timing",
+      "--opentpu-root",
+      "/home/ubuntu/FeSens-openTPU-qwen",
+      "--compiler",
+      "/home/ubuntu/LPNDialect-heartbeat/build/tools/lpn-compile/lpn-compile",
+      "--prompt-tokens",
+      "1024",
+      "--output-tokens",
+      "8",
+      "--workers",
+      "16",
+      "--output",
+      "/home/ubuntu/lpn-runs/fpga-sequence-1024/run"
+    ]
+  }
+}

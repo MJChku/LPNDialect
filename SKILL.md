@@ -80,6 +80,15 @@ The new Timing knobs default to the original RTL behavior. Preserve shared
 memory contention, scale readiness, output-bank limits and dependencies when
 adding parallel lanes. Whole-image addresses above 4 GiB require a different
 mapping; do not silently wrap addresses for a larger model.
+For complete prescribed-length sequences, use `examples.opentpu.sequence_timing`.
+It compares original/32-row/64-row architectures across every position without
+weights. Independent HALT-drained kernels run in separate host processes; the
+LPN scheduler remains sequential and hardware sequence cycles are summed.
+Read `progress.json` and the owning PID before starting duplicate jobs. Resume
+the same output directory with unchanged source/parameter fingerprints; worker
+count may change. Per-position JSON checkpoints retain completed work. Use
+`--prompt-tokens 1024 --output-tokens 8 --workers 16` for the long example.
+Prefill is token-by-token; larger-capacity predictions are not new RTL validation.
 
 Create places with `net.place(name, initial_tokens=N, observable=True)` as
 needed, and register transitions with `@net.transition`. Transition primitives
