@@ -1,7 +1,9 @@
-"""Measure LPN-only generation from an RTL-validated report and verify every step.
+"""Measure LPN-only generation from an RTL-validated report.
 
 Full pipeline timers and complete process wall time are reported separately.
 No RTL timestamps enter the timing model; they are used only for comparison.
+Use --timing-only to skip full RTL input files and their per-step checksums.
+Functional execution, greedy decoding and logit/cycle comparisons still run.
 """
 def main():
   import argparse
@@ -17,6 +19,7 @@ def main():
   p.add_argument('--opentpu-root',type=Path,required=True)
   p.add_argument('--model-dir',type=Path)
   p.add_argument('--allow-partial',action='store_true',help='Explicitly replay a snapshot of an unfinished generation case')
+  p.add_argument('--timing-only',action='store_true',help='Skip RTL input-file serialization and hashing; retain functional execution and logit/cycle checks')
   p.add_argument('--output',type=Path,required=True)
   a=p.parse_args()
   session_start=time.perf_counter()
@@ -58,14 +61,17 @@ def main():
    def run(self,programs,args=None):
     r=expected[len(self.records)]
     current=a.output/'current'
-    before=time.perf_counter()
-    write_inputs(current,self.cfg,programs,self.drams,args)
-    serialization=time.perf_counter()-before
-    before=time.perf_counter()
-    hashes={name:digest(current/name) for s in range(self.cfg.S)
-            for name in (f'prog_{s}.hex',f'dram_{s}.bin')}
-    hash_seconds=time.perf_counter()-before
-    assert hashes==r['input_sha256'],('input differs',r['position'],hashes,r['input_sha256'])
+    hashes={}
+    serialization=hash_seconds=0.0
+    if not a.timing_only:
+     before=time.perf_counter()
+     write_inputs(current,self.cfg,programs,self.drams,args)
+     serialization=time.perf_counter()-before
+     before=time.perf_counter()
+     hashes={name:digest(current/name) for s in range(self.cfg.S)
+             for name in (f'prog_{s}.hex',f'dram_{s}.bin')}
+     hash_seconds=time.perf_counter()-before
+     assert hashes==r['input_sha256'],('input differs',r['position'],hashes,r['input_sha256'])
     before=time.perf_counter()
     workload=execute(self.cfg,programs,self.drams,args,hashes)
     frontend=time.perf_counter()-before
@@ -79,7 +85,8 @@ def main():
     assert counters and int(counters[3])==0
     hit=re.search(r'Guard cache hits: (\d+); dependency reads: (\d+)',log)
     record=dict(position=r['position'],phase=r['phase'],input_token=r['input_token'],
-      instructions=r['instructions'],input_sha256=hashes,identical_input_files=True,
+      instructions=r['instructions'],input_sha256=hashes if not a.timing_only else None,
+      identical_input_files=True if not a.timing_only else None,
       lpn_cycles=cycles,baseline_lpn_cycles=r['lpn_cycles'],rtl_cycles=r['rtl_cycles'],
       relative_cycle_error=cycles/r['rtl_cycles']-1,
       functional_frontend_seconds=frontend,model_build_seconds=prepared.preparation_seconds,
@@ -92,7 +99,8 @@ def main():
     self.records.append(record)
     # The original RTL validation established bit-exact ISA/RTL output memory.
     # Feeding the independent ISA result forward regenerates each next input;
-    # hashes above verify this against the original RTL path on every step.
+    # Default mode verifies regenerated input files against the original RTL
+    # path. Timing-only mode skips those files; logits/cycles are still checked.
     self.drams=[s.dram[:len(im)].copy() for s,im in zip(workload.machine.slices,self.drams)]
     return record
 
@@ -123,12 +131,14 @@ def main():
      'cycles':record['lpn_cycles'],'cache_hit':record['timing_cache_hit']}),flush=True)
   workload_elapsed=time.perf_counter()-workload_start
   records=engine.backend.records
-  report={'mode':a.mode,'status':'complete','steps':len(records),'workload':f'Exactly {len(expected)} recorded {model_dir.name} steps; persistent KV state, all transformer layers and vocabulary logits',
+  report={'mode':a.mode,'timing_only':a.timing_only,
+   'input_file_validation':'skipped' if a.timing_only else 'verified',
+   'status':'complete','steps':len(records),'workload':f'Exactly {len(expected)} recorded {model_dir.name} steps; persistent KV state, all transformer layers and vocabulary logits',
    'baseline_generation_status':baseline.get('status'),
    'complete_generation_replayed':baseline.get('status') in ('complete','eos'),
    'generated_tokens':[r['input_token'] for r in records if r['phase']=='decode'],
    'replay_source_sha256':digest(Path(__file__)),
-   'comparison':'Original recorded RTL timings; RTL was not rerun. Inputs, logits and LPN predictions checked against every saved step.',
+   'comparison':'Original recorded RTL timings; RTL was not rerun. Logits and LPN predictions checked against every saved step. '+('Full RTL input files and their checksums were skipped.' if a.timing_only else 'Input file hashes also match every saved step.'),
    'baseline_report_sha256':digest(baseline_path),'baseline_identity':baseline['identity'],
    'compiler_sha256':digest(a.compiler),'runtime_sha256':digest(a.compiler.parent/'libLPNNativeRuntime.a'),
    'engine_init_seconds':engine_init,'workload_elapsed_seconds':workload_elapsed,
@@ -142,7 +152,8 @@ def main():
    recorded_rtl_process_seconds=sum(r['rtl_process_seconds'] for r in expected),
    recorded_lpn_accounted_seconds=baseline['single_use_lpn_seconds'],
    recorded_lpn_core_seconds=baseline['lpn_core_seconds'],
-   all_inputs_identical=True,all_logits_identical=True,all_predicted_cycles_identical=True,
+   all_inputs_identical=True if not a.timing_only else None,
+   all_logits_identical=True,all_predicted_cycles_identical=True,
    all_steps_within_5_percent=all(abs(r['relative_cycle_error'])<=.05 for r in records),
    compilation_misses=sum(not r['timing_cache_hit'] for r in records))
   report['full_lpn_speedup_vs_recorded_lpn']=report['recorded_lpn_accounted_seconds']/report['single_use_lpn_seconds']

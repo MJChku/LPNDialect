@@ -206,9 +206,12 @@ expected after completion and must not trigger a restart. Results, raw CSV,
 an independent archive audit and measured functional overhead are under
 `examples/opentpu/validation/qwen17`. Recheck disk snapshots, final logits,
 source fingerprints and all paired/replay observations with
-`audit_completed.py --root RUN_ROOT --project-root "$PWD" --opentpu-root FESENS_ROOT
+`audit_completed.py --root RUN_ROOT --project-root FROZEN_PROJECT_ROOT --opentpu-root FESENS_ROOT
 --expected-cases 10 --output /tmp/qwen-completion-audit.json`, using the NumPy
-environment. The audit is read-only except for its output and rejects an
+environment. Use a worktree at `cea0c77` for `FROZEN_PROJECT_ROOT` when auditing
+the original campaign: the strict audit compares recorded replay source hashes,
+which later source changes must not overwrite. The audit is read-only except
+for its output and rejects an
 unfinished campaign. Report whole-process speedup separately from native
 timing speedup; functional frontend time does not isolate pure matrix compute.
 RAM scratch holds active large snapshots; the separate overnight monitor
@@ -220,6 +223,12 @@ The separate full-case replay driver is recorded in `lpn-replays.json`; verify
 its PID before starting another. `examples.opentpu.replay_e2e` regenerates real
 numerics from a completed report and verifies every input/logit/cycle. It
 reports session wall time separately from the summed functional/timing stages.
+For LPN-only timing experiments, add `replay_e2e --timing-only` to skip full
+RTL DRAM/program file serialization and per-step input hashing. Functional
+execution, KV state, greedy decoding and logit/cycle checks remain active.
+Skipped input checks are recorded as null, not true. Checkpoint/compiler
+fingerprints and small timing tables still exist; this option does not disable
+all hashing or skip numerical execution. Default mode retains input validation.
 Only use `--allow-partial` for an explicitly labeled unfinished snapshot.
 Freeze the RTL/observer source
 hashes in run identities; the pinned commit alone does not identify local

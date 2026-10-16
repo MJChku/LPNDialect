@@ -208,11 +208,13 @@ paired measurement. The [completion audit](validation/qwen17/completion_audit.js
 verifies all ten durable snapshot hashes and final logits, complete generation
 replays, raw CSV records, and checkpoint/model/compiler/runtime/RTL fingerprints.
 The [audit program](validation/qwen17/audit_completed.py) rejects unfinished
-campaigns and can recheck the archived run on icdslab2:
+campaigns and can recheck the archived run on icdslab2. It checks source hashes
+strictly; use the frozen validation revision, before later replay changes:
 
 ```sh
+git worktree add --detach /tmp/lpn-qwen-audit cea0c77
 ~/FeSens-openTPU/.venv/bin/python examples/opentpu/validation/qwen17/audit_completed.py \
-  --root ~/lpn-runs/qwen3-1.7b-parallel --project-root "$PWD" \
+  --root ~/lpn-runs/qwen3-1.7b-parallel --project-root /tmp/lpn-qwen-audit \
   --opentpu-root ~/FeSens-openTPU-qwen --expected-cases 10 \
   --output /tmp/qwen-completion-audit.json
 ```
@@ -303,6 +305,48 @@ PYTHONPATH=. ../FeSens-openTPU/.venv/bin/python -m examples.opentpu.replay_e2e \
   --baseline /path/to/completed/report.json --opentpu-root ../FeSens-openTPU-qwen \
   --compiler build/tools/lpn-compile/lpn-compile --output /tmp/qwen-lpn-replay
 ```
+
+For timing experiments, add **`--timing-only`**. This skips writing the full RTL
+DRAM images/program files and skips their per-step SHA-256 checks. Functional
+ISA execution, persistent KV state, greedy generation, instruction counts,
+logit comparisons and cycle comparisons remain enabled. The report records
+`input_file_validation: "skipped"` and `all_inputs_identical: null`; skipped
+checks are not reported as passes. Small timing input tables are still written;
+checkpoint verification and compiler/cache fingerprinting remain enabled.
+Omit the option to retain full input-file validation.
+
+To use the checked-in Qwen example, extract its baseline and provide your local
+copy of the official checkpoint at the pinned revision above. Install the
+Torch/safetensors/tokenizer dependencies listed below and build LPN first:
+
+```sh
+python3 - <<'PY'
+import json
+from pathlib import Path
+case = json.loads(Path('examples/opentpu/validation/qwen17/completed_fibonacci.json').read_text())
+Path('/tmp/qwen-baseline.json').write_text(json.dumps(case['baseline']))
+PY
+OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=. \
+  ../FeSens-openTPU/.venv/bin/python -m examples.opentpu.replay_e2e \
+  --baseline /tmp/qwen-baseline.json --opentpu-root ../FeSens-openTPU \
+  --model-dir ../FeSens-openTPU/models/Qwen3-1.7B \
+  --compiler build/tools/lpn-compile/lpn-compile \
+  --output /tmp/qwen-timing-only --timing-only
+```
+
+This LPN-only command does not launch Verilator. Model weights and generated
+binaries remain external; the model, runtime/compiler sources, RTL patches,
+baseline reports and replay example are included in this repository.
+
+The [full timing-only check](validation/qwen17/timing_only_fibonacci.json)
+replayed the 18-input/8-output Qwen case in **292.31 s (4m52s)**, versus
+372.41 s for the earlier validated replay: **1.27x** faster end to end and
+**73.20x** faster than the recorded whole RTL processes. All 26 steps matched
+the saved logits, generated tokens and predicted cycles, with zero rollbacks.
+No RTL DRAM/program files were created; their serialization/hash timers are zero.
+This is one measured run, not a controlled alternating benchmark. Initialization
+took 23.63 s versus 0.65 s in the earlier replay, which used a RAM image cache.
+The original RTL was not rerun; the existing per-step cycle errors are unchanged.
 
 The [three-step replay pilot](validation/qwen17/replay_pilot.json) covers one
 prefill and two generated-token decodes. All hashes/logits/cycles match; its
