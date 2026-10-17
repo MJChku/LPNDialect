@@ -1,0 +1,1029 @@
+diff --git a/opentpu/rtlsim.py b/opentpu/rtlsim.py
+index 5179451c..cf4dd30e 100644
+--- a/opentpu/rtlsim.py
++++ b/opentpu/rtlsim.py
+@@ -23,7 +23,7 @@ BUILD = ROOT / "build" / "verilator"
+ RTL_SOURCES = [
+     "vpu/otpu_fp.sv", "vpu/otpu_fpipe.sv", "top/otpu_pkg.sv", "mem/otpu_dram.sv", "mem/otpu_tmem.sv",
+     "mem/otpu_native_dram.sv", "mem/otpu_actram.sv", "seq/otpu_seq.sv",
+-    "vpu/otpu_vtree.sv", "dma/otpu_dma.sv", "mxu/otpu_mxu.sv", "tech/generic/otpu_tech_dsp.sv",
++    "vpu/otpu_vtree.sv", "dma/otpu_dma.sv", "mxu/otpu_mxu.sv", "mxu/otpu_mxu_parallel.sv", "tech/generic/otpu_tech_dsp.sv",
+     "tech/generic/otpu_tech_ram.sv",
+     "vpu/otpu_quant.sv", "vpu/otpu_se_comp.sv", "vpu/otpu_se_tail.sv", "vpu/otpu_vpu.sv",
+     "top/otpu_coll.sv", "exp/tmem_nocopy/otpu_tmem_model.sv", "top/otpu_slice.sv",
+@@ -32,7 +32,7 @@ RTL_SOURCES = [
+ 
+ 
+ # Verilator's flags (in the build cache's key, with its version and the sources' names)
+-VFLAGS = ["--binary", "-j", "0", "-Wno-fatal", "-Wno-WIDTHEXPAND", "-Wno-WIDTHTRUNC",
++VFLAGS = ["--binary", "-j", "12", "-Wno-fatal", "-Wno-WIDTHEXPAND", "-Wno-WIDTHTRUNC",
+           "-Wno-UNUSEDSIGNAL", "-Wno-UNUSEDPARAM", "-O3", "--x-assign", "0", "--x-initial", "0"]
+ _VERSION: str | None = None
+ 
+@@ -286,7 +286,7 @@ def build_top(cfg, dram_lat: int = 8, uarch: dict | None = None, axi: bool = Fal
+     shell = RTL / "shell"
+     mem = ([shell / "otpu_afifo.sv", shell / "otpu_mem_ch.sv", TB / LDC_MODELS[ldc],
+             TB / "otpu_ldc_mem.sv"] if ldc else [TB / "otpu_native_mem.sv"] if axi else [])
+-    return build("tb_top", [RTL / s for s in RTL_SOURCES] + mem + [TB / "tb_top.sv"],
++    return build("tb_top", [RTL / s for s in RTL_SOURCES] + mem + [TB / "lpn_wall.cpp", TB / "tb_top.sv"],
+                  top_params(cfg, dram_lat, uarch, 2 if ldc else axi, dram_bytes))
+ 
+ 
+diff --git a/rtl/mem/otpu_dram.sv b/rtl/mem/otpu_dram.sv
+index 4c00c462..e34819a9 100644
+--- a/rtl/mem/otpu_dram.sv
++++ b/rtl/mem/otpu_dram.sv
+@@ -8,6 +8,8 @@ module otpu_dram #(
+   parameter int WORDS = 1 << 18,
+   parameter int D     = 32,
+   parameter int LAT   = 8,
++  parameter int VL    = 8,
++  parameter int P     = 1,
+   parameter int SID   = 0
+ ) (
+   input  logic              clk,
+@@ -32,12 +34,27 @@ module otpu_dram #(
+   output logic              b_rtag,
+   output logic [D*8-1:0]    b_rdata,
+   output logic              rd_idle,    // no read in flight
++  input logic [P-1:0] x_a_req, x_b_req,
++  input logic [P-1:0][31:0] x_a_addr, x_b_addr,
++  output logic [P-1:0] x_a_valid, x_b_valid,
++  output logic [P-1:0][255:0] x_a_data,
++  output logic [P-1:0][D*8-1:0] x_b_data,
++  input logic [VL-1:0] x_sw_req,
++  input logic [VL-1:0][31:0] x_sw_addr, x_sw_data,
++  input logic [VL-1:0][3:0] x_sw_be,
+   input  logic              dump
+ );
+   localparam int AW = $clog2(WORDS);
+   localparam int CW = D / 4;
+ 
+-  logic [31:0] mem [WORDS];
++  // The behavioral image can exceed Verilator's single-dimension range limit.
++  // Split storage into rows; this is only an address representation, not DRAM
++  // bank timing or arbitration. All ports retain their original latency.
++  localparam int BANK_SHIFT = (AW < 16) ? AW : 16;
++  localparam int BANK_WORDS = 1 << BANK_SHIFT;
++  localparam int BANK_MASK = BANK_WORDS - 1;
++  localparam int BANKS = (WORDS + BANK_WORDS - 1) / BANK_WORDS;
++  logic [31:0] mem [BANKS][BANK_WORDS];
+ 
+   logic [LAT-1:0]    av, bv, bt;
+   logic [255:0]      ad [LAT];
+@@ -56,25 +73,31 @@ module otpu_dram #(
+ `ifndef SYNTHESIS
+     pk_cyc <= pk_cyc + 1;
+     if (pk_i < pk_n && pk_cyc >= pk_c[pk_i]) begin
+-      mem[pk_a[pk_i][AW-1:0]] <= pk_v[pk_i];
++      mem[(AW'(pk_a[pk_i][AW-1:0])) >> BANK_SHIFT][(AW'(pk_a[pk_i][AW-1:0])) & BANK_MASK] <= pk_v[pk_i];
+       pk_i <= pk_i + 1;
+     end
+ `endif
+     if (a_req && a_we) begin
+       for (int b = 0; b < 4; b++)
+-        if (a_be[b]) mem[a_addr[AW-1:0]][8*b +: 8] <= a_wdata[8*b +: 8];
++        if (a_be[b]) mem[(AW'(a_addr[AW-1:0])) >> BANK_SHIFT][(AW'(a_addr[AW-1:0])) & BANK_MASK][8*b +: 8] <= a_wdata[8*b +: 8];
+     end
+     if (sw_req) begin
+       for (int b = 0; b < 4; b++)
+-        if (sw_be[b]) mem[sw_addr[AW-1:0]][8*b +: 8] <= sw_wdata[8*b +: 8];
++        if (sw_be[b]) mem[(AW'(sw_addr[AW-1:0])) >> BANK_SHIFT][(AW'(sw_addr[AW-1:0])) & BANK_MASK][8*b +: 8] <= sw_wdata[8*b +: 8];
+     end
++    // Parallel byte-enabled word writes; contiguous bytes naturally merge.
++    // The top budgets four link bytes per active lane, including scatter stores.
++    for (int l=0;l<VL;l++) if (x_sw_req[l])
++      for (int b=0;b<4;b++) if (x_sw_be[l][b])
++        mem[(AW'(x_sw_addr[l])) >> BANK_SHIFT][(AW'(x_sw_addr[l])) & BANK_MASK][8*b+:8]
++          <= x_sw_data[l][8*b+:8];
+     av[0] <= a_req && !a_we;
+-    for (int w = 0; w < 8; w++) ad[0][32*w +: 32] <= mem[{a_addr[AW-1:3], 3'(w)}];
++    for (int w = 0; w < 8; w++) ad[0][32*w +: 32] <= mem[(AW'({a_addr[AW-1:3], 3'(w)})) >> BANK_SHIFT][(AW'({a_addr[AW-1:3], 3'(w)})) & BANK_MASK];
+     bv[0] <= b_req && !b_we;
+     bt[0] <= b_tag;
+-    for (int w = 0; w < CW; w++) bd[0][32*w +: 32] <= mem[AW'(b_addr + w)];
++    for (int w = 0; w < CW; w++) bd[0][32*w +: 32] <= mem[(AW'(AW'(b_addr + w))) >> BANK_SHIFT][(AW'(AW'(b_addr + w))) & BANK_MASK];
+     if (b_req && b_we)
+-      for (int w = 0; w < CW; w++) if (b_wmask[w]) mem[AW'(b_addr + w)] <= b_wdata[32*w +: 32];
++      for (int w = 0; w < CW; w++) if (b_wmask[w]) mem[(AW'(AW'(b_addr + w))) >> BANK_SHIFT][(AW'(AW'(b_addr + w))) & BANK_MASK] <= b_wdata[32*w +: 32];
+     for (int k = 1; k < LAT; k++) begin
+       av[k] <= av[k-1];
+       ad[k] <= ad[k-1];
+@@ -88,22 +111,49 @@ module otpu_dram #(
+   assign b_rvalid = bv[LAT-1];
+   assign b_rtag   = bt[LAT-1];
+   assign b_rdata  = bd[LAT-1];
+-  assign rd_idle  = !(|av) && !(|bv);
++  logic [P-1:0][LAT-1:0] xav, xbv;
++  for (genvar p = 0; p < P; p++) begin : g_x
++    logic [255:0] adx [LAT];
++    logic [D*8-1:0] bdx [LAT];
++    initial begin xav[p] = '0; xbv[p] = '0; end
++    always_ff @(posedge clk) begin
++      xav[p][0] <= x_a_req[p]; xbv[p][0] <= x_b_req[p];
++      if (x_a_req[p]) for (int w = 0; w < 8; w++)
++        adx[0][32*w +: 32] <= mem[(AW'({x_a_addr[p][AW-1:3], 3'(w)})) >> BANK_SHIFT]
++                                  [(AW'({x_a_addr[p][AW-1:3], 3'(w)})) & BANK_MASK];
++      if (x_b_req[p]) for (int w = 0; w < CW; w++)
++        bdx[0][32*w +: 32] <= mem[(AW'(x_b_addr[p] + w)) >> BANK_SHIFT]
++                                  [(AW'(x_b_addr[p] + w)) & BANK_MASK];
++      for (int k = 1; k < LAT; k++) begin
++        xav[p][k] <= xav[p][k-1]; xbv[p][k] <= xbv[p][k-1];
++        adx[k] <= adx[k-1]; bdx[k] <= bdx[k-1];
++      end
++    end
++    assign x_a_valid[p] = xav[p][LAT-1], x_b_valid[p] = xbv[p][LAT-1];
++    assign x_a_data[p] = adx[LAT-1], x_b_data[p] = bdx[LAT-1];
++  end
++  assign rd_idle = !(|av) && !(|bv) && !(|xav) && !(|xbv);
+ 
+ `ifndef SYNTHESIS
+   // Images are raw binary: dram_<SID>.bin holds big-endian words ($fread order) and the dump
+   // dram_out_<SID>.bin is little-endian (the byte order of the DRAM itself).
+   string dir;
+   integer fd, nread;
++  logic [31:0] load_bank [BANK_WORDS];
+   initial begin
+     av = '0;
+     bv = '0;
+     bt = '0;
+-    for (int i = 0; i < WORDS; i++) mem[i] = '0;
++    for (int i = 0; i < WORDS; i++) mem[(AW'(i)) >> BANK_SHIFT][(AW'(i)) & BANK_MASK] = '0;
+     if ($value$plusargs("dir=%s", dir)) begin
+       fd = $fopen($sformatf("%s/dram_%0d.bin", dir, SID), "rb");
+       if (fd != 0) begin
+-        nread = $fread(mem, fd);
++        for (int bank = 0; bank < BANKS; bank++) begin
++          nread = $fread(load_bank, fd);
++          for (int word_idx = 0; word_idx < (nread + 3) / 4; word_idx++)
++            mem[bank][word_idx] = load_bank[word_idx];
++          if (nread < 4 * BANK_WORDS) break;
++        end
+         $fclose(fd);
+       end
+       fd = $fopen($sformatf("%s/poke_%0d.txt", dir, SID), "r");
+@@ -116,7 +166,7 @@ module otpu_dram #(
+   end
+   always @(posedge clk) if (dump) begin
+     fd = $fopen($sformatf("%s/dram_out_%0d.bin", dir, SID), "wb");
+-    for (int i = 0; i < WORDS; i++) $fwrite(fd, "%u", mem[i]);
++    for (int i = 0; i < WORDS; i++) $fwrite(fd, "%u", mem[(AW'(i)) >> BANK_SHIFT][(AW'(i)) & BANK_MASK]);
+     $fclose(fd);
+   end
+ `endif
+diff --git a/rtl/mxu/otpu_mxu.sv b/rtl/mxu/otpu_mxu.sv
+index 44befead..d1e9ccae 100644
+--- a/rtl/mxu/otpu_mxu.sv
++++ b/rtl/mxu/otpu_mxu.sv
+@@ -54,6 +54,7 @@ module otpu_mxu
+   parameter int IMPL  = 2,       // the dot product: 2 systolic (the only one; CFG_UARCH reports it)
+   parameter int CL    = 16,      // products per cascade chain (at most D/8)
+   parameter int E     = 0,       // epilogue lanes (0: MCOLS / 2, at least 1; more than MCOLS: MCOLS)
++  parameter int NSTEP = 1,       // distance between streamed output rows
+   parameter int SID   = 0
+ ) (
+   input  logic                  clk,
+@@ -85,6 +86,7 @@ module otpu_mxu
+   input  logic                  a_gnt,
+   input  logic                  a_rvalid,
+   input  logic [255:0]          a_rdata,     // the aligned 32 bytes holding word a_addr
++  output logic                  a_want, b_want, rmax_write,
+   output logic                  b_req,
+   output logic [31:0]           b_addr,
+   input  logic                  b_gnt,
+@@ -116,7 +118,7 @@ module otpu_mxu
+   // RF covers the pipeline's rows in flight (one-advance rows: one per cycle of its latency)
+   localparam int RF = (LROW + 7 <= 32) ? 32 : 64;
+   localparam int RFW = $clog2(RF);
+-  localparam int MW = $clog2(MCOLS) + 1;
++  localparam int MW = (MCOLS > 1) ? $clog2(MCOLS) + 1 : 2;
+   localparam int TD = 128;                  // port A requests in flight (their tags)
+   localparam int TDW = $clog2(TD);
+   // a lane: the pick, i2f48 (4), x Sw, x Sa'
+@@ -274,7 +276,7 @@ module otpu_mxu
+   wire [31:0] c_asa = h.asa;
+   wire        c_act = (q_n != 0) && h.go;
+   wire [7:0]  c_G = h.G;
+-  logic [31:0] alpha [MCOLS];
++  logic [31:0] alpha [ROWS];
+   logic [1:0]  al_st;                       // ASCALE factors: 0 to load, 1 requested (in TMEM's
+                                             // request register), 3 read (the words arrive), 2 loaded
+   logic [7:0]  al_i, mx_i;                  // next ASCALE factor to load / RMAX value to write
+@@ -396,6 +398,9 @@ module otpu_mxu
+   assign pf_level  = f_count;
+   assign pf_starve = more && f_count == 0;
+   assign pf_block  = more && f_count != 0 && !pop;
++  assign a_want = want_iss && need_a;
++  assign b_want = want_iss && need_b;
++  assign rmax_write = mx_go;
+   assign b_req  = go_iss && need_b;
+   // not gated with b_req: the address (and the slice's parity of it) does not wait for b_gnt
+   assign b_addr = chunk_addr >> 2;
+@@ -913,7 +918,7 @@ module otpu_mxu
+       if (32'(dj) + 32'(k) < MCOLS) begin
+         dx_l[k] = rfh_i[MW'(dj) + MW'(k)];
+         dsa_l[k] = rfh_sa[MW'(dj) + MW'(k)];
+-        dcol_l[k] = 8'(dj) + 8'(k);
++        dcol_l[k] = 8'(dg * MCOLS) + 8'(dj) + 8'(k);
+       end
+   end
+ `ifndef SYNTHESIS
+@@ -1028,7 +1033,7 @@ module otpu_mxu
+       r1 <= r0;
+       for (int k = 0; k < NL; k++) begin
+         xo[k]  <= t_rdata[k];
+-        alr[k] <= c_asc ? alpha[r0.col[k][MW-2:0]] : F_ONE;
++        alr[k] <= c_asc ? alpha[r0.col[k]] : F_ONE;
+       end
+     end
+   for (genvar k = 0; k < NL; k++) begin : g_rmw
+@@ -1040,8 +1045,8 @@ module otpu_mxu
+ 
+   // RMAX: the running max is kept as its sort key (mk = fkey(max); the max is always stored
+   // ftz'd, so fkey(max) is the key it is compared by); written out through unkey.
+-  logic [31:0] mk [MCOLS];
+-  logic [MCOLS-1:0] mx_have;
++  logic [31:0] mk [ROWS];
++  logic [ROWS-1:0] mx_have;
+   logic mx_done;
+   function automatic f32_t unkey(input logic [31:0] k);
+     return k[31] ? {1'b0, k[30:0]} : ~k;
+@@ -1049,22 +1054,22 @@ module otpu_mxu
+   // rw's column hits, one-hot, computed from r1 and carried alongside u_rw (same length and
+   // enable); the last stage is a reset flop, not an SRL tap. c_rmax is fixed while entries are
+   // in flight (the head changes only once drained)
+-  logic [NL-1:0][MCOLS-1:0] rh, rh_p, rwh, rxh;
++  logic [NL-1:0][ROWS-1:0] rh, rh_p, rwh, rxh;
+   always_comb
+     for (int k = 0; k < NL; k++)
+-      for (int j = 0; j < MCOLS; j++) begin
+-        rh[k][j]  = r1.v && c_rmax && r1.m[k] && (r1.col[k][MW-2:0] == (MW-1)'(j));
+-        rxh[k][j] = rx.v && rx.m[k] && (rx.col[k][MW-2:0] == (MW-1)'(j));
++      for (int j = 0; j < ROWS; j++) begin
++        rh[k][j]  = r1.v && c_rmax && r1.m[k] && (r1.col[k] == 8'(j));
++        rxh[k][j] = rx.v && rx.m[k] && (rx.col[k] == 8'(j));
+       end
+-  otpu_delay #(.W(NL * MCOLS), .N(LM + LA - 1)) u_rwh (.clk, .en(t_gnt), .d(rh), .q(rh_p));
++  otpu_delay #(.W(NL * ROWS), .N(LM + LA - 1)) u_rwh (.clk, .en(t_gnt), .d(rh), .q(rh_p));
+   always_ff @(posedge clk) if (rst) rwh <= '0; else if (t_gnt) rwh <= rh_p;
+   // per column: the candidate key is selected by the hits alone, the compare only makes the
+   // enable. At most one lane hits a column per cycle (lanes drain distinct columns) and rx / rw
+   // are exclusive (rx only for !c_acc commands, rw only for c_acc ones)
+-  logic [MCOLS-1:0] mx_hit, mx_upd;
+-  logic [31:0] mx_cand [MCOLS];
++  logic [ROWS-1:0] mx_hit, mx_upd;
++  logic [31:0] mx_cand [ROWS];
+   always_comb
+-    for (int j = 0; j < MCOLS; j++) begin
++    for (int j = 0; j < ROWS; j++) begin
+       mx_hit[j] = 1'b0; mx_upd[j] = 1'b0; mx_cand[j] = '0;
+       for (int k = 0; k < NL; k++) begin
+         if (rxh[k][j]) begin
+@@ -1177,7 +1182,7 @@ module otpu_mxu
+         if (mxm[k]) begin
+           t_wen[k] = 1'b1;
+           t_waddr[k] = mxl[k];
+-          t_wdata[k] = unkey(mk[MW'(32'(mx_i) + 32'(k))]);
++          t_wdata[k] = unkey(mk[32'(mx_i) + 32'(k)]);
+         end
+       end
+     end
+@@ -1397,7 +1402,7 @@ module otpu_mxu
+               dg <= '0; dg1 <= 8'd1;
+               for (int j = 0; j < MCOLS; j++) begin
+                 logic [31:0] a;
+-                a = drow[j] + 32'd1;
++                a = drow[j] + 32'(NSTEP);
+                 dad[j] <= a;
+                 drow[j] <= a;
+                 if (j < NL) dal[j] <= a;
+@@ -1419,7 +1424,7 @@ module otpu_mxu
+           end
+         end
+         // RMAX (rx: registered so the lane selection and the max compare are in different cycles)
+-        for (int j = 0; j < MCOLS; j++) begin
++        for (int j = 0; j < ROWS; j++) begin
+           if (mx_upd[j]) mk[j] <= mx_cand[j];
+           if (mx_hit[j]) mx_have[j] <= 1'b1;
+         end
+@@ -1434,7 +1439,7 @@ module otpu_mxu
+         if (al_st == 2'd3) begin
+           // one write per entry (a constant index): a variable-index write of several lanes makes
+           // Vivado try, and crash while dissolving, a RAM for these MCOLS registers
+-          for (int j = 0; j < MCOLS; j++)
++          for (int j = 0; j < ROWS; j++)
+             if (32'(j) >= 32'(al_i) && 32'(j) < 32'(al_i) + LANES)
+               alpha[j] <= t_rdata[$clog2(LANES)'(32'(j) - 32'(al_i))];
+           if (32'(al_i) + LANES >= 32'(c_M)) al_st <= 2'd2;
+diff --git a/rtl/mxu/otpu_mxu_parallel.sv b/rtl/mxu/otpu_mxu_parallel.sv
+new file mode 100644
+index 00000000..3b80669a
+--- /dev/null
++++ b/rtl/mxu/otpu_mxu_parallel.sv
+@@ -0,0 +1,207 @@
++// Independent streamed weight-row engines. The instruction/scoreboard contract
++// remains one MM: no unit reports completion until every row and epilogue lands.
++// Physical row p consumes p, p+P, ...; each core reuses the upstream systolic
++// integer/FP datapath. ACT storage is replicated for independent read addresses.
++module otpu_mxu_parallel
++  import otpu_pkg::*;
++  import otpu_fp::*;
++#(parameter int D=128, P=32, ROWS=16, BLOCKS=64, DEPTH=128,
++  parameter int LANES=64, CL=16, SID=0) (
++  input logic clk, rst, start, go,
++  input cmd_t cmd,
++  output logic rdy, done, computing,
++  output logic [$clog2(DEPTH):0] pf_level,
++  output logic pf_starve, pf_block, pf_u,
++  output logic [3:0][31:0] pf_uv,
++  input logic [LANES-1:0] act_we,
++  input logic [7:0] act_row, act_off,
++  input logic [31:0] act_idx,
++  input logic [LANES-1:0][7:0] act_data,
++  input logic act_dup, asc_we,
++  input logic [7:0] asc_row,
++  input logic [15:0] asc_blk,
++  input logic [63:0] asc_data,
++  output logic [P-1:0] a_req, b_req, a_want, b_want,
++  output logic [P-1:0][31:0] a_addr, b_addr,
++  input logic [P-1:0] mem_gnt, a_rvalid, b_rvalid,
++  input logic [P-1:0][255:0] a_rdata,
++  input logic [P-1:0][D*8-1:0] b_rdata,
++  output logic [LANES-1:0] t_ren, t_wen,
++  output logic [LANES-1:0][31:0] t_raddr, t_waddr, t_wdata,
++  input logic [LANES-1:0][31:0] t_rdata,
++  input logic t_gnt
++);
++  localparam int BW=$clog2(LANES);
++  localparam int CP=2;  // one result, or two contiguous ASCALE/RMAX words
++  initial if (LANES < CP*P) $fatal(1, "parallel MXU needs >=2 TMEM lanes per engine");
++  logic busy, launching, released, reducing, release_sent;
++  cmd_t head;
++  logic [P-1:0] active, finished, cd, cr, cg, pop, rm;
++  logic [P-1:0][CP-1:0] re, we;
++  logic [P-1:0][CP-1:0][31:0] ra, wa, wd;
++  logic [P-1:0][$clog2(DEPTH):0] level;
++  logic [P-1:0] starve, block_;
++  logic [31:0] maxima [P][ROWS];
++  logic [7:0] flush_row;
++  int unsigned rr;
++  assign rdy = !busy;
++  assign computing = |pop;
++  assign pf_u = done;
++  assign pf_uv = '0;
++  assign pf_starve = |starve;
++  assign pf_block = |block_;
++  // Profiling level is a per-engine high-water observation, not a sum that wraps.
++  always_comb begin
++    pf_level = '0;
++    for (int p=0;p<P;p++) if (level[p]>pf_level) pf_level=level[p];
++  end
++
++  for (genvar p=0;p<P;p++) begin : g_core
++    cmd_t subcmd;
++    logic [15:0] blk, blk2;
++    logic [7:0] grp;
++    logic [0:0] hi, ren;
++    logic [D*8-1:0] data;
++    logic [63:0] scale;
++    logic [ROWS-1:0] bank_ren;
++    logic [ROWS*D*8-1:0] bank_data;
++    logic [ROWS*64-1:0] bank_scale;
++    logic [7:0] group_q;
++    always_comb begin
++      bank_ren='0;
++      if (ren[0] && 32'(grp) < ROWS) bank_ren[grp]=1'b1;
++    end
++    always_ff @(posedge clk) if (ren[0]) group_q<=grp;
++    assign data=bank_data[32'(group_q)*D*8+:D*8];
++    assign scale=bank_scale[32'(group_q)*64+:64];
++    always_comb begin
++      subcmd = head;
++      subcmd.w1 = head.w1 + p*head.w5;
++      subcmd.w2 = head.flags[3] ? head.w2 : head.w2 + p*head.w7;
++      subcmd.w3 = head.w3 + p;
++      subcmd.w4[15:0] = (32'(head.w4[15:0]) > p) ?
++                            16'((32'(head.w4[15:0])-p+P-1)/P) : 16'd0;
++      subcmd.w5 = head.w5 * P;
++      subcmd.w7 = head.w7 * P;
++      // PAIR is an integer accumulation optimization; the narrow engine
++      // consumes its two blocks serially, giving the same exact accumulator.
++      subcmd.flags[6] = 1'b0;
++    end
++    otpu_actram #(.D(D), .MCOLS(ROWS), .ROWS(ROWS), .BLOCKS(BLOCKS), .LANES(LANES)) u_act (
++      .clk, .we(act_we), .w_row(act_row), .w_idx(act_idx), .w_data(act_data),
++      .w_dup(act_dup), .w_off(act_off), .swe(asc_we), .s_row(asc_row),
++      .s_blk(asc_blk), .s_data(asc_data), .ren(bank_ren), .r_use(pop[p]), .r_blk(blk),
++      .r_blk2(blk2), .r_hi({ROWS{1'b0}}), .r_grp(8'd0), .r_data(bank_data), .r_scale(bank_scale));
++    otpu_mxu #(.D(D), .MCOLS(1), .ROWS(ROWS), .DEPTH(DEPTH), .LANES(CP),
++        .CL(CL), .E(1), .NSTEP(P), .SID(SID)) u_mxu (
++      .clk, .rst, .start(launching && active[p]),
++      .go(busy && !launching && released && !release_sent), .cmd(subcmd), .rdy(cr[p]),
++      .done(cd[p]), .computing(pop[p]), .pf_level(level[p]),
++      .pf_starve(starve[p]), .pf_block(block_[p]), .pf_u(), .pf_uv(),
++      .act_blk(blk), .act_blk2(blk2), .act_hi(hi), .act_grp(grp), .act_ren(ren),
++      .act_data(data), .act_scale(scale),
++      .a_req(a_req[p]), .b_req(b_req[p]), .a_want(a_want[p]), .b_want(b_want[p]),
++      .a_addr(a_addr[p]), .b_addr(b_addr[p]), .a_gnt(mem_gnt[p]), .b_gnt(mem_gnt[p]),
++      .a_rvalid(a_rvalid[p]), .b_rvalid(b_rvalid[p]), .a_rdata(a_rdata[p]), .b_rdata(b_rdata[p]),
++      .t_ren(re[p]), .t_raddr(ra[p]), .t_rdata(t_rdata[CP*p+:CP]),
++      .t_wen(we[p]), .t_waddr(wa[p]), .t_wdata(wd[p]), .t_gnt(cg[p]), .rmax_write(rm[p]));
++  end
++
++  // Within the single MXU scratchpad port each bank has one address. Select
++  // independently advancing engines. Even identical reads use separate lane
++  // requests in the slice's counters, so emit at most one read per bank.
++  // The shared slice arbiter arbitrates these requests against other units.
++  logic [P-1:0] selected;
++  always_comb begin
++    logic [LANES-1:0] read_used, write_used;
++    logic [LANES-1:0][31:0] read_addr;
++    logic okay;
++    int p, bank;
++    selected='0; read_used='0; write_used='0; read_addr='0;
++    t_ren='0; t_wen='0; t_raddr='0; t_waddr='0; t_wdata='0;
++    if (busy && !reducing) begin
++      for (int q=0;q<P;q++) begin
++        p=(rr+q)%P;
++        okay=1'b1;
++        for (int l=0;l<CP;l++) begin
++          bank=int'(ra[p][l][BW-1:0]);
++          if (re[p][l] && read_used[bank]) okay=1'b0;
++          bank=int'(wa[p][l][BW-1:0]);
++          if (we[p][l] && !rm[p] && write_used[bank]) okay=1'b0;
++        end
++        if (okay) begin
++          selected[p]=1'b1;
++          for (int l=0;l<CP;l++) begin
++            t_ren[CP*p+l]=re[p][l]; t_raddr[CP*p+l]=ra[p][l];
++            if (re[p][l]) begin
++              bank=int'(ra[p][l][BW-1:0]); read_used[bank]=1'b1; read_addr[bank]=ra[p][l];
++            end
++            t_wen[CP*p+l]=we[p][l] && !rm[p];
++            t_waddr[CP*p+l]=wa[p][l]; t_wdata[CP*p+l]=wd[p][l];
++            if (we[p][l] && !rm[p]) write_used[wa[p][l][BW-1:0]]=1'b1;
++          end
++        end
++      end
++    end
++    if (reducing) begin
++      for (int l=0;l<LANES;l++) begin
++        logic [31:0] best;
++        best='0;
++        if (32'(flush_row)+l < 32'(head.w6[23:16])) begin
++          best=maxima[0][32'(flush_row)+l];
++          for (int p=1;p<P;p++)
++            if (active[p] && fkey(maxima[p][32'(flush_row)+l]) > fkey(best))
++              best=maxima[p][32'(flush_row)+l];
++          t_wen[l]=1'b1;
++          t_waddr[l]=head.w3 + 32'(head.w6[23:16])*32'(head.w6[15:0])+32'(flush_row)+l;
++          t_wdata[l]=best;
++        end
++      end
++    end
++    cg=selected & {P{t_gnt}};
++  end
++
++  always_ff @(posedge clk) begin
++    done<=1'b0;
++    launching<=1'b0;
++    if (rst) begin
++      busy<=1'b0; launching<=1'b0; released<=1'b0; reducing<=1'b0;
++      release_sent<=1'b0; active<='0; finished<='0; rr<=0; flush_row<='0;
++    end else begin
++      rr <= (rr+1==P) ? 0 : rr+1;
++      if (start) begin
++        head<=cmd; busy<=1'b1; launching<=1'b1; released<=go;
++        reducing<=1'b0; release_sent<=1'b0; flush_row<='0;
++        for (int p=0;p<P;p++) begin
++          active[p] <= p < 32'(cmd.w4[15:0]);
++          finished[p] <= p >= 32'(cmd.w4[15:0]);
++        end
++      end else if (busy) begin
++        if (go) released<=1'b1;
++        if (!launching && released) release_sent<=1'b1;
++        finished<=finished|cd;
++        for (int p=0;p<P;p++)
++          if (cg[p] && rm[p])
++            for (int l=0;l<CP;l++) if (we[p][l])
++              for (int r=0;r<ROWS;r++)
++                if (wa[p][l]==head.w3+p+32'(head.w6[23:16])*32'(head.w6[15:0])+r)
++                  maxima[p][r]<=wd[p][l];
++        if (!launching && &(finished|cd) && !reducing) begin
++          if (head.flags[2] && |active && head.w4[23:16]!=0) reducing<=1'b1;
++          else begin busy<=1'b0; done<=1'b1; end
++        end
++        if (reducing && t_gnt) begin
++          if (32'(flush_row)+LANES>=32'(head.w6[23:16])) begin
++            reducing<=1'b0; busy<=1'b0; done<=1'b1;
++          end else flush_row<=flush_row+8'(LANES);
++        end
++      end
++    end
++  end
++`ifndef SYNTHESIS
++  always @(posedge clk) if (!rst) begin
++    if (start && !rdy) $fatal(1,"parallel MXU accepted while busy");
++    if (launching && ((cr & active)!=active)) $fatal(1,"parallel core not ready");
++  end
++`endif
++endmodule
+diff --git a/rtl/top/otpu_slice.sv b/rtl/top/otpu_slice.sv
+index 4f8d7757..1d599253 100644
+--- a/rtl/top/otpu_slice.sv
++++ b/rtl/top/otpu_slice.sv
+@@ -46,6 +46,9 @@ module otpu_slice
+   parameter int WIN        = 32,
+   parameter int RPB        = 4,       // TMEM reads per bank per cycle
+   parameter int WPB        = 2,       // TMEM writes per bank per cycle
++  parameter int QST_LANES  = 0,
++  parameter int MXU_ROWS   = 1,       // independent streamed weight rows
++  parameter int VPU_LANES  = LANES,
+   parameter int MXU_IMPL   = 2,       // MXU dot product: 2 systolic, the only one (docs/mxu_systolic.md)
+   parameter int MXU_CL     = 16,      // cascade chain length
+   parameter int MXU_E      = 0,       // MXU epilogue lanes (0: MCOLS / 2; otpu_mxu E)
+@@ -119,6 +122,16 @@ module otpu_slice
+   input  logic          b_rvalid,
+   input  logic          b_rtag,
+   input  logic [D*8-1:0] b_rdata,
++  output logic [MXU_ROWS-1:0] x_a_req, x_b_req,
++  output logic [MXU_ROWS-1:0] x_a_want, x_b_want,
++  output logic [MXU_ROWS-1:0][31:0] x_a_addr, x_b_addr,
++  input logic [MXU_ROWS-1:0] x_gnt, x_a_valid, x_b_valid,
++  input logic [MXU_ROWS-1:0][255:0] x_a_data,
++  input logic [MXU_ROWS-1:0][D*8-1:0] x_b_data,
++  output logic [LANES-1:0] x_sw_want, x_sw_req,
++  output logic [LANES-1:0][31:0] x_sw_addr, x_sw_data,
++  output logic [LANES-1:0][3:0] x_sw_be,
++  input logic x_sw_rdy,
+   // collective
+   output logic                    coll_req,
+   output cmd_t                    coll_cmd,
+@@ -408,9 +421,11 @@ module otpu_slice
+     .w_data, .blk_x(tm_bx), .blk_s(tm_bs), .lost(tm_lost), .frz(tm_frz), .dump);
+   assign coll_rdata = r_data[P_COLL];
+   // the units' TMEM requests
+-  logic [LANES-1:0]        dma_ren, dma_wen, va_ren, vb_ren, v_wen;
++  logic [LANES-1:0]        dma_ren, dma_wen;
++  logic [VPU_LANES-1:0] va_ren, vb_ren, v_wen;
+   logic                    v_ren;   // the VPU's lanes take their read data this cycle
+-  logic [LANES-1:0][31:0]  dma_raddr, dma_waddr, dma_wdata, va_raddr, vb_raddr, v_waddr, v_wdata;
++  logic [LANES-1:0][31:0]  dma_raddr, dma_waddr, dma_wdata;
++  logic [VPU_LANES-1:0][31:0] va_raddr, vb_raddr, v_waddr, v_wdata;
+   logic [ULANES-1:0]       mxu_ren, mxu_wen, q_ren, q_ren2;
+   logic [ULANES-1:0][31:0] mxu_raddr, mxu_waddr, mxu_wdata, q_raddr, q_raddr2;
+ 
+@@ -429,12 +444,7 @@ module otpu_slice
+   logic                   mxu_pop;       // the MXU consumes a block this cycle (its ACT read)
+   logic [MCOLS*D*8-1:0]   act_rdata;
+   logic [MCOLS*64-1:0]    act_rscale;
+-  otpu_actram #(.D(D), .MCOLS(MCOLS), .ROWS(ACT_ROWS), .BLOCKS(ACT_BLOCKS), .LANES(ULANES)) u_act (
+-    .clk, .we(act_we), .w_row(act_row), .w_idx(act_idx), .w_data(act_data), .w_dup(act_dup),
+-    .w_off(act_off), .swe(asc_we),
+-    .s_row(asc_row), .s_blk(asc_blk), .s_data(asc_data), .ren(act_ren), .r_use(mxu_pop), .r_blk(act_rblk),
+-    .r_blk2(act_rblk2), .r_hi(act_rhi), .r_grp(act_rgrp),
+-    .r_data(act_rdata), .r_scale(act_rscale));
++
+ 
+   // ---- units
+   logic [NG-1:0] gnt;
+@@ -482,6 +492,11 @@ module otpu_slice
+   logic [2:0]  ss_fk;
+   logic [4:0]  ss_fi;
+   logic [31:0] ss_in_d [LANES], ss_fd [LANES], ss_y_d [LANES];
++  logic [31:0] vs_y_d [VPU_LANES];
++  for (genvar v = 0; v < LANES; v++) begin : g_vs_y
++    if (v < VPU_LANES) assign ss_y_d[v] = vs_y_d[v];
++    else assign ss_y_d[v] = 0;
++  end
+   logic [31:0] ss_o_d;
+ 
+   otpu_dma #(.D(D), .LANES(LANES), .HAS_DSTEP(HAS_SS)) u_dma (
+@@ -494,6 +509,13 @@ module otpu_slice
+     .ss_req, .ss_gnt, .ss_cfg, .ss_pe, .ss_in_v, .ss_in_d, .ss_fk, .ss_fi, .ss_fd,
+     .ss_y_v, .ss_y_d, .ss_o_v, .ss_o_d);
+ 
++  if (MXU_ROWS == 1) begin : g_serial
++  otpu_actram #(.D(D), .MCOLS(MCOLS), .ROWS(ACT_ROWS), .BLOCKS(ACT_BLOCKS), .LANES(ULANES)) u_act (
++    .clk, .we(act_we), .w_row(act_row), .w_idx(act_idx), .w_data(act_data), .w_dup(act_dup),
++    .w_off(act_off), .swe(asc_we),
++    .s_row(asc_row), .s_blk(asc_blk), .s_data(asc_data), .ren(act_ren), .r_use(mxu_pop), .r_blk(act_rblk),
++    .r_blk2(act_rblk2), .r_hi(act_rhi), .r_grp(act_rgrp),
++    .r_data(act_rdata), .r_scale(act_rscale));
+   otpu_mxu #(.D(D), .MCOLS(MCOLS), .ROWS(ACT_ROWS), .DEPTH(FIFO_DEPTH), .LANES(ULANES), .IMPL(MXU_IMPL),
+              .CL(MXU_CL), .E(MXU_E), .SID(SID)) u_mxu (
+     .clk, .rst(rst_mxu), .start(ustart[U_MXU]), .go(urel), .cmd(ucmd[U_MXU]), .rdy(r_mxu), .done(d_mxu),
+@@ -505,13 +527,38 @@ module otpu_slice
+     .b_rdata(b_rdata_i),
+     .t_ren(mxu_ren), .t_raddr(mxu_raddr), .t_rdata(r_data[P_MXU][ULANES-1:0]),
+     .t_wen(mxu_wen), .t_waddr(mxu_waddr), .t_wdata(mxu_wdata), .t_gnt(gnt[G_MXU]));
++    assign x_a_req = '0, x_b_req = '0, x_a_want = '0, x_b_want = '0;
++    assign x_a_addr = '0, x_b_addr = '0;
++  end else begin : g_parallel
++    assign mxu_areq = 1'b0, mxu_breq = 1'b0, mxu_aaddr = '0, mxu_baddr = '0;
++    otpu_mxu_parallel #(.D(D), .P(MXU_ROWS), .ROWS(ACT_ROWS), .BLOCKS(ACT_BLOCKS),
++        .DEPTH(FIFO_DEPTH), .LANES(ULANES), .CL(MXU_CL), .SID(SID)) u_mxu (
++      .clk, .rst(rst_mxu), .start(ustart[U_MXU]), .go(urel), .cmd(ucmd[U_MXU]),
++      .rdy(r_mxu), .done(d_mxu), .computing(mxu_pop),
++      .pf_level(mxu_level), .pf_starve(mxu_starve), .pf_block(mxu_block),
++      .pf_u(mxu_u), .pf_uv(mxu_uv),
++      .act_we, .act_row, .act_idx, .act_data, .act_dup, .act_off,
++      .asc_we, .asc_row, .asc_blk, .asc_data,
++      .a_req(x_a_req), .b_req(x_b_req), .a_want(x_a_want), .b_want(x_b_want),
++      .a_addr(x_a_addr), .b_addr(x_b_addr), .mem_gnt(x_gnt),
++      .a_rvalid(x_a_valid), .b_rvalid(x_b_valid), .a_rdata(x_a_data), .b_rdata(x_b_data),
++      .t_ren(mxu_ren), .t_raddr(mxu_raddr), .t_rdata(r_data[P_MXU][ULANES-1:0]),
++      .t_wen(mxu_wen), .t_waddr(mxu_waddr), .t_wdata(mxu_wdata), .t_gnt(gnt[G_MXU]));
++  end
++
+ 
+   // the quantizer's group maxes of a row (MX offsets; not ROW mode): a QACT's 4 KB (KB <=
+   // ACT_BLOCKS: the ACT RAM's bound) and a QST's KB (its row in TMEM: KB <= TMEM_WORDS / D), so
+   // every QACT and QST the ISA's bounds allow fits (the card: 512)
+   localparam int QG = (4 * ACT_BLOCKS > TMEM_WORDS / D) ? 4 * ACT_BLOCKS : TMEM_WORDS / D;
+   localparam int Q_GR = (QG <= 8) ? 8 : (1 << $clog2(QG));
+-  otpu_quant #(.D(D), .LANES(ULANES), .GR(Q_GR), .XD(QUANT_XD), .SID(SID)) u_quant (
++  logic [ULANES-1:0] qv_req;
++  logic [ULANES-1:0][31:0] qv_addr, qv_data;
++  logic [ULANES-1:0][3:0] qv_be;
++  assign x_sw_want=qv_req;
++  assign x_sw_req=qv_req & {ULANES{gnt[G_Q]}};
++  assign x_sw_addr=qv_addr, x_sw_data=qv_data, x_sw_be=qv_be;
++  otpu_quant #(.STORE_LANES(QST_LANES), .D(D), .LANES(ULANES), .GR(Q_GR), .XD(QUANT_XD), .SID(SID)) u_quant (
+     .clk, .rst(rst_q), .start(ustart[U_Q]), .cmd(ucmd[U_Q]), .rdy(r_q), .done(d_q), .gnt(gnt[G_Q]),
+     .t_ren(q_ren), .t_raddr(q_raddr), .t_rdata(r_data[P_Q][ULANES-1:0]),
+     .t_ren2(q_ren2), .t_raddr2(q_raddr2), .t_rdata2(r_data[P_Q2][ULANES-1:0]),
+@@ -519,16 +566,17 @@ module otpu_slice
+     .act_we, .act_row, .act_idx, .act_data, .act_dup, .act_off, .asc_we, .asc_row, .asc_blk, .asc_data,
+     .a_want(q_awant), .wr_idle(wr_idle_i),
+     .a_req(q_areq), .a_we(q_awe), .a_addr(q_aaddr), .a_wdata(q_awdata), .a_be(q_abe),
++    .v_req(qv_req), .v_addr(qv_addr), .v_data(qv_data), .v_be(qv_be),
+     .pf_u(q_u), .pf_frz(q_frz));
+ 
+-  otpu_vpu #(.LANES(LANES), .CL(VPU_CL), .SID(SID), .WBUF(ARB_MASK), .HAS_SE(HAS_SS)) u_vpu (
++  otpu_vpu #(.LANES(VPU_LANES), .CL(VPU_CL), .SID(SID), .WBUF(ARB_MASK), .HAS_SE(HAS_SS)) u_vpu (
+     .clk, .rst(rst_vpu), .start(ustart[U_VPU]), .cmd(ucmd[U_VPU]), .rdy(r_vpu), .done(d_vpu),
+     .gnt(gnt[G_VPU]), .ren(v_ren), .rhold(tm_lost[P_VA] || tm_lost[P_VB]),
+-    .ta_en(va_ren), .ta_addr(va_raddr), .ta_data(r_data[P_VA]),
+-    .tb_en(vb_ren), .tb_addr(vb_raddr), .tb_data(r_data[P_VB]),
++    .ta_en(va_ren), .ta_addr(va_raddr), .ta_data(r_data[P_VA][VPU_LANES-1:0]),
++    .tb_en(vb_ren), .tb_addr(vb_raddr), .tb_data(r_data[P_VB][VPU_LANES-1:0]),
+     .tw_en(v_wen), .tw_addr(v_waddr), .tw_data(v_wdata), .pf_u(v_u), .pf_frz(v_frz),
+-    .ss_req, .ss_gnt, .ss_cfg, .ss_pe, .ss_in_v, .ss_in_d, .ss_fk, .ss_fi, .ss_fd,
+-    .ss_y_v, .ss_y_d, .ss_o_v, .ss_o_d);
++    .ss_req, .ss_gnt, .ss_cfg, .ss_pe, .ss_in_v, .ss_in_d(ss_in_d[0:VPU_LANES-1]), .ss_fk, .ss_fi, .ss_fd(ss_fd[0:VPU_LANES-1]),
++    .ss_y_v, .ss_y_d(vs_y_d), .ss_o_v, .ss_o_d);
+ 
+   // collective: request from start until acknowledged (an RLD is not a collective)
+   wire rl_start = ustart[U_COLL] && ucmd[U_COLL].op == OP_RLD;
+@@ -583,15 +631,15 @@ module otpu_slice
+     rq_en[P_Q][ULANES-1:0] = q_ren;       r_addr[P_Q][ULANES-1:0] = q_raddr;
+     rq_en[P_Q2][ULANES-1:0] = q_ren2;     r_addr[P_Q2][ULANES-1:0] = q_raddr2;
+     rq_en[P_Q3][0] = q3_en;   r_addr[P_Q3][0] = q3_addr;
+-    rq_en[P_VA] = va_ren;     r_addr[P_VA] = va_raddr;
+-    rq_en[P_VB] = vb_ren;     r_addr[P_VB] = vb_raddr;
++    rq_en[P_VA][VPU_LANES-1:0] = va_ren; r_addr[P_VA][VPU_LANES-1:0] = va_raddr;
++    rq_en[P_VB][VPU_LANES-1:0] = vb_ren; r_addr[P_VB][VPU_LANES-1:0] = vb_raddr;
+     rq_en[P_COLL] = coll_ren; r_addr[P_COLL] = coll_raddr;
+     if (rl_pq) begin rq_en[P_COLL][0] = 1'b1; r_addr[P_COLL][0] = rl_a; end
+     wq_en[W_DMA] = dma_wen;   w_addr[W_DMA] = dma_waddr;   w_data[W_DMA] = dma_wdata;
+     wq_en[W_MXU][ULANES-1:0] = mxu_wen;
+     w_addr[W_MXU][ULANES-1:0] = mxu_waddr;
+     w_data[W_MXU][ULANES-1:0] = mxu_wdata;
+-    wq_en[W_VPU] = v_wen;     w_addr[W_VPU] = v_waddr;     w_data[W_VPU] = v_wdata;
++    wq_en[W_VPU][VPU_LANES-1:0] = v_wen; w_addr[W_VPU][VPU_LANES-1:0] = v_waddr; w_data[W_VPU][VPU_LANES-1:0] = v_wdata;
+     wq_en[W_COLL] = coll_wen; w_addr[W_COLL] = coll_waddr; w_data[W_COLL] = coll_wdata;
+   end
+ 
+@@ -898,12 +946,12 @@ module otpu_slice
+   // DRAM's sw_rdy and wr_idle only through it (tests/test_target.py)
+   wire  sw_req_c = q_areq && q_awe;
+   logic sw_v;
+-  assign sw_rdy_i  = !sw_v || sw_rdy;
++  assign sw_rdy_i  = (!sw_v || sw_rdy) && (QST_LANES == 0 || x_sw_rdy);
+   assign wr_idle_i = wr_idle && !sw_v && !(b_req && b_we);
+   assign sw_req    = sw_v;
+   always_ff @(posedge clk) begin : sw_reg
+     if (sys_rst) sw_v <= 1'b0;
+-    else if (sw_rdy_i) sw_v <= sw_req_c;
++    else if (!sw_v || sw_rdy) sw_v <= sw_req_c && (QST_LANES == 0 || x_sw_rdy);
+     if (sw_rdy_i && sw_req_c) begin
+       sw_addr <= q_aaddr; sw_wdata <= q_awdata; sw_be <= q_abe;
+     end
+@@ -1233,14 +1281,16 @@ module otpu_slice
+   initial trace = $test$plusargs("trace");
+   // the MXU's scale reads (otpu_mxu xs_*; rtlsim stats["mxu_scale"]): port A line requests, and
+   // those that fetched a row's Sw alone
++  if (MXU_ROWS == 1) begin : g_serial_stats
+   always @(posedge clk)
+-    if (dump) $display("MXSCALE s%0d areq=%0d sw=%0d", SID, u_mxu.xs_a, u_mxu.xs_sw);
++    if (dump) $display("MXSCALE s%0d areq=%0d sw=%0d", SID, g_serial.u_mxu.xs_a, g_serial.u_mxu.xs_sw);
+   // the ACT RAM's reads (otpu_mxu xa_*; rtlsim stats["act_reads"]): cycles, column reads, pops,
+   // the columns of output rows at the pops, and the columns that ever read (a mask)
+   always @(posedge clk)
+     if (dump) $display("MXACT s%0d cyc=%0d rd=%0d pop=%0d use=%0d cols=%0d any=%0d", SID,
+-                       u_mxu.xa_cyc, u_mxu.xa_rd, u_mxu.xa_pop, u_mxu.xa_use, MCOLS,
+-                       64'(u_mxu.xa_any));
++                       g_serial.u_mxu.xa_cyc, g_serial.u_mxu.xa_rd, g_serial.u_mxu.xa_pop, g_serial.u_mxu.xa_use, MCOLS,
++                       64'(g_serial.u_mxu.xa_any));
++  end
+   always_ff @(posedge clk)
+     if (trace) begin
+       if (pf.sq.g) $display("T%0d G c=%0d s=%0d", SID, pf.sq.cyc, pf.sq.g_slot);
+diff --git a/rtl/top/otpu_top.sv b/rtl/top/otpu_top.sv
+index 1bd38a1d..fca80557 100644
+--- a/rtl/top/otpu_top.sv
++++ b/rtl/top/otpu_top.sv
+@@ -22,6 +22,10 @@ module otpu_top
+   parameter int WIN        = 32,
+   parameter int RPB        = 4,
+   parameter int WPB        = 2,
++  parameter int QST_LANES  = 0,
++  parameter int MXU_ROWS   = 1,
++  parameter int MEM_BYTES  = 2816,
++  parameter int VPU_LANES  = LANES,
+   parameter int MXU_IMPL   = 2,
+   parameter int MXU_CL     = 16,
+   parameter int MXU_E      = 0,       // MXU epilogue lanes (0: MCOLS / 2; otpu_mxu E)
+@@ -81,15 +85,46 @@ module otpu_top
+     logic [31:0]   sw_addr, sw_wdata;
+     logic [3:0]    sw_be;
+ 
++    logic [LANES-1:0] x_sw_req, x_sw_want;
++    logic [LANES-1:0][31:0] x_sw_addr, x_sw_data;
++    logic [LANES-1:0][3:0] x_sw_be;
++    logic x_sw_rdy;
++    logic [MXU_ROWS-1:0] x_a_req, x_b_req, x_a_want, x_b_want;
++    logic [MXU_ROWS-1:0] x_gnt, x_a_valid, x_b_valid;
++    logic [MXU_ROWS-1:0][31:0] x_a_addr, x_b_addr;
++    logic [MXU_ROWS-1:0][255:0] x_a_data;
++    logic [MXU_ROWS-1:0][D*8-1:0] x_b_data;
++    initial if ((MXU_ROWS > 1 || QST_LANES > 0) && AXI != 0)
++      $fatal(1, "parallel MXU needs the multi-port memory interface (AXI=0)");
+     if (AXI == 0) begin : g_dram
+       assign a_rdy = 1'b1;
+       assign sw_rdy = 1'b1;
+       assign b_rdy = 1'b1;
+       assign wr_idle = 1'b1;
+-      otpu_dram #(.WORDS(DRAM_WORDS), .D(D), .LAT(DRAM_LAT), .SID(s)) u_dram (
++      // One shared byte budget, including the original DMA/scalar links. A lane's
++      // data and scale requests are admitted atomically; rotate priority each cycle.
++      int unsigned rr;
++      always_ff @(posedge clk) if (sys_rst) rr <= 0;
++        else rr <= (rr + 1 == MXU_ROWS) ? 0 : rr + 1;
++      always_comb begin
++        int left, p, cost, write_cost;
++        left = MEM_BYTES - ((b_req) ? D : 0) - ((a_req) ? 32 : 0) - ((sw_req) ? 4 : 0);
++        write_cost=4*$countones(x_sw_want);
++        x_sw_rdy=write_cost<=left;
++        if (x_sw_rdy) left-=4*$countones(x_sw_req);
++        x_gnt = '0;
++        for (int q = 0; q < MXU_ROWS; q++) begin
++          p = (rr + q) % MXU_ROWS;
++          cost = (x_a_want[p] ? 32 : 0) + (x_b_want[p] ? D : 0);
++          if (cost > 0 && cost <= left) begin x_gnt[p] = 1'b1; left -= cost; end
++        end
++      end
++      otpu_dram #(.WORDS(DRAM_WORDS), .D(D), .LAT(DRAM_LAT), .SID(s), .P(MXU_ROWS), .VL(LANES)) u_dram (
+         .clk, .a_req, .a_we, .a_addr, .a_wdata, .a_be, .a_rvalid, .a_rdata,
+         .sw_req, .sw_addr, .sw_wdata, .sw_be,
+         .b_req, .b_tag, .b_we, .b_wmask, .b_wdata, .b_addr, .b_rvalid, .b_rtag, .b_rdata, .rd_idle,
++        .x_a_req, .x_b_req, .x_a_addr, .x_b_addr, .x_a_valid, .x_b_valid, .x_a_data, .x_b_data,
++        .x_sw_req, .x_sw_addr, .x_sw_data, .x_sw_be,
+         .dump);
+     end else begin : g_native
+       logic [1:0] cvalid, cready, cwe, wvalid, wready, rvalid;
+@@ -134,7 +169,7 @@ module otpu_top
+     otpu_slice #(.SID(s), .S(S), .D(D), .MCOLS(MCOLS), .ACT_BLOCKS(ACT_BLOCKS), .ACT_ROWS(ACT_ROWS),
+                  .TMEM_WORDS(TMEM_WORDS), .IMEM_WORDS(IMEM_WORDS),
+                  .FIFO_DEPTH(FIFO_DEPTH), .LANES(LANES), .WIN(WIN), .RPB(RPB),
+-                 .WPB(WPB), .MXU_IMPL(MXU_IMPL), .MXU_CL(MXU_CL), .MXU_E(MXU_E), .QUANT_XD(QUANT_XD), .VPU_CL(VPU_CL), .ULANES(ULANES),
++                 .WPB(WPB), .QST_LANES(QST_LANES), .MXU_ROWS(MXU_ROWS), .VPU_LANES(VPU_LANES), .MXU_IMPL(MXU_IMPL), .MXU_CL(MXU_CL), .MXU_E(MXU_E), .QUANT_XD(QUANT_XD), .VPU_CL(VPU_CL), .ULANES(ULANES),
+                  .TMEM_IMPL(TMEM_IMPL), .TMEM_RQ(TMEM_RQ), .TMEM_NCP(TMEM_NCP),
+                  .TMEM_NSB(TMEM_NSB), .TMEM_SBP(TMEM_SBP), .TMEM_SBH(TMEM_SBH),
+                  .TMEM_RPL(TMEM_RPL), .TMEM_TDP(TMEM_TDP), .TMEM_GST(TMEM_GST),
+@@ -145,6 +180,9 @@ module otpu_top
+       .a_req, .a_we, .a_addr, .a_wdata, .a_be, .a_rvalid, .a_rdata,
+       .sw_req, .sw_addr, .sw_wdata, .sw_be,
+       .b_req, .b_tag, .b_we, .b_wmask, .b_wdata, .b_addr, .b_par, .b_rvalid, .b_rtag, .b_rdata,
++      .x_a_req, .x_b_req, .x_a_want, .x_b_want, .x_a_addr, .x_b_addr,
++      .x_sw_req, .x_sw_want, .x_sw_rdy, .x_sw_addr, .x_sw_data, .x_sw_be,
++      .x_gnt, .x_a_valid, .x_b_valid, .x_a_data, .x_b_data,
+       .coll_req(coll_req[s]), .coll_cmd(coll_cmd[s]), .coll_ack,
+       .coll_ren(coll_ren[s]), .coll_raddr(coll_raddr[s]), .coll_rdata(coll_rdata[s]),
+       .coll_wen, .coll_waddr, .coll_wdata, .coll_gnt_local(coll_gl[s]), .coll_gnt,
+diff --git a/rtl/vpu/otpu_quant.sv b/rtl/vpu/otpu_quant.sv
+index 957c2be7..82c24d22 100644
+--- a/rtl/vpu/otpu_quant.sv
++++ b/rtl/vpu/otpu_quant.sv
+@@ -130,6 +130,7 @@ module otpu_quant
+   import otpu_fp::*;
+ #(
+   parameter int D     = 32,
++  parameter int STORE_LANES = 0, // 0: legacy word port; else parallel byte stores
+   parameter int LANES = 8,
+   parameter int GR    = 1024,               // group maxes of a row (QACT 4*KB, QST KB; not ROW)
+   parameter int XD    = 1024,               // row buffer chunks (QACT rows <= XD*LANES); 0: none
+@@ -172,6 +173,9 @@ module otpu_quant
+   output logic [31:0]             a_addr,
+   output logic [31:0]             a_wdata,
+   output logic [3:0]              a_be,
++  output logic [LANES-1:0] v_req,
++  output logic [LANES-1:0][31:0] v_addr, v_data,
++  output logic [LANES-1:0][3:0] v_be,
+   // profiling: a cycle after a QACT ends, its cycles frozen by the TMEM grant
+   output logic                    pf_u,
+   output logic [31:0]             pf_frz
+@@ -190,6 +194,8 @@ module otpu_quant
+   initial if (XD == 1 || (XD & (XD - 1)) != 0) $fatal(1, "otpu_quant: XD 0 or a power of two >= 2");
+   initial if (D % LANES != 0 || (D & (D - 1)) != 0)
+     $fatal(1, "otpu_quant: D a power of two, a multiple of LANES");
++  initial if (STORE_LANES > LANES || (STORE_LANES != 0 && (STORE_LANES & (STORE_LANES-1)) != 0))
++    $fatal(1,"otpu_quant: STORE_LANES zero or a power of two <= LANES");
+   initial if (LANES < 4) $fatal(1, "otpu_quant: QST word writes need LANES >= 4");
+   initial if ((LANES & (LANES - 1)) != 0) $fatal(1, "otpu_quant: LANES must be a power of two");
+   initial if (GR % 4 != 0 || (GWN & (GWN - 1)) != 0) $fatal(1, "otpu_quant: GR 4 x a power of two");
+@@ -227,8 +233,8 @@ module otpu_quant
+   logic        sw_ph;                        // QST: the scale row's writes
+   logic [15:0] sw_i;                         // ... its word
+   // elements per read: QST pass 1 one byte (or one word) a cycle, everything else LANES
+-  wire [31:0] ew = (is_st && pass) ? (wide ? 32'd4 : 32'd1) : 32'(LANES);
+-  wire [31:0] bstep = wide ? 32'd4 : es;     // QST pass 1: badr per read
++  wire [31:0] ew = (is_st && pass) ? ((STORE_LANES > 0) ? 32'(STORE_LANES) : (wide ? 32'd4 : 32'd1)) : 32'(LANES);
++  wire [31:0] bstep = (STORE_LANES > 0) ? es * STORE_LANES : wide ? 32'd4 : es;     // QST pass 1: badr per read
+   wire [31:0] Gr = pass ? GW : G;            // the elements of this pass
+   wire rlast = (e + ew >= Gr);
+   // the elements left in the row, Gr - e, kept alongside e (set wherever e or the pass moves):
+@@ -627,8 +633,16 @@ module otpu_quant
+     act_we = '0; act_row = '0; act_idx = '0; act_data = '0;
+     asc_we = 1'b0; asc_row = '0; asc_blk = '0; asc_data = '0;
+     a_req = 1'b0; a_we = 1'b0; a_addr = '0; a_wdata = '0; a_be = '0;
++    v_req='0; v_addr='0; v_data='0; v_be='0;
+     if (busy && !ackw && wqd.v) begin
+-      if (wqd.st) begin
++      if (wqd.st && STORE_LANES > 0) begin
++        for (int l=0;l<LANES;l++) begin
++          logic [31:0] addr;
++          addr=wqd.baddr+32'(l)*es;
++          v_req[l]=wqd.mask[l]; v_addr[l]=addr>>2;
++          v_data[l]={4{qb[l]}}; v_be[l]=4'b0001<<addr[1:0];
++        end
++      end else if (wqd.st) begin
+         a_req = 1'b1;
+         a_we = 1'b1;
+         a_addr = wqd.baddr >> 2;
+diff --git a/rtl/vpu/otpu_vpu.sv b/rtl/vpu/otpu_vpu.sv
+index 139117e4..50170118 100644
+--- a/rtl/vpu/otpu_vpu.sv
++++ b/rtl/vpu/otpu_vpu.sv
+@@ -139,8 +139,8 @@ module otpu_vpu
+   // OUTER's column buffers: 256 columns (docs/isa.md) over the lanes
+   localparam int CBD = 256 / LANES;
+   localparam int CBW = $clog2(CBD);
+-  initial if (RL < LA || NP % LANES != 0)
+-    $fatal(1, "otpu_vpu: LANES must be a power of two <= 16");
++  initial if (LANES < 4 || LANES > 64 || NP % LANES != 0)
++    $fatal(1, "otpu_vpu: LANES must be a power of two from 4 to 64");
+   localparam int TA = 1 + LM + LA;           // stream: the tail's X registers -> slot 0's pacc
+ 
+   localparam f32_t F_NZ = 32'h8000_0000;     // -0: (a*b) + -0 == a*b exactly
+@@ -268,7 +268,19 @@ module otpu_vpu
+   assign iss_thr = 1'b1;
+   assign red_thr = 1'b1;
+ `endif
+-  wire              iss_ok = !(C8 && comp_f(func) && c_hold) && iss_thr;
++  // Wide sums retain exactly the ISA's 64 ordered partial accumulators.
++  // An accumulator cannot recur faster than the real four-stage FP adder.
++  // Insert issue bubbles; all pipeline stages continue advancing on en.
++  localparam int RED_II = (RL < LA) ? LA / RL : 1;
++  logic [2:0] red_gap;
++  always_ff @(posedge clk)
++    if (rst) red_gap <= '0;
++    else if (en) begin
++      if (issuing && iss_ok && is_sum) red_gap <= 3'(RED_II - 1);
++      else if (red_gap != 0) red_gap <= red_gap - 1'b1;
++    end
++  wire              iss_ok = !(C8 && comp_f(func) && c_hold) && iss_thr &&
++                              (!is_sum || red_gap == 0);
+ 
+   wire is_sum = (func == V_RSUM) || (func == V_RSSQ) || (func == V_RDOT);
+   wire is_am = (func == V_ARGMAX);
+@@ -1074,10 +1086,12 @@ module otpu_vpu
+         otpu_delay #(.W(32), .N(RL - LA - 1)) u_fb (.clk, .en, .d(pacc[l]), .q(fbd));
+         always_ff @(posedge clk) if (en) fbq <= first_e ? F_ZERO : fbd;
+         assign prev = fbq;
+-      end else begin : g_fbw
+-        f32_t fb;
+-        otpu_delay #(.W(32), .N(RL - LA)) u_fb (.clk, .en, .d(pacc[l]), .q(fb));
+-        assign prev = mtq.first ? F_ZERO : fb;
++      end else if (RL == LA) begin : g_fbw
++        assign prev = mtq.first ? F_ZERO : pacc[l];
++      end else begin : g_wide_fb
++        // RED_II spaces recurring partials LA enabled cycles apart. The
++        // preceding output register holds that partial when this term arrives.
++        assign prev = mtq.first ? F_ZERO : pacc[l];
+       end
+       otpu_fadd #(.LAT(LA)) u_acc (.clk, .en, .a(prev), .b(tq), .y(pacc[l]));
+     end
+diff --git a/rtl/vpu/otpu_vtree.sv b/rtl/vpu/otpu_vtree.sv
+index 0d892bbc..35308d90 100644
+--- a/rtl/vpu/otpu_vtree.sv
++++ b/rtl/vpu/otpu_vtree.sv
+@@ -22,6 +22,32 @@ module otpu_vtree
+   output f32_t       root_o,     // root, from a copy of its register (LN2): for a far load
+   output logic       root_v
+ );
++  if (LANES >= 32) begin : g_wide
++    // Capture the 64 ISA partials in their original index order. With 32 lanes
++    // sub 0 precedes sub 1; with 64 lanes the whole row arrives at once.
++    f32_t first [32];
++    if (LANES == 32) begin : g_half
++      always_ff @(posedge clk) if (en && cap && !row_last)
++        for (int k=0;k<32;k++) first[k] <= pacc[k];
++    end
++    f32_t tree [7][64];
++    for (genvar k=0;k<64;k++) begin : g_input
++      if (LANES == 64) assign tree[0][k] = pacc[k];
++      else if (k < 32) assign tree[0][k] = first[k];
++      else assign tree[0][k] = pacc[k-32];
++    end
++    for (genvar q=1;q<=6;q++) begin : g_level
++      for (genvar k=0;k<(64>>q);k++) begin : g_add
++        otpu_fadd #(.LAT(LA)) u_add (.clk, .en, .a(tree[q-1][k]),
++           .b(tree[q-1][k+(64>>q)]), .y(tree[q][k]));
++      end
++    end
++    logic [6*LA-1:0] valid;
++    always_ff @(posedge clk)
++      if (rst) valid <= '0;
++      else if (en) valid <= {valid[6*LA-2:0],cap && row_last};
++    assign root=tree[6][0], root_o=tree[6][0], root_v=valid[6*LA-1];
++  end else begin : g_fold
+   localparam int NP = 64;                    // isum_64 partials
+   localparam int RL = NP / LANES;            // partial loop length in chunks
+   localparam int LW = $clog2(LANES);
+@@ -221,4 +247,5 @@ module otpu_vtree
+                            : SH2 && l2_v && rsr[DL + LA - 1]))
+       $fatal(1, "otpu_vtree: lane level schedule collision");
+ `endif
++  end
+ endmodule
+diff --git a/sim/verilator/lpn_wall.cpp b/sim/verilator/lpn_wall.cpp
+new file mode 100644
+index 00000000..00d9cdcf
+--- /dev/null
++++ b/sim/verilator/lpn_wall.cpp
+@@ -0,0 +1,6 @@
++#include <chrono>
++
++extern "C" double lpn_wall_seconds() {
++  return std::chrono::duration<double>(
++      std::chrono::steady_clock::now().time_since_epoch()).count();
++}
+diff --git a/sim/verilator/tb_top.sv b/sim/verilator/tb_top.sv
+index cd405d6f..ee264254 100644
+--- a/sim/verilator/tb_top.sv
++++ b/sim/verilator/tb_top.sv
+@@ -5,6 +5,8 @@
+ // writes the next run's pokeb lines, the host's writes between the runs), +reload: the program
+ // loaded again, +r<k>_arg<j>=N: run k's arguments (else the run before's), then the next run.
+ module tb_top;
++  import "DPI-C" function real lpn_wall_seconds();
++  real lpn_wall_start;
+   parameter int S          = 1;
+   parameter int D          = 32;
+   parameter int MCOLS      = 8;
+@@ -18,6 +20,10 @@ module tb_top;
+   parameter int WIN        = 32;
+   parameter int RPB        = 4;
+   parameter int WPB        = 2;
++  parameter int QST_LANES  = 0;
++  parameter int MXU_ROWS   = 1;
++  parameter int MEM_BYTES  = 2816;
++  parameter int VPU_LANES  = LANES;
+   parameter int MXU_IMPL   = 2;
+   parameter int MXU_CL     = 16;
+   parameter int MXU_E      = 0;       // MXU epilogue lanes (0: MCOLS / 2)
+@@ -53,7 +59,7 @@ module tb_top;
+ 
+   otpu_top #(.S(S), .D(D), .MCOLS(MCOLS), .ACT_BLOCKS(ACT_BLOCKS), .ACT_ROWS(ACT_ROWS), .TMEM_WORDS(TMEM_WORDS),
+              .IMEM_WORDS(IMEM_WORDS), .DRAM_WORDS(DRAM_WORDS), .DRAM_LAT(DRAM_LAT),
+-             .LANES(LANES), .WIN(WIN), .RPB(RPB), .WPB(WPB), .MXU_IMPL(MXU_IMPL), .MXU_CL(MXU_CL), .MXU_E(MXU_E), .QUANT_XD(QUANT_XD), .VPU_CL(VPU_CL), .ULANES(ULANES), .AXI(AXI), .FIFO_DEPTH(FIFO_DEPTH),
++             .LANES(LANES), .WIN(WIN), .RPB(RPB), .WPB(WPB), .QST_LANES(QST_LANES), .MXU_ROWS(MXU_ROWS), .VPU_LANES(VPU_LANES), .MXU_IMPL(MXU_IMPL), .MXU_CL(MXU_CL), .MXU_E(MXU_E), .QUANT_XD(QUANT_XD), .VPU_CL(VPU_CL), .ULANES(ULANES), .MEM_BYTES(MEM_BYTES), .AXI(AXI), .FIFO_DEPTH(FIFO_DEPTH),
+              .TMEM_IMPL(TMEM_IMPL), .TMEM_RQ(TMEM_RQ), .TMEM_NCP(TMEM_NCP),
+              .TMEM_NSB(TMEM_NSB), .TMEM_SBP(TMEM_SBP), .TMEM_SBH(TMEM_SBH),
+              .TMEM_RPL(TMEM_RPL), .TMEM_TDP(TMEM_TDP), .TMEM_GST(TMEM_GST),
+@@ -99,10 +105,13 @@ module tb_top;
+     end
+     @(negedge clk);
+     rst = 1'b0;
++    if ($test$plusargs("lpn_wall")) lpn_wall_start = lpn_wall_seconds();
+     while (!all_halted && cycles < max_cycles) begin
+       @(negedge clk);
+       cycles++;
+     end
++    if ($test$plusargs("lpn_wall"))
++      $display("LPN_WALL seconds=%0.9f cycles=%0d", lpn_wall_seconds()-lpn_wall_start, cycles);
+     begin
+       int runs = 1;
+       string nm;

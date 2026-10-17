@@ -42,7 +42,8 @@ def run_engine(spec,cfg,cap,prompt,max_new,backend_factory,weights=None):
   return engine,generated
 
 
-def make_backend(output,prompt_length,compiler=None,options=None,capacity=65536):
+def make_backend(output,prompt_length,compiler=None,options=None,capacity=65536,
+                 execution_backend=None):
   import numpy as np
   from .shape_workload import resolve_static,program_hash
   from .e2e import CheckedBackend
@@ -51,7 +52,7 @@ def make_backend(output,prompt_length,compiler=None,options=None,capacity=65536)
   from .native_timing import ReusableTiming
   from .model import Timing
   output=Path(output)
-  class Backend(CheckedBackend):
+  class Backend(execution_backend or CheckedBackend):
     def __init__(self,cfg,images):
       if options is not None:
         super().__init__(cfg,images,options)

@@ -1,0 +1,18 @@
+{
+  "status": "complete",
+  "lanes": 64,
+  "all_tmem_bit_exact": true,
+  "functions": [
+    "add",
+    "mul",
+    "exp2",
+    "recip",
+    "rsqrt",
+    "rsum",
+    "rssq",
+    "rdot",
+    "rmax",
+    "argmax"
+  ],
+  "elements_per_row": 193
+}

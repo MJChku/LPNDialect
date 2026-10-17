@@ -1,0 +1,63 @@
+# RTL architecture validation (in progress)
+
+The prior 8.23× LPN result used historical token-at-a-time prefill. It is not
+an established normal-inference speedup. This experiment implements hardware
+and measures original/evolved RTL on the unmodified upstream inference path.
+
+`parallel-rtl.patch` applies to FeSens revision
+`f237dab2f196855a59a083b1454786df8f01291f`. It includes the passive wall timer
+and large behavioral-memory representation used by the original validation.
+Apply it in a separate clean worktree; preserve the original baseline checkout.
+
+The implementation adds the following hardware (numerical validation is in progress):
+
+* 32 independent single-column systolic engines, with integer accumulation and
+  the original FP epilogue. A decoded MM is striped across weight rows inside
+  hardware. Each engine has its own weight/scale FIFO and activation RAM copy.
+* Shared scratchpad-bank arbitration and shared memory byte-budget arbitration,
+  including weight data, scale lines, DMA and scalar quantizer writes.
+* A completion barrier and reduction of per-engine matrix maxima. One logical
+  instruction completes only when every engine and final maximum write finishes.
+* Narrow-column and replay-row indexing in the fused epilogue.
+* A 64-lane VPU and reduction tree. Ordered sums retain the ISA's 64 partials;
+  their issue rate respects the existing four-stage FP adder's feedback latency.
+* 64 parallel QST byte converters and byte-enabled word links, supporting
+  contiguous and strided stores. The shared memory budget charges four link
+  bytes per active store lane (256 bytes for 64 lanes). This is an abstract
+  logical memory interface, not an implemented HBM burst/coalescing controller.
+
+The current configuration uses `MXU_ROWS=32`, `LANES=64`, `VPU_LANES=64`,
+`QST_LANES=64`, `MEM_BYTES=2816`. Two-command parallel-MXU prefetch is still
+missing. This is not yet an equivalent implementation of all earlier LPN
+assumptions; in particular, wide ordered sums need feedback stalls. The multi-link behavioral DRAM retains actual data and fixed
+read latency. It has no HBM channel/bank controller or board integration.
+The independent 64-lane VPU gate has passed bit-exact full scratchpad comparison
+for ADD, MUL, EXP2, RECIP, RSQRT, RSUM, RSSQ, RDOT, RMAX and ARGMAX with
+193-element rows (including feedback and a partial final chunk). Full matrix,
+wide-QST and checkpoint gates are still required. The fused-epilogue gate found
+that duplicate ASCALE reads overflowed the slice's per-bank lane counters even
+when they named the same word. The wrapper now admits at most one read per
+bank, and full gates have been restarted with this correction.
+Cycle speedup at a common clock does not prove FPGA resource fit or Fmax.
+
+Run numerical gates with Verilator 5.052 and the NumPy environment:
+
+```sh
+python examples/opentpu/rtl_evolution/check_matrix.py \
+  --opentpu-root ../FeSens-openTPU-arch-rtl --output /tmp/parallel-matrix
+```
+
+Every gate compares the entire DRAM and TMEM against the independent upstream
+ISA model. Gates include incomplete engine groups, replayed activation rows,
+strided outputs, scales, ACC/ASCALE/RMAX, and packed weights. Gate completion
+and the requested 128-prompt/32-output real-checkpoint experiment are still
+required before reporting a verified architecture speedup.
+
+The original-RTL long run is under
+`~/lpn-runs/rtl-architecture-128x32` on `icdslab2.epfl.ch`. Its
+`baseline-job.json` identifies the controller and worker; inspect their live
+processes and `baseline-smol128x32/progress.json` before starting another job.
+It uses SmolLM2-135M real weights, an exactly 128-token story prompt, capacity
+256, 32 requested output tokens, and a frozen LPN project at `9672222`.
+Upstream `Engine.generate()` owns batching, autoregressive decode and EOS.
+A shorter EOS-terminated run must not be labeled a completed 32-output case.
