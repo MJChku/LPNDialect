@@ -1,4 +1,4 @@
-"""Recheck normal-inference LPN predictions against retained original-RTL cycles.
+"""Recheck normal-inference LPN predictions against retained RTL cycles.
 
 Static dense control is resolved from each original program; tensor arithmetic
 and RTL are not rerun. Program hashes and prior numerical/input checks are
@@ -6,7 +6,7 @@ required. This cannot replace the separate checkpoint numerical validation.
 """
 import argparse
 from concurrent.futures import ProcessPoolExecutor,as_completed
-from dataclasses import asdict
+from dataclasses import asdict,replace
 import json
 import multiprocessing
 import os
@@ -34,6 +34,8 @@ def replay(item):
             raise RuntimeError(f'kernel {item["index"]}: original program hash differs')
     before=time.perf_counter()
     workload=resolve_static(cfg,programs,record['args'])
+    if item['parallel_rtl']:
+        workload=replace(workload,config=replace(cfg,MCOLS=1,LANES=64))
     runner=ReusableTiming(Path(item['compiler']),Path(item['cache']),capacity=65536)
     prepared=runner.prepare(workload,Timing(**record['timing']),target/'timing.tables')
     cycles,wall,process,log=prepared.run();(target/'lpn.log').write_text(log)
@@ -41,7 +43,7 @@ def replay(item):
         phase=record['phase'],input_rows=record['input_rows'],rtl_cycles=record['rtl_cycles'],
         old_lpn_cycles=record['lpn_cycles'],new_lpn_cycles=cycles,
         relative_cycle_error=cycles/record['rtl_cycles']-1,
-        old_relative_cycle_error=record['relative_cycle_error'],
+        old_relative_cycle_error=record.get('relative_cycle_error',record.get('evolved_lpn_relative_cycle_error')),
         host_seconds=time.perf_counter()-before,lpn_core_seconds=wall,
         zero_rollbacks=True,program_hash_verified=True)
     (target/'record.json').write_text(json.dumps(result,indent=2)+'\n')
@@ -56,12 +58,17 @@ def main():
     ap.add_argument('--compiler',type=Path,required=True)
     ap.add_argument('--indices',help='Comma-separated kernel indices; default: snapshot all completed kernels')
     ap.add_argument('--workers',type=int,default=1)
+    ap.add_argument('--parallel-rtl',action='store_true',
+        help='Use the implemented 32-row, 64-lane physical configuration')
     a=ap.parse_args()
     from examples.opentpu.e2e import atomic_json,digest
     if a.workers<1:ap.error('workers must be positive')
     a.output=a.output.resolve();a.output.mkdir(parents=True,exist_ok=False)
     case=a.case.resolve()
-    config=json.loads((case/'identity.json').read_text())['config']
+    identity=json.loads((case/'identity.json').read_text());config=identity['config']
+    if a.parallel_rtl and identity.get('uarch')!={
+            'MXU_ROWS':32,'LANES':64,'VPU_LANES':64,'QST_LANES':64,'MEM_BYTES':2816}:
+        raise ValueError('case does not identify the implemented parallel RTL architecture')
     project=Path(__file__).resolve().parents[1]
     files=[project/name for name in ('model.py','components.py','compact.py','shape_workload.py',
                                     'workload.py','native_timing.py','benchmark.py')]+[Path(__file__).resolve()]
@@ -73,7 +80,7 @@ def main():
         if wanted is not None and index not in wanted:continue
         if not record['all_dram_and_tmem_bit_exact'] or not record['identical_input_files']:
             raise ValueError(f'kernel {index} lacks verified original-RTL input/numerical evidence')
-        items.append(dict(index=index,record=record,config=config,directory=str(path.parent),
+        items.append(dict(index=index,record=record,config=config,directory=str(path.parent),parallel_rtl=a.parallel_rtl,
             opentpu_root=str(a.opentpu_root.resolve()),compiler=str(a.compiler.resolve()),
             cache=str(a.output/'cache'),output=str(a.output/f'{index:04d}')))
     if not items or (wanted is not None and wanted!={i['index'] for i in items}):
@@ -81,7 +88,7 @@ def main():
     results=[]
     def save(status):
         atomic_json(a.output/'report.json',dict(status=status,pid=os.getpid(),
-            scope=__doc__,case=str(case),source_sha256=sources,
+            scope=__doc__,case=str(case),source_sha256=sources,parallel_rtl=a.parallel_rtl,
             compiler_sha256=digest(a.compiler),
             records=sorted(results,key=lambda r:r['kernel_index']),
             timing_target_met_all_kernels=all(abs(r['relative_cycle_error'])<=.05 for r in results)))

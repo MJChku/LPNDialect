@@ -32,10 +32,17 @@ def equal_files(left, right):
     return True
 
 
-def audit(baseline, evolved, replay, baseline_root, evolved_root):
+def audit(baseline, evolved, replay, baseline_root, evolved_root, evolved_replay=None):
     original = json.loads((baseline / 'report.json').read_text())
     candidate = json.loads((evolved / 'report.json').read_text())
     corrected = json.loads((replay / 'report.json').read_text())
+    evolved_corrected = json.loads((evolved_replay / 'report.json').read_text()) if evolved_replay else None
+    if evolved_corrected:
+        require(evolved_corrected['status'] == 'complete' and evolved_corrected['parallel_rtl'] and
+                Path(evolved_corrected['case']).resolve() == evolved.resolve(),
+                'evolved timing replay must cover this completed parallel RTL case')
+        for name, expected in evolved_corrected['source_sha256'].items():
+            require(digest(Path(name)) == expected, f'evolved timing source changed: {name}')
     require(original['status'] == candidate['status'] == corrected['status'] == 'complete',
             'all three full experiments must be complete')
     require(original['mode'] == 'validate-rtl', 'baseline must contain actual RTL observations')
@@ -63,8 +70,11 @@ def audit(baseline, evolved, replay, baseline_root, evolved_root):
     originals = original['kernels']
     candidates = candidate['kernels']
     timings = {r['kernel_index']: r for r in corrected['records']}
+    evolved_timings = {r['kernel_index']: r for r in evolved_corrected['records']} if evolved_corrected else None
     require(len(originals) == len(candidates) == len(timings) == 48,
             'expected all 16 batched prefill and 32 decode kernels')
+    if evolved_timings is not None:
+        require(set(evolved_timings) == set(range(48)), 'evolved timing replay must cover all 48 kernels')
     config = original['config']
     identity = json.loads((baseline / 'identity.json').read_text())
     baseline_binaries = {str(p): digest(p) for p in
@@ -72,7 +82,8 @@ def audit(baseline, evolved, replay, baseline_root, evolved_root):
     require(identity['binary_sha256'] in baseline_binaries.values(),
             'retained original simulator binary is missing or changed')
     phases = {phase: dict(baseline_cycles=0, evolved_cycles=0,
-                          original_lpn_cycles=0, evolved_lpn_cycles=0, kernels=0)
+                          original_lpn_cycles=0, evolved_lpn_cycles=0,
+                          recorded_evolved_lpn_cycles=0, kernels=0)
               for phase in ('prefill', 'decode')}
     binaries = {}
     observations = []
@@ -81,6 +92,13 @@ def audit(baseline, evolved, replay, baseline_root, evolved_root):
         worker = json.loads((directory / 'rtl-result.json').read_text())
         saved = json.loads((directory / 'record.json').read_text())
         timing = timings[index]
+        evolved_timing = evolved_timings[index] if evolved_timings is not None else None
+        if evolved_timing is not None:
+            require(evolved_timing['rtl_cycles'] == new['rtl_cycles'] and
+                    evolved_timing['old_lpn_cycles'] == new['lpn_cycles'] and
+                    evolved_timing['program_hash_verified'] and evolved_timing['zero_rollbacks'],
+                    f'kernel {index}: corrected evolved timing evidence differs')
+        evolved_cycles = evolved_timing['new_lpn_cycles'] if evolved_timing else new['lpn_cycles']
         phase = 'prefill' if index < 16 else 'decode'
         position = index * 8 if index < 16 else 128 + index - 16
         require(old['step'] == new['step'] == worker['step'] == index,
@@ -122,8 +140,11 @@ def audit(baseline, evolved, replay, baseline_root, evolved_root):
                 f'kernel {index}: raw RTL completion/cycles differ')
         counts = [int(v) for v in re.findall(r'SLICE \d+ icount=(\d+)', log)]
         require(counts == new['instructions'], f'kernel {index}: raw RTL instruction count differs')
-        for path, expected in [(directory / 'lpn.log', new['lpn_cycles']),
-                               (replay / f'{index:04d}' / 'lpn.log', timing['new_lpn_cycles'])]:
+        logs = [(directory / 'lpn.log', new['lpn_cycles']),
+                (replay / f'{index:04d}' / 'lpn.log', timing['new_lpn_cycles'])]
+        if evolved_timing is not None:
+            logs.append((evolved_replay / f'{index:04d}' / 'lpn.log', evolved_cycles))
+        for path, expected in logs:
             native = path.read_text()
             cycles = re.search(r'Simulation finished at t=([0-9.]+)', native)
             require(cycles is not None and float(cycles[1]) == expected and 'rollbacks: 0' in native and
@@ -137,16 +158,18 @@ def audit(baseline, evolved, replay, baseline_root, evolved_root):
         values = phases[phase]
         for name, value in [('baseline_cycles', old['rtl_cycles']), ('evolved_cycles', new['rtl_cycles']),
                             ('original_lpn_cycles', timing['new_lpn_cycles']),
-                            ('evolved_lpn_cycles', new['lpn_cycles'])]:
+                            ('evolved_lpn_cycles', evolved_cycles),
+                            ('recorded_evolved_lpn_cycles', new['lpn_cycles'])]:
             values[name] += value
         values['kernels'] += 1
         observations.append(dict(kernel=index, phase=phase, baseline_cycles=old['rtl_cycles'],
             evolved_cycles=new['rtl_cycles'], original_lpn_error=timing['relative_cycle_error'],
-            evolved_lpn_error=new['lpn_cycles'] / new['rtl_cycles'] - 1))
+            evolved_lpn_error=evolved_cycles / new['rtl_cycles'] - 1,
+            recorded_evolved_lpn_error=new['lpn_cycles'] / new['rtl_cycles'] - 1))
     total = {name: sum(p[name] for p in phases.values()) for name in next(iter(phases.values()))}
     require(total['baseline_cycles'] == original['rtl_cycles'] == candidate['baseline_rtl_cycles'] and
             total['evolved_cycles'] == candidate['evolved_rtl_cycles'], 'full cycle sums differ')
-    require(total['evolved_lpn_cycles'] == candidate['lpn_cycles'], 'evolved LPN cycle sum differs')
+    require(total['recorded_evolved_lpn_cycles'] == candidate['lpn_cycles'], 'evolved LPN cycle sum differs')
     for values in [*phases.values(), total]:
         values['architecture_cycle_speedup'] = values['baseline_cycles'] / values['evolved_cycles']
         values['original_lpn_relative_error'] = values['original_lpn_cycles'] / values['baseline_cycles'] - 1
@@ -160,7 +183,7 @@ def audit(baseline, evolved, replay, baseline_root, evolved_root):
         worst_original_lpn_error=max(abs(r['original_lpn_error']) for r in observations),
         worst_evolved_lpn_error=max(abs(r['evolved_lpn_error']) for r in observations),
         report_sha256={str(p / 'report.json'): digest(p / 'report.json')
-                       for p in (baseline, evolved, replay)},
+                       for p in (baseline, evolved, replay, *([evolved_replay] if evolved_replay else []))},
         interpretation='Hardware cycles at a common clock; FPGA resource fit, Fmax and a vendor '
                        'HBM controller are not established. Host validation processes run independently; '
                        'the accelerator workload latency is the sum of all 48 kernels.')
@@ -170,8 +193,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('baseline', 'evolved', 'replay', 'baseline-root', 'evolved-root', 'output'):
         parser.add_argument('--' + name, type=Path, required=True)
+    parser.add_argument('--evolved-replay', type=Path)
     args = parser.parse_args()
-    result = audit(args.baseline, args.evolved, args.replay, args.baseline_root, args.evolved_root)
+    result = audit(args.baseline, args.evolved, args.replay, args.baseline_root, args.evolved_root,
+                   args.evolved_replay)
     args.output.write_text(json.dumps(result, indent=2) + '\n')
     print(json.dumps(result['total'], indent=2))
 
