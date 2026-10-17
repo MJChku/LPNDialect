@@ -225,10 +225,13 @@ class OpenTPU:
       rows,kb = w[3]&65535,w[3]>>16
       elems = kb*cfg.D
       width = 4 if w[6]==1 else 1
-      store = (ceil(elems*(4 if w[6]==1 else 1)/t.scalar_store_bytes)
+      store = (ceil(elems*4/t.scalar_store_bytes)
                if t.scalar_store_bytes else ceil(elems/width))
       latency = rows*(ceil(elems/cfg.LANES)+store+60)
-      port,service = memory.sw,latency
+      # The shared memory link is occupied by byte-enabled stores, not by
+      # scratchpad reads, max reduction or FP conversion in the quantizer.
+      # Charging its complete latency here stalls unrelated matrix prefetch.
+      port,service = memory.sw,(rows*store if t.unified_dram else latency)
     elif ins.op==I.VOP:
       rows,cols = w[3]&65535,w[3]>>16
       function = (w[5]>>16)&255

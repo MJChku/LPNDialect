@@ -48,6 +48,28 @@ class OpenTPUTest(unittest.TestCase):
     self.assertEqual(bank_write_cycles(8,4,64,8),4)
     self.assertEqual(bank_write_cycles(8,4,64,1),32)
 
+  def test_shared_dram_load_can_finish_while_quantizer_computes(self):
+    from examples.opentpu.shape_workload import resolve_static
+    from opentpu import Config,isa as I
+    cfg=Config(D=64,MCOLS=1,LANES=64,DRAM_BYTES=1<<20)
+    program=[I.qst(0,65536,131072,8,1,64,64,1),I.ld(0,1024,16),I.halt()]
+    workload=resolve_static(cfg,[program])
+    timing=Timing(unified_dram=True,scalar_store_bytes=256,
+        dram_bytes_per_cycle=256,dram_port_bytes=256)
+    ends=[]
+    for cls in (OpenTPU,CompactOpenTPU):
+      sim=cls(workload,timing).net.python_simulator()
+      sim.run(max_time=100)
+      if cls is OpenTPU:
+        self.assertEqual(len(sim.place_dicts('s0_done_1')),1)
+        self.assertEqual(len(sim.place_dicts('s0_done_0')),0)
+      else:
+        bits=sim.place_dicts('s0_flags_0')[0]['bits']
+        self.assertTrue(bits&2)
+        self.assertFalse(bits&1)
+      ends.append(sim.run(max_time=10000,reset=False))
+    self.assertEqual(*ends)
+
   def test_small_matrix_prefetch_uses_actual_fifo_capacity(self):
     import re
     from examples.opentpu.shape_workload import resolve_static
