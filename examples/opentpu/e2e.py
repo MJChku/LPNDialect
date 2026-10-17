@@ -158,7 +158,7 @@ class CheckedBackend:
       record.update(timing_cache_hit=prepared.cache_hit,timing_net=prepared.statistics,
           timing_ir_bytes=prepared.ir_bytes)
     record["single_use_lpn_seconds"] = front+build+compile_seconds+process
-    if not record["accuracy_within_5_percent"]:
+    if not record["accuracy_within_5_percent"] and getattr(self.options,'fail_timing_error',True):
       atomic_json(out/"failed-step.json",record)
       raise RuntimeError(f"timing error {error:.2%} exceeds 5%; see failed-step.json")
     self.records.append(record)
