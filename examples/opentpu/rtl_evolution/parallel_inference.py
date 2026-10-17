@@ -27,6 +27,14 @@ def files_equal(a,b):
     return True
 
 
+def configure_rtlsim(rtlsim):
+    # A pool worker handles multiple kernels. Repeated flags alter upstream's
+    # cache key even though they do not change the generated simulator.
+    rtlsim.VFLAGS[rtlsim.VFLAGS.index('-j')+1]='12'
+    if not any(rtlsim.VFLAGS[i:i+2]==['-CFLAGS','-O3'] for i in range(len(rtlsim.VFLAGS)-1)):
+        rtlsim.VFLAGS+=['-CFLAGS','-O3']
+
+
 def check_kernel(task):
     from examples.opentpu.workload import use_checkout
     from examples.opentpu.e2e import atomic_json,digest
@@ -42,22 +50,42 @@ def check_kernel(task):
                 for name in (f'prog_{sid}.hex',f'dram_{sid}.bin')}
         if hashes!=task['input_sha256'] or hashes!=original['input_sha256']:
             raise RuntimeError(f'kernel {index}: input hashes differ from original RTL')
-        rtlsim.VFLAGS[rtlsim.VFLAGS.index('-j')+1]='12'
-        rtlsim.VFLAGS+=['-CFLAGS','-O3']
+        configure_rtlsim(rtlsim)
         atomic_json(directory/'worker.json',dict(status='building',pid=os.getpid()))
-        before=time.perf_counter()
-        exe=rtlsim.build_top(cfg,uarch=task['uarch'],dram_lat=8)
-        build=time.perf_counter()-before
+        reused=None
+        if task.get('reuse_directory'):
+            source=Path(task['reuse_directory'])/f'{index:04d}'
+            previous=source/'rtl-result.json'
+            if previous.exists():
+                reused=json.loads(previous.read_text())
+                if (reused['input_sha256']!=hashes or not reused['all_dram_and_tmem_bit_exact'] or
+                    not reused['identical_input_files'] or reused['step']!=index):
+                    raise RuntimeError(f'kernel {index}: retained RTL evidence differs')
+                exe=Path(reused['simulator'])
+                if digest(exe)!=reused['baseline_binary_sha256']:
+                    raise RuntimeError('retained simulator binary changed')
+                for sid in range(cfg.S):
+                    for name in (f'dram_out_{sid}.bin',f'tmem_{sid}.hex'):
+                        os.link(source/name,directory/name)
+                build=0
+        if reused is None:
+            before=time.perf_counter()
+            exe=rtlsim.build_top(cfg,uarch=task['uarch'],dram_lat=8)
+            build=time.perf_counter()-before
         # This is the same behavioral-memory harness as rtlsim.run. Files were
         # already serialized once by its canonical writer in the producer.
         cmd=[str(exe),f'+dir={directory}',f'+max_cycles={max(10000,2*original["rtl_cycles"])}',
              '+lpn_wall']+[f'+arg{k}={int(v)&0xffffffff}' for k,v in enumerate(task['args'])]
         if index==0:cmd.append('+trace')
         atomic_json(directory/'worker.json',dict(status='simulating',pid=os.getpid(),command=cmd))
-        before=time.perf_counter();run=rtlsim.run_sim(cmd,timeout=task['rtl_timeout'])
-        process=time.perf_counter()-before
-        log=run.stdout+run.stderr;(directory/'rtl.log').write_text(log)
-        run.check_returncode()
+        if reused is None:
+            before=time.perf_counter();run=rtlsim.run_sim(cmd,timeout=task['rtl_timeout'])
+            process=time.perf_counter()-before
+            log=run.stdout+run.stderr;(directory/'rtl.log').write_text(log)
+            run.check_returncode()
+        else:
+            process=reused['rtl_process_seconds'];log=(source/'rtl.log').read_text()
+            (directory/'rtl.log').write_text(log)
         result=re.search(r'RESULT cycles=(\d+) halted=(\d+) error=(\d+)',log)
         wall=re.search(r'LPN_WALL seconds=([0-9.]+) cycles=(\d+)',log)
         counts=[int(v) for v in re.findall(r'SLICE \d+ icount=(\d+)',log)]
@@ -94,6 +122,7 @@ def check_kernel(task):
             rtl_process_seconds=process,rtl_build_seconds=build,
             all_dram_and_tmem_bit_exact=True,identical_input_files=True,zero_rollbacks=True,
             simulator=str(exe),baseline_binary_sha256=digest(exe),timing=asdict(timing))
+        if reused is not None:record['rtl_reused_from']=str(previous)
         atomic_json(directory/'rtl-result.json',record)
         atomic_json(directory/'worker.json',dict(status='complete',pid=os.getpid()))
         return record
@@ -112,6 +141,8 @@ def main():
     ap.add_argument('--compiler',type=Path,required=True)
     ap.add_argument('--workers',type=int,default=16)
     ap.add_argument('--rtl-timeout',type=float,default=7200)
+    ap.add_argument('--reuse-rtl',type=Path,
+        help='Reuse completed identical-source RTL kernels after fresh input and full numerical checks')
     a=ap.parse_args()
     if a.workers<1:ap.error('workers must be positive')
     from examples.opentpu.workload import use_checkout,execute
@@ -135,6 +166,10 @@ def main():
     files=[a.opentpu_root/'opentpu/rtlsim.py',rtlsim.TB/'tb_top.sv',rtlsim.TB/'lpn_wall.cpp',
            *[rtlsim.RTL/name for name in rtlsim.RTL_SOURCES]]
     sources={str(p.relative_to(a.opentpu_root)):digest(p) for p in files}
+    if a.reuse_rtl is not None:
+        prior=json.loads((a.reuse_rtl/'identity.json').read_text())
+        if prior['rtl_source_sha256']!=sources or prior['uarch']!=ua or prior['config']!=asdict(cfg):
+            raise ValueError('retained RTL sources or configuration differ')
     atomic_json(a.output/'identity.json',dict(pid=os.getpid(),config=asdict(cfg),uarch=ua,
         workers=a.workers,scope=__doc__,rtl_source_sha256=sources,
         project_revision=subprocess.check_output(['git','rev-parse','HEAD'],
@@ -190,7 +225,8 @@ def main():
                 config=asdict(cfg),uarch=ua,opentpu_root=str(a.opentpu_root),
                 baseline=str(a.baseline),baseline_job=str(a.baseline_job) if a.baseline_job else None,
                 compiler=str(a.compiler),cache=str(a.output/'timing-cache'),
-                instructions=record['instructions'],args=list(args or []),rtl_timeout=a.rtl_timeout)
+                instructions=record['instructions'],args=list(args or []),rtl_timeout=a.rtl_timeout,
+                reuse_directory=str(a.reuse_rtl/'kernels') if a.reuse_rtl is not None else None)
             tasks[pool.submit(check_kernel,task)]=index
             atomic_json(directory/'prepared.json',record)
             for future,i in list(tasks.items()):
