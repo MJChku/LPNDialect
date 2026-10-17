@@ -34,13 +34,14 @@ retain the real four-stage adder feedback limit. The multi-link behavioral DRAM 
 read latency. It has no HBM channel/bank controller or board integration.
 The independent 64-lane VPU gate has passed bit-exact full scratchpad comparison
 for ADD, MUL, EXP2, RECIP, RSQRT, RSUM, RSSQ, RDOT, RMAX and ARGMAX with
-193-element rows (including feedback and a partial final chunk). Full matrix,
-checkpoint gates are still required. All nine full matrix/store gates passed after
-correcting bank arbitration, including ACC/ASCALE/RMAX, FP4 PAIR, partial engine
-groups, activation replay and QST strides 1, 4 and 17. The fused-epilogue gate found
+193-element rows (including feedback and a partial final chunk). All eleven
+matrix/store gates passed, including two queued-command sequences,
+ACC/ASCALE/RMAX, FP4 PAIR, partial engine groups, activation replay and QST
+strides 1, 4 and 17. Full checkpoint validation is still required. The fused-epilogue gate found
 that duplicate ASCALE reads overflowed the slice's per-bank lane counters even
 when they named the same word. The wrapper now admits at most one read per
-bank, and full gates have been restarted with this correction.
+bank; the completed eleven-gate run includes this correction and uses nonzero
+accumulator/activation-scale fixtures.
 Cycle speedup at a common clock does not prove FPGA resource fit or Fmax.
 
 Run numerical gates with Verilator 5.052 and the NumPy environment:
@@ -52,16 +53,17 @@ python examples/opentpu/rtl_evolution/check_matrix.py \
 
 Every gate compares the entire DRAM and TMEM against the independent upstream
 ISA model. Gates include incomplete engine groups, replayed activation rows,
-strided outputs, scales, ACC/ASCALE/RMAX, and packed weights. Gate completion
-and the requested 128-prompt/32-output real-checkpoint experiment are still
-required before reporting a verified architecture speedup.
+strided outputs, scales, ACC/ASCALE/RMAX, and packed weights. The requested
+128-prompt/32-output real-checkpoint experiment is still required before
+reporting a verified end-to-end architecture speedup.
 
 The original-RTL long run is under
 `~/lpn-runs/rtl-architecture-128x32` on `icdslab2.epfl.ch`. Its
-`baseline-job.json` identifies the controller and worker; inspect their live
-processes and `baseline-smol128x32/progress.json` before starting another job.
+`baseline-continued-job.json` identifies the current controller and worker;
+inspect their live processes and `baseline-smol128x32-continued/progress.json`
+before starting another job.
 It uses SmolLM2-135M real weights, an exactly 128-token story prompt, capacity
-256, 32 requested output tokens, and a frozen LPN project at `9672222`.
+256, 32 requested output tokens, and a frozen LPN project at `95fd1e6`.
 Upstream `Engine.generate()` owns batching, autoregressive decode and EOS.
 A shorter EOS-terminated run must not be labeled a completed 32-output case.
 
@@ -170,3 +172,23 @@ The LPN now groups whole parallel row waves independently of its aggregation
 hint, and models the wide reduction feedback/tree pipeline. It preserves the
 original <=16-lane timing model. The recorded 64-lane isolated operator latencies
 match within one cycle. All 23 LPN integration/regression checks passed.
+
+After both full experiments finish, replay all original kernels with the
+corrected timing model. Then independently audit the completed comparison:
+
+```sh
+python -m examples.opentpu.rtl_evolution.audit_completed \
+  --baseline "$HOME/lpn-runs/rtl-architecture-128x32/baseline-smol128x32-continued" \
+  --evolved "$HOME/lpn-runs/rtl-architecture-128x32/evolved-pipeline-parallel" \
+  --replay /tmp/corrected-timing-replay \
+  --baseline-root ../FeSens-openTPU-qwen \
+  --evolved-root ../FeSens-openTPU-arch-pipeline \
+  --output /tmp/rtl-architecture-audit.json
+```
+
+The audit requires all 48 verified kernels, checks the actual token IDs and
+schedule, rehashes every evolved input and simulator/source, freshly compares
+every evolved DRAM/TMEM dump, checks raw RTL and native LPN completion logs, and
+recomputes total and per-phase cycle speedups and prediction errors. It retains
+the original per-kernel numerical evidence, including the five explicitly
+reused observations. It refuses incomplete or mismatched reports.
