@@ -93,11 +93,9 @@ class MatrixEngine:
   and window credits return after the pipeline/epilogue tail. There is no
   ordering link to another matrix engine.
   """
-  def __init__(self,net,prefix,cfg,timing,interface,parameters,memory,kind,buffer_metadata=None):
+  def __init__(self,net,prefix,cfg,timing,interface,parameters,memory,kind):
     t = timing
-    self.resources = resources = SystolicArray(net,prefix,t,
-        max(b*c for b,c in zip(parameters.batches,parameters.chunks)),
-        initial_buffers=0 if buffer_metadata is not None else None)
+    self.resources = resources = SystolicArray(net,prefix,t)
     self.prefetch_credit = prefetch_credit = net.place(prefix+"_prefetch_credit",initial_tokens=1)
     self.request = request = net.place(prefix+"_request")
     self.ready = ready = net.place(prefix+"_ready")
@@ -109,16 +107,6 @@ class MatrixEngine:
     scale_bytes = parameters.scale_bytes
     write_full,write_tail = parameters.write_full,parameters.write_tail
     row_services,tails = parameters.row_services,parameters.tails
-
-    if buffer_metadata is not None:
-      initialize = net.place(prefix+"_initialize_buffers",initial_tokens=1)
-
-      @net.transition(prefix+"_initialize_buffer_credits")
-      def initialize_buffer_credits():
-        guard(count(initialize)>0)
-        take(initialize)
-        for b in range(array(buffer_metadata)[1]):
-          emit(resources.buffers,create())
 
     @net.transition(prefix+"_start")
     def start():
@@ -141,13 +129,16 @@ class MatrixEngine:
       guard(count(resources.buffers)>0)
       guard(count(memory.b)>0)
       idx = peek(request).get("id")
+      row = peek(request).get("row")
+      n,batch,chunk = array(rows)[idx],array(batches)[idx],array(chunks)[idx]
+      width = select(row+batch<n,batch,n-row)
+      needed = muli(width,chunk)
+      guard(peek(resources.buffers).get('free')>=needed)
       needs_scale = array(scaled)[idx]
       guard(count(memory.a)>=needs_scale)
       token = take(request)
-      row = token.get("row")
-      n,batch,chunk = array(rows)[idx],array(batches)[idx],array(chunks)[idx]
-      width = select(row+batch<n,batch,n-row)
-      take(resources.buffers)
+      capacity = take(resources.buffers)
+      emit(resources.buffers,capacity.set('free',capacity.get('free')-needed))
       bus = take(memory.b)
       bytes_per_row = muli(chunk,cfg.D)
       if t.unified_dram:
@@ -173,6 +164,7 @@ class MatrixEngine:
     def compute():
       guard(count(ready)>0)
       guard(count(resources.compute)>0)
+      guard(count(resources.buffers)>0)
       idx = peek(ready).get("id")
       ci = array(indices)
       enabled = const_i64(0)==0
@@ -185,7 +177,9 @@ class MatrixEngine:
       write_cycles = select(token.get("width")==array(batches)[idx],array(write_full)[idx],array(write_tail)[idx])
       service = sitofp(select(compute_cycles>write_cycles,compute_cycles,write_cycles))
       emit(resources.compute,port,delay=service)
-      emit(resources.buffers,create())
+      capacity = take(resources.buffers)
+      emit(resources.buffers,capacity.set('free',capacity.get('free')+
+           muli(token.get('width'),array(chunks)[idx])))
       if token.get("row")+array(batches)[idx]>=array(rows)[idx]:
         latency = service+sitofp(array(tails)[idx])
         publish(idx,latency)

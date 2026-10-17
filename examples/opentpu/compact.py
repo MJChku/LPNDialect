@@ -196,8 +196,7 @@ class CompactOpenTPU(OpenTPU):
     parameter_values = [latencies,services,port_ids,batches,chunkses,scale_flags,kbs,ns,row_services,tails,scale_bytes,write_full,write_tail]
     parameters = CommandTiming(*(self._table(prefix+"_"+name,values)
         for name,values in zip(CommandTiming.__dataclass_fields__,parameter_values)))
-    metadata = self._table(prefix+"_metadata",[ncommands,
-        max(1,t.fifo_chunks//max(b*c for b,c in zip(batches,chunkses)))])
+    metadata = self._table(prefix+"_metadata",[ncommands])
 
     def csr(rows):
       offsets,flat = [0],[]
@@ -281,8 +280,7 @@ class CompactOpenTPU(OpenTPU):
                  vector_ranks if u==W.U_VPU else None)
              for u in (W.U_DMA,W.U_Q,W.U_VPU,W.U_COLL,5)]
     matrices = [MatrixEngine(net,prefix+f"_mxu_{engine}",cfg,t,interface,
-        parameters,memory,W.U_MXU,
-        buffer_metadata=metadata if self.input_capacity is not None else None)
+        parameters,memory,W.U_MXU)
         for engine in range(t.matrix_engines)]
     self.components[sid] = {"memory":memory,"units":units,"matrix_engines":matrices}
 

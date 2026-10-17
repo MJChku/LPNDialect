@@ -101,7 +101,13 @@ the last retained complete RTL memory dump. Later kernels execute RTL normally.
 It records predictor misses explicitly while collecting actual hardware-cycle
 measurements; this policy does not establish the 95% timing-accuracy target.
 The normal `standard_inference` validation still fails on errors over 5%.
-The predictor regression remains work to investigate and correct.
+The matrix FIFO capacity regression is now corrected: each request reserves its
+actual chunk count in a free-capacity counter rather than a worst-case packet
+slot. Ten completed prefill chunks (positions 0 through 72) have been replayed
+from the identical programs against measured RTL cycles. Worst error is 2.02%,
+with zero rollbacks. The former 5.52% miss is now 1.70%. These are completed
+prefix observations; full 128/32 timing accuracy is still under validation.
+The scheduler, guard synthesis and heartbeat cache are unchanged.
 
 `compare_inference --baseline-job BASELINE_JOB.json` can consume each completed
 original-RTL observation as the original job progresses. It verifies the live
@@ -109,3 +115,19 @@ worker's PID and command while waiting, then checks the same input hashes and
 full numerical memories for the evolved RTL. It still requires the final
 completed original 128/32 report and matching generated IDs before success.
 This overlaps the two simulations without changing inference scheduling.
+
+To replay timing predictions for completed original-RTL kernels without rerunning
+numerics or RTL:
+
+```sh
+PYTHONPATH=. python -m examples.opentpu.rtl_evolution.replay_baseline_timing \
+  --opentpu-root ../FeSens-openTPU-qwen \
+  --case "$HOME/lpn-runs/rtl-architecture-128x32/baseline-smol128x32-continued" \
+  --output /tmp/corrected-timing-replay \
+  --compiler ../LPNDialect-heartbeat/build/tools/lpn-compile/lpn-compile \
+  --workers 4
+```
+
+This snapshots completed records, verifies each program hash and resolves only
+static dense control. It retains the old predictions alongside corrected ones.
+It rejects data-dependent control and does not establish new numerical evidence.

@@ -60,11 +60,20 @@ class DRAM:
 
 
 class SystolicArray:
-  def __init__(self,net,prefix,timing,buffer_chunks,initial_buffers=None):
+  def __init__(self,net,prefix,timing):
     self.compute = net.place(prefix+"_compute",initial_tokens=1)
     self.commands = net.place(prefix+"_commands",initial_tokens=2)
-    self.buffers = net.place(prefix+"_buffers",initial_tokens=
-        max(1,timing.fifo_chunks//buffer_chunks) if initial_buffers is None else initial_buffers)
+    self.buffers = buffers = net.place(prefix+"_buffers",initial_tokens=1)
+    initialize = net.place(prefix+"_initialize_buffers",initial_tokens=1)
+    capacity = timing.fifo_chunks
+    # Requests have different chunk counts. A single free-capacity counter
+    # avoids rounding every packet up to the largest command in the program.
+    @net.transition(prefix+"_initialize_buffer_capacity")
+    def initialize_buffer_capacity():
+      guard(count(initialize)>0)
+      take(initialize)
+      token = take(buffers)
+      emit(buffers,token.set('free',capacity))
     self.spec = timing
 
 
@@ -131,15 +140,7 @@ class OpenTPU:
     cfg,t,net = self.workload.config,self.timing,self.net
     prefix = f"s{sid}"
     memory = DRAM(net,prefix+"_dram",t)
-    packet_sizes = [1]
-    for c in commands:
-      ins = c.instruction
-      if ins.op==I.MM:
-        kb,n = (ins.w[3]>>16)&255,ins.w[3]&65535
-        chunks = kb if (ins.flags>>I.WF_SHIFT)&3==I.W8 else ceil(kb/2)
-        batch = min(t.batch_rows,max(1,n//64),max(1,t.fifo_chunks//(2*chunks)))
-        packet_sizes.append(chunks*batch)
-    array = SystolicArray(net,prefix+"_mxu",t,max(packet_sizes))
+    array = SystolicArray(net,prefix+"_mxu",t)
     units = [net.place(prefix+f"_unit_{u}",initial_tokens=1) for u in range(5)]
     vector = VectorPipeline(net,prefix+'_vpu')
     window = net.place(prefix+"_window",initial_tokens=t.window)
@@ -349,12 +350,16 @@ class OpenTPU:
     def prefetch():
       guard(count(request)>0)
       guard(count(buffers)>0)
+      observed = peek(request)
+      needed = muli(select(observed.get('row')+batch<n,batch,n-observed.get('row')),chunks)
+      guard(peek(buffers).get('free')>=needed)
       guard(count(memory.b)>0)
       guard(count(memory.a)>=scaled)
       token = take(request)
       row = token.get("row")
       width = select(row+batch<n,batch,n-row)
-      take(buffers)
+      capacity = take(buffers)
+      emit(buffers,capacity.set('free',capacity.get('free')-needed))
       bus = take(memory.b)
       transfer_cycles = divi(muli(width,row_bytes)+t.dram_bytes_per_cycle-1,t.dram_bytes_per_cycle)
       scale_cycles = divi(muli(muli(width,kb),scaled)+t.scale_lanes-1,t.scale_lanes)
@@ -375,6 +380,7 @@ class OpenTPU:
       guard(count(ready)>0)
       guard(count(compute_cursor)>0)
       guard(count(array.compute)>0)
+      guard(count(buffers)>0)
       for dep in deps:
         guard(count(dep)>0)
       if previous_compute is not None:
@@ -386,7 +392,8 @@ class OpenTPU:
       write_cycles = select(token.get("width")==batch,write_full,write_tail)
       service = sitofp(select(compute_cycles>write_cycles,compute_cycles,write_cycles))
       emit(array.compute,port,delay=service)
-      emit(buffers,create())
+      capacity = take(buffers)
+      emit(buffers,capacity.set('free',capacity.get('free')+muli(token.get('width'),chunks)))
       if token.get("row")+batch<n:
         emit(compute_cursor,create(),delay=service)
       else:

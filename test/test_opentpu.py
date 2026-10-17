@@ -48,6 +48,43 @@ class OpenTPUTest(unittest.TestCase):
     self.assertEqual(bank_write_cycles(8,4,64,8),4)
     self.assertEqual(bank_write_cycles(8,4,64,1),32)
 
+  def test_small_matrix_prefetch_uses_actual_fifo_capacity(self):
+    import re
+    from examples.opentpu.shape_workload import resolve_static
+    from opentpu import Config,isa as I
+    cfg=Config(D=128,MCOLS=4,ACT_BLOCKS=64)
+    # The first matrix fits all 64 one-chunk rows in the 128-chunk FIFO.
+    # A later, barrier-separated 64-chunk command must not shrink that FIFO
+    # into two slots for the first command and insert repeated DRAM delays.
+    program=[I.mm(0,0,0,64,1,128,64,1,0,4,unit=True),I.bar(),
+             I.mm(65536,0,4096,8,64,8192,8,4,0,4,unit=True),I.halt()]
+    workload=resolve_static(cfg,[program])
+    timing=Timing(batch_rows=8,dram_latency=64)
+    with tempfile.TemporaryDirectory() as directory:
+      for cls in (OpenTPU,CompactOpenTPU):
+        with self.subTest(model=cls.__name__):
+          model=cls(workload,timing)
+          sim=model.net.python_simulator()
+          sim.run(max_time=250)
+          if cls is CompactOpenTPU:
+            self.assertTrue(sim.place_dicts('s0_flags_0')[0]['bits']&1)
+          else:
+            self.assertEqual(sim.place_dicts('s0_done_0'),[{}])
+          if self.tool:
+            out=Path(directory)
+            ir,binary=out/'fifo.mlir',out/'fifo.native'
+            ir.write_text(model.build())
+            subprocess.run([self.tool,str(ir),'-o',str(binary)],check=True,capture_output=True,text=True)
+            native=subprocess.run([str(binary),'--max-time=250','--tokens','--stats'],
+                check=True,capture_output=True,text=True).stdout
+            self.assertIn('rollbacks: 0',native)
+            if cls is CompactOpenTPU:
+              flags=re.search(r"place s0_flags_0: 1 token\(s\)\s+token \{[^}]*'bits': (\d+)",native)
+              self.assertIsNotNone(flags)
+              self.assertTrue(int(flags[1])&1)
+            else:
+              self.assertIn('place s0_done_0: 1 token(s)',native)
+
   def test_fpga_unscaled_prefetch_does_not_overtake_scale_fetch(self):
     if not self.tool:
       self.skipTest('native compiler not supplied')
@@ -135,7 +172,7 @@ class OpenTPUTest(unittest.TestCase):
           sim = model.net.python_simulator()
           cycles = sim.run(max_time=100000)
           self.assertEqual(sim.place_dicts("program_completed"),[{}])
-          self.assertEqual(model.statistics()["transitions"],15+3*(engines-1))
+          self.assertEqual(model.statistics()["transitions"],16+4*(engines-1))
           self.assertEqual(len(model.components[0]["matrix_engines"]),engines)
           if self.tool:
             ir,binary = out/"multi.mlir",out/"multi.native"
