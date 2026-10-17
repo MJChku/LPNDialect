@@ -9,7 +9,7 @@ and measures original/evolved RTL on the unmodified upstream inference path.
 and large behavioral-memory representation used by the original validation.
 Apply it in a separate clean worktree; preserve the original baseline checkout.
 
-The implementation adds the following hardware (numerical validation is in progress):
+The implementation adds the following hardware (primitive numerical validation passed; checkpoint validation is in progress):
 
 * 32 independent single-column systolic engines, with integer accumulation and
   the original FP epilogue. A decoded MM is striped across weight rows inside
@@ -34,7 +34,9 @@ read latency. It has no HBM channel/bank controller or board integration.
 The independent 64-lane VPU gate has passed bit-exact full scratchpad comparison
 for ADD, MUL, EXP2, RECIP, RSQRT, RSUM, RSSQ, RDOT, RMAX and ARGMAX with
 193-element rows (including feedback and a partial final chunk). Full matrix,
-wide-QST and checkpoint gates are still required. The fused-epilogue gate found
+checkpoint gates are still required. All nine full matrix/store gates passed after
+correcting bank arbitration, including ACC/ASCALE/RMAX, FP4 PAIR, partial engine
+groups, activation replay and QST strides 1, 4 and 17. The fused-epilogue gate found
 that duplicate ASCALE reads overflowed the slice's per-bank lane counters even
 when they named the same word. The wrapper now admits at most one read per
 bank, and full gates have been restarted with this correction.
@@ -100,3 +102,10 @@ It records predictor misses explicitly while collecting actual hardware-cycle
 measurements; this policy does not establish the 95% timing-accuracy target.
 The normal `standard_inference` validation still fails on errors over 5%.
 The predictor regression remains work to investigate and correct.
+
+`compare_inference --baseline-job BASELINE_JOB.json` can consume each completed
+original-RTL observation as the original job progresses. It verifies the live
+worker's PID and command while waiting, then checks the same input hashes and
+full numerical memories for the evolved RTL. It still requires the final
+completed original 128/32 report and matching generated IDs before success.
+This overlaps the two simulations without changing inference scheduling.

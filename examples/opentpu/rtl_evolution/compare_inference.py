@@ -1,6 +1,7 @@
 """Execute evolved RTL on the baseline's upstream inference and compare inputs.
 
-Requires a completed original-RTL report. Every evolved kernel must match its
+Accepts a completed report or completed observations from a verified live
+original-RTL job. Every evolved kernel must match its
 original program, arguments and numerical input hashes. No inference decisions
 are made by the hardware model or this backend.
 """
@@ -18,6 +19,8 @@ def main():
     ap=argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--opentpu-root',type=Path,required=True)
     ap.add_argument('--baseline',type=Path,required=True)
+    ap.add_argument('--baseline-job',type=Path,
+        help='Optional live original-RTL job manifest; wait for its completed observations')
     ap.add_argument('--output',type=Path,required=True)
     ap.add_argument('--compiler',type=Path,required=True)
     ap.add_argument('--rtl-timeout',type=float,default=28800)
@@ -28,6 +31,7 @@ def main():
     from examples.opentpu.benchmark import write_inputs
     from examples.opentpu.native_timing import ReusableTiming
     from examples.opentpu.model import Timing
+    from examples.opentpu.rtl_evolution.baseline_stream import BaselineReference
     a.opentpu_root=use_checkout(a.opentpu_root)
     import numpy as np
     import torch
@@ -35,11 +39,8 @@ def main():
     from opentpu.llm import load_spec
     from opentpu.llm.qwen3 import load_weights
     torch.set_num_threads(1)
-    baseline=json.loads(a.baseline.read_text())
-    if baseline['status']!='complete' or baseline['mode']!='validate-rtl':
-        raise ValueError('a completed actual-RTL baseline is required')
-    if baseline['prompt_tokens']!=128 or baseline['returned_output_tokens']!=32:
-        raise ValueError('baseline did not finish the requested 128/32 case')
+    reference=BaselineReference(a.baseline,a.baseline_job)
+    baseline=reference.info
     output=a.output.resolve(); output.mkdir(parents=True,exist_ok=False)
     ua=dict(MXU_ROWS=32,LANES=64,VPU_LANES=64,QST_LANES=64,MEM_BYTES=2816)
     cfg=Config(**baseline['config'])
@@ -56,10 +57,12 @@ def main():
     source_files += [a.opentpu_root/'opentpu/rtlsim.py']
     source={str(p.relative_to(a.opentpu_root)):digest(p) for p in source_files}
     atomic_json(output/'identity.json',dict(pid=os.getpid(),config=asdict(cfg),uarch=ua,
-        baseline_report_sha256=digest(a.baseline),rtl_source_sha256=source))
+        baseline_report_sha256=digest(a.baseline) if a.baseline.exists() else None,
+        baseline_job_sha256=digest(a.baseline_job) if a.baseline_job else None,
+        rtl_source_sha256=source))
     class ArchitectureBackend(CheckedBackend):
         def run(self,programs,args=None):
-            index=len(self.records); expected=baseline['kernels'][index]
+            index=len(self.records); expected=reference.kernel(index)
             current=output/'current'; current.mkdir(exist_ok=True)
             write_inputs(current,self.cfg,programs,self.drams,args)
             hashes={name:digest(current/name) for sid in range(self.cfg.S)
@@ -119,6 +122,7 @@ def main():
     engine,generated=run_engine(spec,cfg,256,baseline['prompt_ids'],32,
         make_backend(output,128,options=options,execution_backend=ArchitectureBackend),weights)
     records=engine.backend.records
+    baseline=reference.complete()
     if generated!=baseline['generated_ids'] or len(records)!=len(baseline['kernels']):
         raise RuntimeError('generated tokens or kernel schedule differ from baseline')
     cycles=sum(r['rtl_cycles'] for r in records)
