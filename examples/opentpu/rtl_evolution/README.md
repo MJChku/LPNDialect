@@ -74,7 +74,7 @@ Once the baseline and full gates pass, compare the complete checkpoint run:
 ```sh
 PYTHONPATH=. python -m examples.opentpu.rtl_evolution.compare_inference \
   --opentpu-root ../FeSens-openTPU-arch-wide \
-  --baseline "$HOME/lpn-runs/rtl-architecture-128x32/baseline-smol128x32/report.json" \
+  --baseline "$HOME/lpn-runs/rtl-architecture-128x32/baseline-smol128x32-continued/report.json" \
   --output "$HOME/lpn-runs/rtl-architecture-128x32/evolved-smol128x32" \
   --compiler ../LPNDialect-heartbeat/build/tools/lpn-compile/lpn-compile
 ```
@@ -86,3 +86,17 @@ their errors rather than treating the old architecture forecast as validated.
 Freeze both project and RTL sources for the long comparison. The final report
 must show all 128 prompt tokens and all 32 actual output tokens before this
 experiment can establish the requested end-to-end architecture speedup.
+
+The first strict original-RTL run stopped at prompt position 32: numerical
+memory checks passed, but the LPN prediction was 4,007,659 cycles versus
+3,798,036 measured RTL cycles (+5.52%). This misses the 5% timing target.
+`baseline-continued-job.json` owns the successor, using frozen project
+`95fd1e6` in `~/LPNDialect-rtl-arch-validation`. Its progress is under
+`baseline-smol128x32-continued`. The successor reconstructs upstream state by
+ISA replay, rechecks the program/DRAM hashes and simulator binary before
+reusing each of the first five verified RTL observations, and freshly compares
+the last retained complete RTL memory dump. Later kernels execute RTL normally.
+It records predictor misses explicitly while collecting actual hardware-cycle
+measurements; this policy does not establish the 95% timing-accuracy target.
+The normal `standard_inference` validation still fails on errors over 5%.
+The predictor regression remains work to investigate and correct.
