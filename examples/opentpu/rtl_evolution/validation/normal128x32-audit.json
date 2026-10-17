@@ -525,7 +525,7 @@
   "report_sha256": {
     "/home/ubuntu/lpn-runs/rtl-architecture-128x32/baseline-smol128x32-continued/report.json": "707397e09544ea7ab2482346917c6dbf168f0c6492355474499442a9fb50d5ad",
     "/home/ubuntu/lpn-runs/rtl-architecture-128x32/evolved-pipeline-final/report.json": "f037e875e73760f7c3d70b6851d0ce4f01bbdd9f0c62ef27ccd75ba5659f07fe",
-    "/home/ubuntu/lpn-runs/rtl-architecture-128x32/corrected-baseline-full/report.json": "94ca26efed7b11a1ada422e0d742ba88ab662725b61ac29978c8af427ff37973",
+    "/home/ubuntu/lpn-runs/rtl-architecture-128x32/corrected-original-final/report.json": "da357ce51bc06b570b1343ca726a56d2563870027c67894caf049f56aac0c34d",
     "/home/ubuntu/lpn-runs/rtl-architecture-128x32/corrected-evolved-full/report.json": "f601fe90c064ae6801c784bcc1641b00bc1a4350c651bd0850b3b149a8d26279"
   },
   "interpretation": "Hardware cycles at a common clock; FPGA resource fit, Fmax and a vendor HBM controller are not established. Host validation processes run independently; the accelerator workload latency is the sum of all 48 kernels."

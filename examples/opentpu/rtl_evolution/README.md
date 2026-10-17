@@ -162,7 +162,7 @@ the server rather than in Git.
 
 Raw data on `icdslab2.epfl.ch` is under `~/lpn-runs/rtl-architecture-128x32`:
 `baseline-smol128x32-continued`, `evolved-pipeline-final`,
-`corrected-baseline-full`, `corrected-evolved-full`, and
+`corrected-original-final`, `corrected-evolved-full`, and
 `completed-comparison-audit.json`. Both complete inference jobs and the final
 audit are terminal. The original baseline explicitly reused five previously
 verified observations; the evolved successor reused sixteen completed prefill
