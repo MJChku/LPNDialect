@@ -1,0 +1,33 @@
+{
+  "status": "complete",
+  "scope": "Audit a completed standard-inference checkpoint run and replay its final kernel.\n\nEarlier numerical comparisons are the runner's in-run checks. This audit\nindependently checks their metadata/program identities and replays the last\nkernel's numerical execution and native timing from its retained input bundle.\n",
+  "model_directory": "/home/ubuntu/FeSens-openTPU/models/Qwen3-1.7B",
+  "kernels": 4,
+  "prompt_tokens": 8,
+  "output_tokens": 2,
+  "prefill_rows": [
+    4,
+    4
+  ],
+  "source_checkpoint_and_program_hashes_match": true,
+  "reported_checks_pass": true,
+  "final_dram_and_tmem_independently_replayed_bit_exact": true,
+  "final_native_cycles_replayed": 13691403.0,
+  "report_sha256": "1639a8b76c93d405d2e489cb7444d40b63870055a56075bf534e103f2aa77c60",
+  "audit_source_sha256": "f6cab5787a43b47b31a707e9ebbef562e69d9ddbd3c90e8b01de477f681d7003",
+  "timing_totals": {
+    "rtl_cycles": 53251060,
+    "lpn_cycles": 53651773.0,
+    "relative_cycle_error": 0.007524976967594688,
+    "worst_kernel_cycle_error": 0.010821582796223916,
+    "rtl_core_seconds": 3013.088999879,
+    "lpn_core_seconds": 13.244230884,
+    "core_speedup": 227.5019988906288,
+    "lpn_pipeline_seconds_excluding_input_serialization": 94.88225069642067,
+    "rtl_process_seconds": 3370.0887770429254,
+    "all_device_memories_bit_exact": true,
+    "all_input_files_identical": true,
+    "zero_rollbacks": true
+  },
+  "matched_source_revision": "c82de17a39010058efac9bebbbaf15dfb38e67bf"
+}

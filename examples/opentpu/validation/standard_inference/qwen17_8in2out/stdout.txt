@@ -1,0 +1,90 @@
+{"stage": "rtl", "step": 0, "predicted_cycles": 11908296.0, "frontend_seconds": 14.597631443291903, "compile_seconds": 0.3320157080888748}
+{"stage": "rtl", "step": 1, "predicted_cycles": 14362155.0, "frontend_seconds": 17.477289360016584, "compile_seconds": 0.00012905336916446686}
+{"stage": "rtl", "step": 2, "predicted_cycles": 13689919.0, "frontend_seconds": 6.737268960103393, "compile_seconds": 9.386800229549408e-05}
+{"stage": "rtl", "step": 3, "predicted_cycles": 13691403.0, "frontend_seconds": 6.649563869461417, "compile_seconds": 9.153597056865692e-05}
+{
+  "status": "complete",
+  "mode": "validate-rtl",
+  "entrypoint": "opentpu.llm.qwen3.Engine.generate",
+  "scheduling": "Unmodified upstream prefill_chunks/fit_chunk and autoregressive decode; default PREFILL_ROWS. Host compile pipeline disabled; resident device decode disabled.",
+  "scope": "Real checkpoint numerical execution; identical ISA/LPN/RTL inputs and bit-exact device memory checks.",
+  "model": {
+    "hidden": 2048,
+    "layers": 28,
+    "n_q": 16,
+    "n_kv": 8,
+    "head_dim": 128,
+    "ffn": 6144,
+    "vocab": 151936,
+    "eps": 1e-06,
+    "theta": 1000000,
+    "tied": true,
+    "bos": 151643,
+    "eos": [
+      151645,
+      151643
+    ],
+    "qk_norm": true,
+    "qk_smooth": true,
+    "nope": [],
+    "rotary": 0,
+    "rope_div": [],
+    "rope_scale": 1.0,
+    "ctx": 0,
+    "embed": "f32",
+    "formats": "",
+    "mix": ""
+  },
+  "config": {
+    "S": 1,
+    "D": 128,
+    "MCOLS": 4,
+    "ACT_BLOCKS": 64,
+    "TMEM_WORDS": 65536,
+    "DRAM_BYTES": 2147483648,
+    "IMEM_WORDS": 32768,
+    "LANES": 8,
+    "PAIR": false,
+    "DSTEP": false,
+    "STREAM": false,
+    "ACT_ROWS": 16,
+    "SEQ_WC": false
+  },
+  "model_directory": "/home/ubuntu/FeSens-openTPU/models/Qwen3-1.7B",
+  "prompt_ids": [
+    12522,
+    5193,
+    264,
+    882,
+    304,
+    264,
+    11340,
+    14126
+  ],
+  "prompt_tokens": 8,
+  "requested_output_tokens": 2,
+  "returned_output_tokens": 2,
+  "final_position": 10,
+  "generated_ids": [
+    11,
+    1052
+  ],
+  "generated_text": ", there",
+  "engine_default_rows": 8,
+  "host_seconds": 3612.229997329414,
+  "timing_totals": {
+    "rtl_cycles": 53251060,
+    "lpn_cycles": 53651773.0,
+    "relative_cycle_error": 0.007524976967594688,
+    "worst_kernel_cycle_error": 0.010821582796223916,
+    "rtl_core_seconds": 3013.088999879,
+    "lpn_core_seconds": 13.244230884,
+    "core_speedup": 227.5019988906288,
+    "lpn_pipeline_seconds_excluding_input_serialization": 94.88225069642067,
+    "rtl_process_seconds": 3370.0887770429254,
+    "all_device_memories_bit_exact": true,
+    "all_input_files_identical": true,
+    "zero_rollbacks": true
+  }
+}
+{"kernel_schedule": [{"position_before": 0, "phase": "prefill", "input_rows": 4, "logit_rows_read": 0, "instructions": [25263]}, {"position_before": 4, "phase": "prefill", "input_rows": 4, "logit_rows_read": 1, "instructions": [25307]}, {"position_before": 8, "phase": "decode", "input_rows": 1, "logit_rows_read": 1, "instructions": [11055]}, {"position_before": 9, "phase": "decode", "input_rows": 1, "logit_rows_read": 1, "instructions": [11055]}]}

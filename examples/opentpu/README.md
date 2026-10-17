@@ -109,17 +109,30 @@ the upstream final step described above). Every DRAM byte and TMEM word matched
 the independent ISA execution on every kernel; both engines used identical
 programs and numerical inputs, with zero LPN rollbacks.
 
+The real [Qwen3-1.7B checkpoint run](validation/standard_inference/qwen17_8in2out/report.json)
+also completed: all 28 layers, **eight prompt tokens and two generated tokens**,
+with two four-token prefill kernels and two upstream decode kernels. It passed
+the same complete device-memory, input-identity and zero-rollback checks.
+
 | Case | RTL cycles | LPN cycles | Total cycle error | Worst kernel error | RTL core time | Native LPN core time |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | SmolLM2-135M, 16 input / 8 output | 25,455,239 | 25,896,361 | +1.73% | 2.79% | 984.25 s | 12.30 s |
+| Qwen3-1.7B, 8 input / 2 output | 53,251,060 | 53,651,773 | +0.75% | 1.08% | 3,013.09 s | 13.24 s |
 
-That is **80.02x native timing-core speedup** in this single run. The measured
+SmolLM2 achieved **80.02x native timing-core speedup** in this single run. The measured
 functional/preparation/compilation/native-process stages total **54.36 s**;
 that total excludes input serialization and is not an entire-process wall
 measurement. Joint validation wall time, including RTL and its build, was
 1,245.99 s. The generated continuation was ` wise old man named Mr. Oak.`
-These results establish this batched checkpoint case, not accuracy for arbitrary
-models or context lengths. Raw output, the terminal job manifest and an
+
+Qwen achieved **227.50x native timing-core speedup**. Its measured LPN pipeline
+stages total **94.88 s**, excluding input serialization; joint validation wall
+time was 3,614.66 s. Its continuation was `, there`. Its raw output, terminal
+job manifest and [independent archive audit](validation/standard_inference/qwen17_8in2out/audit.json)
+are saved beside its report. These are single-run observations of the stated
+batched checkpoint cases, not accuracy claims for arbitrary context lengths.
+
+SmolLM2's raw output, terminal job manifest and an
 [independent archive audit](validation/standard_inference/smollm2_16in8out/audit.json)
 are retained beside the report.
 
