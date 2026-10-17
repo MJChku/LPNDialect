@@ -49,7 +49,8 @@ def main():
     options=SimpleNamespace(output=output)
     timing=Timing(batch_rows=32,matrix_row_lanes=32,
         dram_bytes_per_cycle=2816,dram_port_bytes=2816,dram_latency=8,
-        fifo_chunks=4096,scale_lanes=32,unified_dram=True,scalar_store_bytes=256)
+        fifo_chunks=4096,scale_lanes=32,unified_dram=True,scalar_store_bytes=256,
+        epilogue_lanes=1)
     runner=ReusableTiming(a.compiler,output/'timing-cache',capacity=65536)
     source_files=[p for folder in ('rtl','sim/verilator')
                   for p in sorted((a.opentpu_root/folder).rglob('*'))

@@ -19,6 +19,14 @@ def bank_write_cycles(width,columns,stride,lanes):
   return max(banks,default=0)
 
 
+def matrix_batch_rows(rows,chunks,timing):
+  """Group whole parallel waves; aggregation must not serialize row engines."""
+  parallel=timing.matrix_row_lanes
+  batch=min(max(timing.batch_rows,parallel),max(parallel,rows//64),
+            max(1,timing.fifo_chunks//(2*chunks)))
+  return batch//parallel*parallel if batch>=parallel else batch
+
+
 @dataclass(frozen=True)
 class Timing:
   dram_latency: int = 8
@@ -236,12 +244,28 @@ class OpenTPU:
       if function==I.V_OUTER:
         latency += max(2,ceil(cols/cfg.LANES))
       if function in I.REDUCE:
-        # The RTL folding tree streams rows and drains once per instruction.
-        if function in (I.V_RSUM,I.V_RSSQ,I.V_RDOT):
-          latency = rows*ceil(cols/64)*(64//cfg.LANES)+12
-        latency += 64//cfg.LANES+12
-        if function==I.V_RDOT and rows<=256:
-          latency += ceil(rows/cfg.LANES)
+        if cfg.LANES>=32:
+          if function in (I.V_RSUM,I.V_RSSQ,I.V_RDOT):
+            partial_chunks=64//cfg.LANES
+            chunks=rows*ceil(cols/64)*partial_chunks
+            # The real wide datapath preserves 64 ordered partial sums. Its
+            # four-stage adder limits recurrence; the six-level tree drains
+            # once, after the last issued partial (read/product/add/tree/retire).
+            interval=4//partial_chunks
+            latency=(chunks-1)*interval+36
+            if function==I.V_RDOT and rows<=256 and w[4]&65535==1:
+              latency+=ceil(rows/cfg.LANES)
+          else:
+            latency=rows*ceil(cols/cfg.LANES)+(cfg.LANES.bit_length()-1)+5
+            if function==I.V_ARGMAX:
+              latency+=4
+        else:
+          # The original folding tree streams rows and drains once.
+          if function in (I.V_RSUM,I.V_RSSQ,I.V_RDOT):
+            latency = rows*ceil(cols/64)*(64//cfg.LANES)+12
+          latency += 64//cfg.LANES+12
+          if function==I.V_RDOT and rows<=256:
+            latency += ceil(rows/cfg.LANES)
       port,service = None,0
     elif ins.op==I.RLD:
       latency,port,service = 4,None,0
@@ -312,13 +336,13 @@ class OpenTPU:
     chunks = kb if wf==I.W8 else ceil(kb/2)
     # Keep two packets in the FIFO so grouping does not introduce a DRAM
     # round-trip bubble between batches. Small N uses single-row events.
-    batch = min(t.batch_rows,max(1,n//64),max(1,t.fifo_chunks//(2*chunks)))
+    batch = matrix_batch_rows(n,chunks,t)
     self.matrix_batch_sizes.append(batch)
     if chunks>t.fifo_chunks:
       raise ValueError("one matrix row must fit the prefetch FIFO")
     groups = ceil(m/cfg.MCOLS)
     steps = chunks if pair else kb
-    drain_width = min(t.epilogue_lanes,cfg.LANES//gcd(w[5]&65535,cfg.LANES))
+    drain_width = min(t.epilogue_lanes,cfg.MCOLS,cfg.LANES//gcd(w[5]&65535,cfg.LANES))
     drain = ceil(m/drain_width)
     # ACC's multiply/add stages increase result latency, not the row initiation
     # interval: read/modify/write is pipelined alongside subsequent rows.

@@ -172,7 +172,7 @@ index 4c00c462..e34819a9 100644
    end
  `endif
 diff --git a/rtl/mxu/otpu_mxu.sv b/rtl/mxu/otpu_mxu.sv
-index 44befead..d1e9ccae 100644
+index 44befead..44ca0a37 100644
 --- a/rtl/mxu/otpu_mxu.sv
 +++ b/rtl/mxu/otpu_mxu.sv
 @@ -54,6 +54,7 @@ module otpu_mxu
@@ -183,15 +183,16 @@ index 44befead..d1e9ccae 100644
    parameter int SID   = 0
  ) (
    input  logic                  clk,
-@@ -85,6 +86,7 @@ module otpu_mxu
+@@ -85,6 +86,8 @@ module otpu_mxu
    input  logic                  a_gnt,
    input  logic                  a_rvalid,
    input  logic [255:0]          a_rdata,     // the aligned 32 bytes holding word a_addr
 +  output logic                  a_want, b_want, rmax_write,
++  output logic [1:0]            head_epoch,
    output logic                  b_req,
    output logic [31:0]           b_addr,
    input  logic                  b_gnt,
-@@ -116,7 +118,7 @@ module otpu_mxu
+@@ -116,7 +119,7 @@ module otpu_mxu
    // RF covers the pipeline's rows in flight (one-advance rows: one per cycle of its latency)
    localparam int RF = (LROW + 7 <= 32) ? 32 : 64;
    localparam int RFW = $clog2(RF);
@@ -200,7 +201,7 @@ index 44befead..d1e9ccae 100644
    localparam int TD = 128;                  // port A requests in flight (their tags)
    localparam int TDW = $clog2(TD);
    // a lane: the pick, i2f48 (4), x Sw, x Sa'
-@@ -274,7 +276,7 @@ module otpu_mxu
+@@ -274,7 +277,7 @@ module otpu_mxu
    wire [31:0] c_asa = h.asa;
    wire        c_act = (q_n != 0) && h.go;
    wire [7:0]  c_G = h.G;
@@ -209,7 +210,7 @@ index 44befead..d1e9ccae 100644
    logic [1:0]  al_st;                       // ASCALE factors: 0 to load, 1 requested (in TMEM's
                                              // request register), 3 read (the words arrive), 2 loaded
    logic [7:0]  al_i, mx_i;                  // next ASCALE factor to load / RMAX value to write
-@@ -396,6 +398,9 @@ module otpu_mxu
+@@ -396,6 +399,9 @@ module otpu_mxu
    assign pf_level  = f_count;
    assign pf_starve = more && f_count == 0;
    assign pf_block  = more && f_count != 0 && !pop;
@@ -219,7 +220,7 @@ index 44befead..d1e9ccae 100644
    assign b_req  = go_iss && need_b;
    // not gated with b_req: the address (and the slice's parity of it) does not wait for b_gnt
    assign b_addr = chunk_addr >> 2;
-@@ -913,7 +918,7 @@ module otpu_mxu
+@@ -913,7 +919,7 @@ module otpu_mxu
        if (32'(dj) + 32'(k) < MCOLS) begin
          dx_l[k] = rfh_i[MW'(dj) + MW'(k)];
          dsa_l[k] = rfh_sa[MW'(dj) + MW'(k)];
@@ -228,7 +229,7 @@ index 44befead..d1e9ccae 100644
        end
    end
  `ifndef SYNTHESIS
-@@ -1028,7 +1033,7 @@ module otpu_mxu
+@@ -1028,7 +1034,7 @@ module otpu_mxu
        r1 <= r0;
        for (int k = 0; k < NL; k++) begin
          xo[k]  <= t_rdata[k];
@@ -237,7 +238,7 @@ index 44befead..d1e9ccae 100644
        end
      end
    for (genvar k = 0; k < NL; k++) begin : g_rmw
-@@ -1040,8 +1045,8 @@ module otpu_mxu
+@@ -1040,8 +1046,8 @@ module otpu_mxu
  
    // RMAX: the running max is kept as its sort key (mk = fkey(max); the max is always stored
    // ftz'd, so fkey(max) is the key it is compared by); written out through unkey.
@@ -248,7 +249,7 @@ index 44befead..d1e9ccae 100644
    logic mx_done;
    function automatic f32_t unkey(input logic [31:0] k);
      return k[31] ? {1'b0, k[30:0]} : ~k;
-@@ -1049,22 +1054,22 @@ module otpu_mxu
+@@ -1049,22 +1055,22 @@ module otpu_mxu
    // rw's column hits, one-hot, computed from r1 and carried alongside u_rw (same length and
    // enable); the last stage is a reset flop, not an SRL tap. c_rmax is fixed while entries are
    // in flight (the head changes only once drained)
@@ -279,7 +280,7 @@ index 44befead..d1e9ccae 100644
        mx_hit[j] = 1'b0; mx_upd[j] = 1'b0; mx_cand[j] = '0;
        for (int k = 0; k < NL; k++) begin
          if (rxh[k][j]) begin
-@@ -1177,7 +1182,7 @@ module otpu_mxu
+@@ -1177,12 +1183,18 @@ module otpu_mxu
          if (mxm[k]) begin
            t_wen[k] = 1'b1;
            t_waddr[k] = mxl[k];
@@ -288,7 +289,18 @@ index 44befead..d1e9ccae 100644
          end
        end
      end
-@@ -1397,7 +1402,7 @@ module otpu_mxu
+   end
+ 
++  // A local completion tag lets a replicated engine's shared drain stop a
++  // leading core at the next command while the logical head still completes.
++  always_ff @(posedge clk)
++    if (rst) head_epoch <= '0;
++    else if (c_done) head_epoch <= head_epoch + 2'd1;
++
+   // ---- statistics for the profiler (per completed command): cycles the stream was starved
+   // (work, no chunk), backpressured (chunks, no consumption), the drain frozen by the TMEM grant,
+   // the issuer denied a DRAM port. The conditions are registered (st_c) and summed a cycle
+@@ -1397,7 +1409,7 @@ module otpu_mxu
                dg <= '0; dg1 <= 8'd1;
                for (int j = 0; j < MCOLS; j++) begin
                  logic [31:0] a;
@@ -297,7 +309,7 @@ index 44befead..d1e9ccae 100644
                  dad[j] <= a;
                  drow[j] <= a;
                  if (j < NL) dal[j] <= a;
-@@ -1419,7 +1424,7 @@ module otpu_mxu
+@@ -1419,7 +1431,7 @@ module otpu_mxu
            end
          end
          // RMAX (rx: registered so the lane selection and the max compare are in different cycles)
@@ -306,7 +318,7 @@ index 44befead..d1e9ccae 100644
            if (mx_upd[j]) mk[j] <= mx_cand[j];
            if (mx_hit[j]) mx_have[j] <= 1'b1;
          end
-@@ -1434,7 +1439,7 @@ module otpu_mxu
+@@ -1434,7 +1446,7 @@ module otpu_mxu
          if (al_st == 2'd3) begin
            // one write per entry (a constant index): a variable-index write of several lanes makes
            // Vivado try, and crash while dissolving, a RAM for these MCOLS registers
@@ -317,10 +329,10 @@ index 44befead..d1e9ccae 100644
            if (32'(al_i) + LANES >= 32'(c_M)) al_st <= 2'd2;
 diff --git a/rtl/mxu/otpu_mxu_parallel.sv b/rtl/mxu/otpu_mxu_parallel.sv
 new file mode 100644
-index 00000000..3b80669a
+index 00000000..3d8229da
 --- /dev/null
 +++ b/rtl/mxu/otpu_mxu_parallel.sv
-@@ -0,0 +1,207 @@
+@@ -0,0 +1,214 @@
 +// Independent streamed weight-row engines. The instruction/scoreboard contract
 +// remains one MM: no unit reports completion until every row and epilogue lands.
 +// Physical row p consumes p, p+P, ...; each core reuses the upstream systolic
@@ -357,17 +369,25 @@ index 00000000..3b80669a
 +  localparam int BW=$clog2(LANES);
 +  localparam int CP=2;  // one result, or two contiguous ASCALE/RMAX words
 +  initial if (LANES < CP*P) $fatal(1, "parallel MXU needs >=2 TMEM lanes per engine");
-+  logic busy, launching, released, reducing, release_sent;
-+  cmd_t head;
-+  logic [P-1:0] active, finished, cd, cr, cg, pop, rm;
++  logic reducing;
++  logic [1:0] queue_count, head_epoch, tail_epoch, releases;
++  cmd_t entries [2];
++  wire cmd_t head=entries[head_epoch[0]];
++  wire busy=queue_count!=0;
++  wire core_go=releases!=0;
++  logic [P-1:0] cd, cr, cg, pop, rm;
++  logic [P-1:0][1:0] epochs;
++  logic [P-1:0] at_head;
++  for (genvar p=0;p<P;p++) assign at_head[p]=epochs[p]==head_epoch;
++  wire all_done=busy && !(|at_head);
 +  logic [P-1:0][CP-1:0] re, we;
 +  logic [P-1:0][CP-1:0][31:0] ra, wa, wd;
 +  logic [P-1:0][$clog2(DEPTH):0] level;
 +  logic [P-1:0] starve, block_;
-+  logic [31:0] maxima [P][ROWS];
++  logic [31:0] maxima [2][P][ROWS];
 +  logic [7:0] flush_row;
 +  int unsigned rr;
-+  assign rdy = !busy;
++  assign rdy = queue_count<2 && (&cr);
 +  assign computing = |pop;
 +  assign pf_u = done;
 +  assign pf_uv = '0;
@@ -398,14 +418,14 @@ index 00000000..3b80669a
 +    assign data=bank_data[32'(group_q)*D*8+:D*8];
 +    assign scale=bank_scale[32'(group_q)*64+:64];
 +    always_comb begin
-+      subcmd = head;
-+      subcmd.w1 = head.w1 + p*head.w5;
-+      subcmd.w2 = head.flags[3] ? head.w2 : head.w2 + p*head.w7;
-+      subcmd.w3 = head.w3 + p;
-+      subcmd.w4[15:0] = (32'(head.w4[15:0]) > p) ?
-+                            16'((32'(head.w4[15:0])-p+P-1)/P) : 16'd0;
-+      subcmd.w5 = head.w5 * P;
-+      subcmd.w7 = head.w7 * P;
++      subcmd = cmd;
++      subcmd.w1 = cmd.w1 + p*cmd.w5;
++      subcmd.w2 = cmd.flags[3] ? cmd.w2 : cmd.w2 + p*cmd.w7;
++      subcmd.w3 = cmd.w3 + p;
++      subcmd.w4[15:0] = (32'(cmd.w4[15:0]) > p) ?
++                            16'((32'(cmd.w4[15:0])-p+P-1)/P) : 16'd0;
++      subcmd.w5 = cmd.w5 * P;
++      subcmd.w7 = cmd.w7 * P;
 +      // PAIR is an integer accumulation optimization; the narrow engine
 +      // consumes its two blocks serially, giving the same exact accumulator.
 +      subcmd.flags[6] = 1'b0;
@@ -417,8 +437,8 @@ index 00000000..3b80669a
 +      .r_blk2(blk2), .r_hi({ROWS{1'b0}}), .r_grp(8'd0), .r_data(bank_data), .r_scale(bank_scale));
 +    otpu_mxu #(.D(D), .MCOLS(1), .ROWS(ROWS), .DEPTH(DEPTH), .LANES(CP),
 +        .CL(CL), .E(1), .NSTEP(P), .SID(SID)) u_mxu (
-+      .clk, .rst, .start(launching && active[p]),
-+      .go(busy && !launching && released && !release_sent), .cmd(subcmd), .rdy(cr[p]),
++      .clk, .rst, .start,
++      .go(core_go), .cmd(subcmd), .rdy(cr[p]),
 +      .done(cd[p]), .computing(pop[p]), .pf_level(level[p]),
 +      .pf_starve(starve[p]), .pf_block(block_[p]), .pf_u(), .pf_uv(),
 +      .act_blk(blk), .act_blk2(blk2), .act_hi(hi), .act_grp(grp), .act_ren(ren),
@@ -427,7 +447,7 @@ index 00000000..3b80669a
 +      .a_addr(a_addr[p]), .b_addr(b_addr[p]), .a_gnt(mem_gnt[p]), .b_gnt(mem_gnt[p]),
 +      .a_rvalid(a_rvalid[p]), .b_rvalid(b_rvalid[p]), .a_rdata(a_rdata[p]), .b_rdata(b_rdata[p]),
 +      .t_ren(re[p]), .t_raddr(ra[p]), .t_rdata(t_rdata[CP*p+:CP]),
-+      .t_wen(we[p]), .t_waddr(wa[p]), .t_wdata(wd[p]), .t_gnt(cg[p]), .rmax_write(rm[p]));
++      .t_wen(we[p]), .t_waddr(wa[p]), .t_wdata(wd[p]), .t_gnt(cg[p]), .rmax_write(rm[p]), .head_epoch(epochs[p]));
 +  end
 +
 +  // Within the single MXU scratchpad port each bank has one address. Select
@@ -445,7 +465,7 @@ index 00000000..3b80669a
 +    if (busy && !reducing) begin
 +      for (int q=0;q<P;q++) begin
 +        p=(rr+q)%P;
-+        okay=1'b1;
++        okay=at_head[p];
 +        for (int l=0;l<CP;l++) begin
 +          bank=int'(ra[p][l][BW-1:0]);
 +          if (re[p][l] && read_used[bank]) okay=1'b0;
@@ -471,10 +491,10 @@ index 00000000..3b80669a
 +        logic [31:0] best;
 +        best='0;
 +        if (32'(flush_row)+l < 32'(head.w6[23:16])) begin
-+          best=maxima[0][32'(flush_row)+l];
++          best=maxima[head_epoch[0]][0][32'(flush_row)+l];
 +          for (int p=1;p<P;p++)
-+            if (active[p] && fkey(maxima[p][32'(flush_row)+l]) > fkey(best))
-+              best=maxima[p][32'(flush_row)+l];
++            if (p<32'(head.w4[15:0]) && fkey(maxima[head_epoch[0]][p][32'(flush_row)+l]) > fkey(best))
++              best=maxima[head_epoch[0]][p][32'(flush_row)+l];
 +          t_wen[l]=1'b1;
 +          t_waddr[l]=head.w3 + 32'(head.w6[23:16])*32'(head.w6[15:0])+32'(flush_row)+l;
 +          t_wdata[l]=best;
@@ -484,47 +504,46 @@ index 00000000..3b80669a
 +    cg=selected & {P{t_gnt}};
 +  end
 +
++  wire retiring=busy && ((reducing && t_gnt &&
++      32'(flush_row)+LANES>=32'(head.w6[23:16])) ||
++      (all_done && !reducing && (!head.flags[2] || head.w4[15:0]==0 || head.w4[23:16]==0)));
 +  always_ff @(posedge clk) begin
 +    done<=1'b0;
-+    launching<=1'b0;
 +    if (rst) begin
-+      busy<=1'b0; launching<=1'b0; released<=1'b0; reducing<=1'b0;
-+      release_sent<=1'b0; active<='0; finished<='0; rr<=0; flush_row<='0;
++      queue_count<='0;head_epoch<='0;tail_epoch<='0;releases<='0;
++      reducing<=1'b0;rr<=0;flush_row<='0;
 +    end else begin
-+      rr <= (rr+1==P) ? 0 : rr+1;
++      rr<=(rr+1==P) ? 0 : rr+1;
++      queue_count<=queue_count+2'(start)-2'(retiring);
++      releases<=releases+2'(go)-2'(core_go);
 +      if (start) begin
-+        head<=cmd; busy<=1'b1; launching<=1'b1; released<=go;
-+        reducing<=1'b0; release_sent<=1'b0; flush_row<='0;
-+        for (int p=0;p<P;p++) begin
-+          active[p] <= p < 32'(cmd.w4[15:0]);
-+          finished[p] <= p >= 32'(cmd.w4[15:0]);
-+        end
-+      end else if (busy) begin
-+        if (go) released<=1'b1;
-+        if (!launching && released) release_sent<=1'b1;
-+        finished<=finished|cd;
-+        for (int p=0;p<P;p++)
-+          if (cg[p] && rm[p])
-+            for (int l=0;l<CP;l++) if (we[p][l])
-+              for (int r=0;r<ROWS;r++)
-+                if (wa[p][l]==head.w3+p+32'(head.w6[23:16])*32'(head.w6[15:0])+r)
-+                  maxima[p][r]<=wd[p][l];
-+        if (!launching && &(finished|cd) && !reducing) begin
-+          if (head.flags[2] && |active && head.w4[23:16]!=0) reducing<=1'b1;
-+          else begin busy<=1'b0; done<=1'b1; end
-+        end
-+        if (reducing && t_gnt) begin
-+          if (32'(flush_row)+LANES>=32'(head.w6[23:16])) begin
-+            reducing<=1'b0; busy<=1'b0; done<=1'b1;
-+          end else flush_row<=flush_row+8'(LANES);
-+        end
++        entries[tail_epoch[0]]<=cmd;
++        tail_epoch<=tail_epoch+2'd1;
++      end
++      // Every core accepts every command, including zero-row internal
++      // commands. Completion epochs therefore remain comparable even when
++      // only a few cores have useful rows in one of the two commands.
++      for (int p=0;p<P;p++)
++        if (cg[p] && rm[p])
++          for (int l=0;l<CP;l++) if (we[p][l])
++            for (int r=0;r<ROWS;r++)
++              if (wa[p][l]==head.w3+p+32'(head.w6[23:16])*32'(head.w6[15:0])+r)
++                maxima[head_epoch[0]][p][r]<=wd[p][l];
++      if (all_done && !reducing && head.flags[2] && head.w4[15:0]!=0 && head.w4[23:16]!=0)
++        reducing<=1'b1;
++      if (reducing && t_gnt && !retiring) flush_row<=flush_row+8'(LANES);
++      if (retiring) begin
++        head_epoch<=head_epoch+2'd1;
++        done<=1'b1;reducing<=1'b0;flush_row<='0;
 +      end
 +    end
 +  end
 +`ifndef SYNTHESIS
 +  always @(posedge clk) if (!rst) begin
 +    if (start && !rdy) $fatal(1,"parallel MXU accepted while busy");
-+    if (launching && ((cr & active)!=active)) $fatal(1,"parallel core not ready");
++    if (go && queue_count==0 && !start) $fatal(1,"parallel MXU release without a command");
++    if (releases>2) $fatal(1,"parallel MXU release queue overflow");
++    if (queue_count>2) $fatal(1,"parallel MXU command queue overflow");
 +  end
 +`endif
 +endmodule

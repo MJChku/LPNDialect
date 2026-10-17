@@ -1,0 +1,33 @@
+{
+  "step": 0,
+  "input_sha256": {
+    "prog_0.hex": "715520e9463ef4394a81fd408cc34c0423701c0905593cc90a625fe2c46d9323",
+    "dram_0.bin": "7d8fcc490914493d4c45ed7706b44a49bc5079a32b0cfcd4e3987d0702ba5fcf"
+  },
+  "instructions": [
+    19776
+  ],
+  "rtl_cycles": 702004,
+  "baseline_rtl_cycles": 3780756,
+  "lpn_cycles": 3366221.0,
+  "lpn_core_seconds": 1.685309874,
+  "evolved_lpn_relative_cycle_error": 3.7951592868416704,
+  "architecture_cycle_speedup": 5.3856616201617085,
+  "rtl_core_seconds": 669.000974506,
+  "rtl_process_seconds": 680.8350168801844,
+  "rtl_build_seconds": 726.7435675300658,
+  "functional_seconds": 6.020171299576759,
+  "all_dram_and_tmem_bit_exact": true,
+  "identical_input_files": true,
+  "simulator": "/home/ubuntu/FeSens-openTPU-arch-wide/build/verilator/tb_top_0414a693ec7c/Vtb_top",
+  "kernel_index": 0,
+  "position_before": 0,
+  "phase": "prefill",
+  "input_rows": 8,
+  "logit_rows_read": 0,
+  "program_sha256": [
+    "715520e9463ef4394a81fd408cc34c0423701c0905593cc90a625fe2c46d9323"
+  ],
+  "args": [],
+  "rows": 8
+}

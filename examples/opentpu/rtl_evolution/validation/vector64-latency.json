@@ -1,0 +1,30 @@
+{
+  "status": "complete",
+  "lanes": 64,
+  "all_tmem_bit_exact": true,
+  "functions": [
+    "add",
+    "mul",
+    "exp2",
+    "recip",
+    "rsqrt",
+    "rsum",
+    "rssq",
+    "rdot",
+    "rmax",
+    "argmax"
+  ],
+  "elements_per_row": 193,
+  "command_cycles": [
+    17,
+    17,
+    85,
+    64,
+    92,
+    49,
+    49,
+    49,
+    16,
+    20
+  ]
+}

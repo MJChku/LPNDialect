@@ -1,0 +1,243 @@
+{
+  "status": "complete",
+  "config": {
+    "S": 1,
+    "D": 64,
+    "MCOLS": 4,
+    "ACT_BLOCKS": 64,
+    "TMEM_WORDS": 65536,
+    "DRAM_BYTES": 1048576,
+    "IMEM_WORDS": 65536,
+    "LANES": 64,
+    "PAIR": false,
+    "DSTEP": false,
+    "STREAM": false,
+    "ACT_ROWS": 16,
+    "SEQ_WC": false
+  },
+  "uarch": {
+    "MXU_ROWS": 32,
+    "VPU_LANES": 64,
+    "QST_LANES": 64
+  },
+  "records": [
+    {
+      "case": {
+        "name": "unit_67x8",
+        "n": 67,
+        "m": 8,
+        "kb": 3,
+        "unit": true
+      },
+      "rtl_cycles": 343,
+      "seconds": 5.12873269803822,
+      "all_dram_and_tmem_bit_exact": true
+    },
+    {
+      "case": {
+        "name": "unit_5x3",
+        "n": 5,
+        "m": 3,
+        "kb": 1,
+        "unit": true
+      },
+      "rtl_cycles": 130,
+      "seconds": 4.040105873718858,
+      "all_dram_and_tmem_bit_exact": true
+    },
+    {
+      "case": {
+        "name": "scaled_65x8",
+        "n": 65,
+        "m": 8,
+        "kb": 5
+      },
+      "rtl_cycles": 469,
+      "seconds": 6.062599590048194,
+      "all_dram_and_tmem_bit_exact": true
+    },
+    {
+      "case": {
+        "name": "acc_ascale_rmax",
+        "n": 67,
+        "m": 3,
+        "kb": 3,
+        "unit": true,
+        "acc": true,
+        "ascale": true,
+        "rmax": true
+      },
+      "rtl_cycles": 200,
+      "seconds": 4.0658381674438715,
+      "all_dram_and_tmem_bit_exact": true
+    },
+    {
+      "case": {
+        "name": "fp4_pair",
+        "n": 35,
+        "m": 2,
+        "kb": 3,
+        "wf": 2,
+        "pair": true
+      },
+      "rtl_cycles": 155,
+      "seconds": 4.064026042819023,
+      "all_dram_and_tmem_bit_exact": true
+    },
+    {
+      "case": {
+        "name": "unit_64x1",
+        "n": 64,
+        "m": 1,
+        "kb": 7,
+        "unit": true
+      },
+      "rtl_cycles": 165,
+      "seconds": 4.062522483989596,
+      "all_dram_and_tmem_bit_exact": true
+    },
+    {
+      "case": {
+        "name": "qst_stride_1",
+        "n": 35,
+        "m": 3,
+        "kb": 3,
+        "unit": true,
+        "qst_stride": 1
+      },
+      "rtl_cycles": 289,
+      "seconds": 5.065730130299926,
+      "all_dram_and_tmem_bit_exact": true
+    },
+    {
+      "case": {
+        "name": "qst_stride_4",
+        "n": 35,
+        "m": 3,
+        "kb": 3,
+        "unit": true,
+        "qst_stride": 4
+      },
+      "rtl_cycles": 289,
+      "seconds": 5.0657605696469545,
+      "all_dram_and_tmem_bit_exact": true
+    },
+    {
+      "case": {
+        "name": "qst_stride_17",
+        "n": 35,
+        "m": 3,
+        "kb": 3,
+        "unit": true,
+        "qst_stride": 17
+      },
+      "rtl_cycles": 289,
+      "seconds": 5.063195733353496,
+      "all_dram_and_tmem_bit_exact": true
+    },
+    {
+      "case": {
+        "name": "pipeline_independent",
+        "commands": 6,
+        "shapes": [
+          [
+            5,
+            3
+          ],
+          [
+            67,
+            8
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            35,
+            2
+          ],
+          [
+            64,
+            4
+          ],
+          [
+            3,
+            3
+          ]
+        ]
+      },
+      "rtl_cycles": 974,
+      "seconds": 10.08531785942614,
+      "all_dram_and_tmem_bit_exact": true,
+      "overlapping_command_admissions": 5,
+      "matrix_start_cycles": [
+        10,
+        16,
+        712,
+        783,
+        810,
+        866
+      ],
+      "matrix_end_cycles": [
+        711,
+        782,
+        809,
+        865,
+        940,
+        971
+      ]
+    },
+    {
+      "case": {
+        "name": "pipeline_waw",
+        "commands": 6,
+        "shapes": [
+          [
+            5,
+            3
+          ],
+          [
+            67,
+            8
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            35,
+            2
+          ],
+          [
+            64,
+            4
+          ],
+          [
+            3,
+            3
+          ]
+        ]
+      },
+      "rtl_cycles": 974,
+      "seconds": 10.083476895466447,
+      "all_dram_and_tmem_bit_exact": true,
+      "overlapping_command_admissions": 5,
+      "matrix_start_cycles": [
+        10,
+        16,
+        712,
+        783,
+        810,
+        866
+      ],
+      "matrix_end_cycles": [
+        711,
+        782,
+        809,
+        865,
+        940,
+        971
+      ]
+    }
+  ]
+}

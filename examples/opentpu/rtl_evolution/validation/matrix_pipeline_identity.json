@@ -1,0 +1,99 @@
+{
+  "compiler_flags": [
+    "--binary",
+    "-j",
+    "12",
+    "-Wno-fatal",
+    "-Wno-WIDTHEXPAND",
+    "-Wno-WIDTHTRUNC",
+    "-Wno-UNUSEDSIGNAL",
+    "-Wno-UNUSEDPARAM",
+    "-O3",
+    "--x-assign",
+    "0",
+    "--x-initial",
+    "0",
+    "-CFLAGS",
+    "-O0"
+  ],
+  "verilator": "Verilator v5.052 rev v5.052",
+  "executable": "/home/ubuntu/FeSens-openTPU-arch-pipeline/build/verilator/tb_top_67931c435d3a/Vtb_top",
+  "executable_sha256": "2bfebef34912074cb99263f376078b143fc179e9a47325467c29b6827577df0c",
+  "rtl_source_sha256": {
+    "opentpu/rtlsim.py": "5d37e088759297a039f45af4f2d48320471a00ecb03ba78be78383adc39e5e50",
+    "rtl/vpu/otpu_fp.sv": "16fc71077a7c7f9c7ef98ee8791c27eee340d6704cbdb0f1852104c64b2bbd48",
+    "rtl/vpu/otpu_fpipe.sv": "50d13a22ce78a2e02f9e92a301e6626696dd8adbb88362960dd1385e34634cee",
+    "rtl/top/otpu_pkg.sv": "ca41c32141fdf224d24481842b182063ce5692a976176eca82c4c78d4d7ad3c6",
+    "rtl/mem/otpu_dram.sv": "adccbba947e4f4940ac0dc0995c052ebadc0aa6df16364b3b7ee07e25c8321c2",
+    "rtl/mem/otpu_tmem.sv": "2e8cb0e266d4c6f82910dc85a2240899c7d36061d31e1f09aa0ec9190b2a1df6",
+    "rtl/mem/otpu_native_dram.sv": "8598544bfc996aece2ab65c98003629eb25979265b3a0f4e8bec72c14bbf6eb5",
+    "rtl/mem/otpu_actram.sv": "17f9e30a1f9bfec27a205be4eda62596779c6f0b024b8a1b99b64171278c9f49",
+    "rtl/seq/otpu_seq.sv": "90887e2e2a6c03607a13945f96d7b3af806b9c537eb9a8af7fc2e164cb1e106e",
+    "rtl/vpu/otpu_vtree.sv": "9b32ae3a18d7fb4fa60003f9d71bb01c10946e5fdfbc241b24a86759cb7afd30",
+    "rtl/dma/otpu_dma.sv": "22283a5bbcfda393945b368122a71d22918917a1441b514b89e3d4e989180a02",
+    "rtl/mxu/otpu_mxu.sv": "1d1b39144818d35d03dbca830a5ae526c27e3ed6bac9641cd8e958cfdb778a70",
+    "rtl/mxu/otpu_mxu_parallel.sv": "27b6351b23d8485aecb6907823c6d8257cf37dae17e2749d0744d84e0ca1c2c6",
+    "rtl/tech/generic/otpu_tech_dsp.sv": "89b0d45e303491dd8dfe6cdeb4e623e60d04a415697a567d1a70836dba9d8de7",
+    "rtl/tech/generic/otpu_tech_ram.sv": "f2c74dc55f26ad01568271ec22469208d93af2d9248ff1f9cfef3dafe1083881",
+    "rtl/vpu/otpu_quant.sv": "a087e0f4f85b1370dd7f029cea537741f8f9e89801ff99c926cc55494ff193cd",
+    "rtl/vpu/otpu_se_comp.sv": "6928f8dfcbcedf4870769c7c2732a965672def10a0442dcf486b83d04a2e1bd7",
+    "rtl/vpu/otpu_se_tail.sv": "e5ba0921b440a500afe20902d7a1cfd47f254750a31a1e374b2cee9b1e4ed094",
+    "rtl/vpu/otpu_vpu.sv": "68439dea1eb4e70868729e5c9d636415126671683ec695298e27eeeee1eb2432",
+    "rtl/top/otpu_coll.sv": "3f6d295b021a56de25e9e6dbc90e2fa1d94224cef1bf8d03c58dbe771dcb8f07",
+    "rtl/exp/tmem_nocopy/otpu_tmem_model.sv": "4d8f55b8774811a1d548d80b384d6ed41f71d1d1801958f6f9e3fc5c9cc3715e",
+    "rtl/top/otpu_slice.sv": "cc6e6022cafbfa7d5ac05b6fe9a2441eec24ed48e8c6a2e32ee75e7db53a03ec",
+    "rtl/top/otpu_top.sv": "fa6ff94de6e71f174fbbe75fd471c22fe4af617732da6dcb11054b699fe2551c",
+    "sim/verilator/tb_top.sv": "81db8beedf96acc8a6a186971fee31d70eef5906c230b1f1b9ec26115c8b3bb0",
+    "sim/verilator/lpn_wall.cpp": "8892bb27d0c38eef196487a68806e6bc69fc8698c60bdfb58fa7d21aff0fcbc4"
+  },
+  "test_source_sha256": {
+    "examples/opentpu/rtl_evolution/check_matrix.py": "afee526b9d25ef16108b058633d6d1c74cbe6835819472afa607445db09d5fb7",
+    "examples/opentpu/rtl_evolution/check_matrix_pipeline.py": "0d79b37589ae5381ab286bec9c07b4e2538eb1edf7f032d0882c3f58eafd7f3d"
+  },
+  "input_sha256": {
+    "unit_67x8": {
+      "prog_0.hex": "81c837790cb2f59a77906c310b4989e412bf3809a97af51209e05aa76e0132c5",
+      "dram_0.bin": "ef1cd6a2897ab45065e5af6d4c752c50d297da8092b259384aa19863ac89037e"
+    },
+    "unit_5x3": {
+      "prog_0.hex": "c2b67b044726395116d9a380f21f95c605ffcddaebee634a3da160af70d941ee",
+      "dram_0.bin": "6890e438fb734772bcca53ad5e88c4ce947766eb6fc4599860e70f1dd3148034"
+    },
+    "scaled_65x8": {
+      "prog_0.hex": "008644b8b3ea8bc18a74bd411ad197619e270a2ce7b8b776dfc1425d54d8e38f",
+      "dram_0.bin": "f904f61f52f86a4cee872108325187d49ef55caeaee245825f37028737f41d25"
+    },
+    "acc_ascale_rmax": {
+      "prog_0.hex": "06aacba445e406cb907b016b76369adfe8cc0e0d3270095c33acd208b0f95976",
+      "dram_0.bin": "a8204ba7e53ffdc006c9921f2977be921ba8c62b27238cd71d766105d1af8119"
+    },
+    "fp4_pair": {
+      "prog_0.hex": "1ec947600dde7e4a6e29e71622d291577f4be0df60b2c65657e4f8b52d9b0284",
+      "dram_0.bin": "e38929ed1bfdec1c4bd55539a15eedeb7ce064c6f3ef3fa21f612785ec61ee19"
+    },
+    "unit_64x1": {
+      "prog_0.hex": "7698e0c1de97d857d15678250b817bdbcb1350292e6fd51f3f4ef4588f3d4a14",
+      "dram_0.bin": "b0931343af6f468af010d652f77ddc0b7980dd607dd2fd477b977b373a75d578"
+    },
+    "qst_stride_1": {
+      "prog_0.hex": "bf7fc05289d74a888e90bf6148c998f2d3b426ec44c494b570f19a792315aad1",
+      "dram_0.bin": "6650d60b06755b181424de61afd749b279925e2d663fe66bd5d152e284dba1f4"
+    },
+    "qst_stride_4": {
+      "prog_0.hex": "d1367d5595015793e2ca4c33702b65045f379d5eee3781d19db372f65f7d380b",
+      "dram_0.bin": "d9c3915f1f5a4067c0b03e8c0a63c411b61f9c5a584fa2a633e57b1c4db22038"
+    },
+    "qst_stride_17": {
+      "prog_0.hex": "5a7f669c61fefbd548f7a76afa2c7c7810d41b2d98f1dae399a640552d9594c2",
+      "dram_0.bin": "941b310ecce244d542df42c3b81535a5b9ba2d38b37c179a48b12cf60c9c75a6"
+    },
+    "pipeline_independent": {
+      "prog_0.hex": "c5787ec3076d0f51374f1196d5d2e137c30cdfa3e1d643e7ca52ce1296cccce3",
+      "dram_0.bin": "c31e77e543518fb613e5f17813c0098b700b3a58d4f73b8aff24aececedddb5e"
+    },
+    "pipeline_waw": {
+      "prog_0.hex": "5ba7497d1ad569fd673d6a01a765cee95bcee27ff0486c7dc458db650e194c78",
+      "dram_0.bin": "e1119e7fc67336b1788cdfd8a4e06b0fcc943df9cbe95f54e6e3fe098884663f"
+    }
+  }
+}

@@ -8,7 +8,7 @@ from bisect import bisect_left
 from math import ceil, gcd
 from lpnlang_mlir import InputArray
 
-from .model import OpenTPU, DRAM, bank_write_cycles, vector_rank, VECTOR_DRAIN_RANK
+from .model import OpenTPU, DRAM, bank_write_cycles, matrix_batch_rows, vector_rank, VECTOR_DRAIN_RANK
 from .components import CommandInterface, CommandTiming, ExecutionUnit, MatrixEngine
 
 
@@ -177,9 +177,9 @@ class CompactOpenTPU(OpenTPU):
         chunks = kb if wf==I.W8 else ceil(kb/2)
         if chunks>t.fifo_chunks:
           raise ValueError("one matrix row must fit the prefetch FIFO")
-        batch = min(t.batch_rows,max(1,n//64),max(1,t.fifo_chunks//(2*chunks)))
+        batch = matrix_batch_rows(n,chunks,t)
         scaled = int(not bool(ins.flags&I.F_UNIT))
-        drain = ceil(m/min(t.epilogue_lanes,cfg.LANES//gcd(w[5]&65535,cfg.LANES)))
+        drain = ceil(m/min(t.epilogue_lanes,cfg.MCOLS,cfg.LANES//gcd(w[5]&65535,cfg.LANES)))
         row_service = max((chunks if pair else kb)*ceil(m/cfg.MCOLS),drain)
         tail = min(cfg.D//8,t.chain_length)+cfg.MCOLS+5+9+(6 if ins.flags&I.F_ACC else 0)+drain
         self.matrix_batch_sizes.append(batch)

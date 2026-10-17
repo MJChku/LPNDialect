@@ -27,9 +27,10 @@ The implementation adds the following hardware (primitive numerical validation p
   logical memory interface, not an implemented HBM burst/coalescing controller.
 
 The current configuration uses `MXU_ROWS=32`, `LANES=64`, `VPU_LANES=64`,
-`QST_LANES=64`, `MEM_BYTES=2816`. Two-command parallel-MXU prefetch is still
-missing. This is not yet an equivalent implementation of all earlier LPN
-assumptions; in particular, wide ordered sums need feedback stalls. The multi-link behavioral DRAM retains actual data and fixed
+`QST_LANES=64`, `MEM_BYTES=2816`. Two-command parallel-MXU prefetch is implemented:
+per-core completion epochs prevent a leading engine's younger drain from
+passing the logical head, including its final RMAX reduction. Wide ordered sums
+retain the real four-stage adder feedback limit. The multi-link behavioral DRAM retains actual data and fixed
 read latency. It has no HBM channel/bank controller or board integration.
 The independent 64-lane VPU gate has passed bit-exact full scratchpad comparison
 for ADD, MUL, EXP2, RECIP, RSQRT, RSUM, RSSQ, RDOT, RMAX and ARGMAX with
@@ -64,7 +65,7 @@ It uses SmolLM2-135M real weights, an exactly 128-token story prompt, capacity
 Upstream `Engine.generate()` owns batching, autoregressive decode and EOS.
 A shorter EOS-terminated run must not be labeled a completed 32-output case.
 
-The active corrected implementation on the server is `~/FeSens-openTPU-arch-wide`;
+The first validated bring-up on the server is `~/FeSens-openTPU-arch-wide`;
 `matrix-wide-fixed.log` and `matrix-wide-fixed/source-identity.json` identify its
 current full gates. Verify the owning PID in that identity and its descendants.
 The older `matrix-gates` and `matrix-wide-gates` jobs were deliberately stopped
@@ -131,3 +132,41 @@ PYTHONPATH=. python -m examples.opentpu.rtl_evolution.replay_baseline_timing \
 This snapshots completed records, verifies each program hash and resolves only
 static dense control. It retains the old predictions alongside corrected ones.
 It rejects data-dependent control and does not establish new numerical evidence.
+
+The queued implementation is `~/FeSens-openTPU-arch-pipeline` on the server.
+All eleven numerical gates passed, including six-command sequences with uneven
+engine groups, epoch wraparound, nonzero ACC/ASCALE data, RMAX and overlapping
+output addresses. Trace checks prove all five younger admissions overlap the
+preceding command's completion. Gate identities include RTL, test, binary and
+input hashes. These gates use an unoptimized host C++ build for faster compilation;
+long inference validation uses `-O3`.
+
+The earlier one-command bring-up has completed two real full-model prefill
+chunks. The first dropped from 3,780,756 to 702,004 hardware cycles (5.39x),
+with identical inputs and bit-exact full memory. This is an eight-row chunk of
+the requested 128/32 workload, not the completed end-to-end result. Its raw
+record and source identity are retained separately from the queued implementation.
+
+`parallel_inference` validates independent HALT-separated kernels in separate
+host processes. The unmodified upstream Engine prepares them in order through
+independent ISA execution. Every complete input and golden device state is
+snapshotted before submission. Workers check the original baseline's input
+hashes, execute actual RTL, compare every DRAM byte/scratchpad word, and run LPN.
+Only after every kernel passes and generated IDs match the completed baseline
+can the report claim success. Hardware cycles are summed; validation parallelism
+does not overlap kernels in the modeled accelerator.
+
+```sh
+PYTHONPATH=. python -m examples.opentpu.rtl_evolution.parallel_inference \
+  --opentpu-root ../FeSens-openTPU-arch-pipeline \
+  --baseline "$HOME/lpn-runs/rtl-architecture-128x32/baseline-smol128x32-continued/report.json" \
+  --baseline-job "$HOME/lpn-runs/rtl-architecture-128x32/baseline-continued-job.json" \
+  --output "$HOME/lpn-runs/rtl-architecture-128x32/evolved-pipeline-parallel" \
+  --compiler ../LPNDialect-heartbeat/build/tools/lpn-compile/lpn-compile \
+  --workers 16
+```
+
+The LPN now groups whole parallel row waves independently of its aggregation
+hint, and models the wide reduction feedback/tree pipeline. It preserves the
+original <=16-lane timing model. The recorded 64-lane isolated operator latencies
+match within one cycle. All 23 LPN integration/regression checks passed.

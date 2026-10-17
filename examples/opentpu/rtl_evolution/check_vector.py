@@ -3,6 +3,7 @@ import argparse
 import json
 from pathlib import Path
 import subprocess
+import re
 import sys
 
 
@@ -49,7 +50,8 @@ def main():
     if len(bad):
         raise RuntimeError(f'wide VPU differs at {bad[:24].tolist()}: actual {got[bad[:8]].tolist()}, expected {golden.slices[0].tmem[bad[:8]].tolist()}')
     report=dict(status='complete',lanes=64,all_tmem_bit_exact=True,
-                functions=[I.VFUNCS[ins.w[5]>>16&255] for ins in programs],elements_per_row=193)
+                functions=[I.VFUNCS[ins.w[5]>>16&255] for ins in programs],elements_per_row=193,
+                command_cycles=[int(v) for _,v in re.findall(r'VCMD index=(\d+) cycles=(\d+)',run.stdout)])
     (a.output/'report.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report),flush=True)
 

@@ -85,6 +85,51 @@ class OpenTPUTest(unittest.TestCase):
             else:
               self.assertIn('place s0_done_0: 1 token(s)',native)
 
+  def test_parallel_rows_do_not_depend_on_aggregation_hint(self):
+    from dataclasses import replace
+    from examples.opentpu.shape_workload import resolve_static
+    from opentpu import Config,isa as I
+    cfg=Config(D=128,MCOLS=4,ACT_ROWS=8,ACT_BLOCKS=64)
+    program=[I.mm(0,0,0,64,16,2048,64,8,0,4,unit=True),I.halt()]
+    baseline=resolve_static(cfg,[program])
+    serial=CompactOpenTPU(baseline,Timing()).net.python_simulator().run(max_time=100000)
+    parallel=replace(baseline,config=replace(cfg,MCOLS=1,LANES=64))
+    results=[]
+    with tempfile.TemporaryDirectory() as directory:
+      for batch in (1,32,64):
+        timing=Timing(batch_rows=batch,matrix_row_lanes=32,fifo_chunks=4096,
+            dram_port_bytes=2048,dram_bytes_per_cycle=2048)
+        for cls in (OpenTPU,CompactOpenTPU):
+          model=cls(parallel,timing)
+          sim=model.net.python_simulator()
+          cycles=sim.run(max_time=100000)
+          self.assertEqual(sim.place_dicts('program_completed'),[{}])
+          results.append(cycles)
+        if self.tool:
+          from examples.opentpu.native_timing import ReusableTiming
+          out=Path(directory)
+          prepared=ReusableTiming(self.tool,out/'cache',capacity=128).prepare(
+              parallel,timing,out/'timing.tables')
+          self.assertEqual(prepared.run()[0],cycles)
+    self.assertEqual(len(set(results)),1)
+    self.assertLess(results[0],serial/4)
+
+  def test_wide_vector_timing_matches_rtl_latency_fixture(self):
+    from examples.opentpu.shape_workload import resolve_static
+    from opentpu import Config,isa as I
+    fixture=Path(__file__).resolve().parents[1]/'examples/opentpu/rtl_evolution/validation/vector64-latency.json'
+    report=json.loads(fixture.read_text())
+    functions={name:code for code,name in I.VFUNCS.items()}
+    program=[I.vop(functions[name],4096+256*i,1024 if name=='rsqrt' else 0,
+                2048,1,193,256,256,256) for i,name in enumerate(report['functions'])]
+    cfg=Config(D=64,LANES=64,TMEM_WORDS=8192,DRAM_BYTES=65536)
+    workload=resolve_static(cfg,[program+[I.halt()]])
+    model=CompactOpenTPU(workload,Timing(dram_bytes_per_cycle=64))
+    for ins,actual in zip(program,report['command_cycles']):
+      with self.subTest(function=I.VFUNCS[ins.w[5]>>16&255]):
+        prediction,_,_=model._simple_timing(ins,model.components[0]['memory'],I)
+        self.assertLessEqual(abs(prediction-actual),1)
+
   def test_fpga_unscaled_prefetch_does_not_overtake_scale_fetch(self):
     if not self.tool:
       self.skipTest('native compiler not supplied')

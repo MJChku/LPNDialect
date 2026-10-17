@@ -33,6 +33,7 @@ module tb_vpu_wide;
     if (cycles>500000) $fatal(1,"wide VPU gate timeout");
   end
   initial begin
+    longint command_start;
     if (!$value$plusargs("dir=%s",dir)) $fatal(1,"missing dir");
     if (!$value$plusargs("ncmd=%d",ncmd)) $fatal(1,"missing command count");
     $readmemh({dir,"/tmem.hex"},mem);
@@ -41,9 +42,11 @@ module tb_vpu_wide;
     rst=0;
     for (int c=0;c<ncmd;c++) begin
       while (!ready) @(negedge clk);
+      command_start=cycles;
       cmd=cmd_t'(commands[c]);start=1;
       @(negedge clk);start=0;
       while (!done) @(negedge clk);
+      $display("VCMD index=%0d cycles=%0d",c,cycles-command_start);
       @(negedge clk);
     end
     repeat(4) @(negedge clk);

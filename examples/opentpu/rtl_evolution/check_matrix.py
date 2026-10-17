@@ -64,7 +64,7 @@ def main():
             image[32768:32768+old.nbytes]=old.view(np.uint8).ravel()
             alpha=rng.normal(size=m).astype(np.float32)
             image[49152:49152+alpha.nbytes]=alpha.view(np.uint8)
-            prog += [I.ld(out,32768,old.size),I.ld(8192,49152,m)]
+            prog += [I.ld(32768,out,old.size),I.ld(49152,8192,m)]
         prog += [I.mm(wbase,sbase,out,n,kb,pitch,ors,m,0,srs,
                      unit=c.get('unit',False),acc=c.get('acc',False),
                      ascale=8192 if c.get('ascale') else None,
