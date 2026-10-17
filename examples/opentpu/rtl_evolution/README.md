@@ -61,3 +61,28 @@ It uses SmolLM2-135M real weights, an exactly 128-token story prompt, capacity
 256, 32 requested output tokens, and a frozen LPN project at `9672222`.
 Upstream `Engine.generate()` owns batching, autoregressive decode and EOS.
 A shorter EOS-terminated run must not be labeled a completed 32-output case.
+
+The active corrected implementation on the server is `~/FeSens-openTPU-arch-wide`;
+`matrix-wide-fixed.log` and `matrix-wide-fixed/source-identity.json` identify its
+current full gates. Verify the owning PID in that identity and its descendants.
+The older `matrix-gates` and `matrix-wide-gates` jobs were deliberately stopped
+when the ASCALE grant deadlock was diagnosed; their stopped manifests explain
+why. Their directories are diagnostic evidence, not completed validation.
+
+Once the baseline and full gates pass, compare the complete checkpoint run:
+
+```sh
+PYTHONPATH=. python -m examples.opentpu.rtl_evolution.compare_inference \
+  --opentpu-root ../FeSens-openTPU-arch-wide \
+  --baseline "$HOME/lpn-runs/rtl-architecture-128x32/baseline-smol128x32/report.json" \
+  --output "$HOME/lpn-runs/rtl-architecture-128x32/evolved-smol128x32" \
+  --compiler ../LPNDialect-heartbeat/build/tools/lpn-compile/lpn-compile
+```
+
+This checks every program/DRAM input hash against the original run, every final
+kernel memory against independent ISA execution, and generated IDs and kernel
+count against the original report. It also records evolved LPN predictions and
+their errors rather than treating the old architecture forecast as validated.
+Freeze both project and RTL sources for the long comparison. The final report
+must show all 128 prompt tokens and all 32 actual output tokens before this
+experiment can establish the requested end-to-end architecture speedup.

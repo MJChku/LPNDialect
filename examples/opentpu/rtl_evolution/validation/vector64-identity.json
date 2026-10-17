@@ -1,0 +1,35 @@
+{
+  "executable": "/home/ubuntu/FeSens-openTPU-arch-wide/build/verilator/tb_vpu_wide_e72866e3a0cc/Vtb_vpu_wide",
+  "executable_sha256": "5ee855e028d9b8892abdc91b87f09bd0e29ba0fd3ad3eb54c74fe1736d975c74",
+  "verilator": "Verilator v5.052 rev v5.052",
+  "flags": [
+    "--binary",
+    "-j",
+    "12",
+    "-Wno-fatal",
+    "-Wno-WIDTHEXPAND",
+    "-Wno-WIDTHTRUNC",
+    "-Wno-UNUSEDSIGNAL",
+    "-Wno-UNUSEDPARAM",
+    "-O3",
+    "--x-assign",
+    "0",
+    "--x-initial",
+    "0"
+  ],
+  "source_sha256": {
+    "/home/ubuntu/FeSens-openTPU-arch-wide/rtl/vpu/otpu_fp.sv": "16fc71077a7c7f9c7ef98ee8791c27eee340d6704cbdb0f1852104c64b2bbd48",
+    "/home/ubuntu/FeSens-openTPU-arch-wide/rtl/vpu/otpu_fpipe.sv": "50d13a22ce78a2e02f9e92a301e6626696dd8adbb88362960dd1385e34634cee",
+    "/home/ubuntu/FeSens-openTPU-arch-wide/rtl/top/otpu_pkg.sv": "ca41c32141fdf224d24481842b182063ce5692a976176eca82c4c78d4d7ad3c6",
+    "/home/ubuntu/FeSens-openTPU-arch-wide/rtl/vpu/otpu_vtree.sv": "9b32ae3a18d7fb4fa60003f9d71bb01c10946e5fdfbc241b24a86759cb7afd30",
+    "/home/ubuntu/FeSens-openTPU-arch-wide/rtl/vpu/otpu_se_comp.sv": "6928f8dfcbcedf4870769c7c2732a965672def10a0442dcf486b83d04a2e1bd7",
+    "/home/ubuntu/FeSens-openTPU-arch-wide/rtl/vpu/otpu_se_tail.sv": "e5ba0921b440a500afe20902d7a1cfd47f254750a31a1e374b2cee9b1e4ed094",
+    "/home/ubuntu/FeSens-openTPU-arch-wide/rtl/vpu/otpu_vpu.sv": "68439dea1eb4e70868729e5c9d636415126671683ec695298e27eeeee1eb2432",
+    "/home/ubuntu/LPNDialect-fpga-dse/examples/opentpu/rtl_evolution/tb_vpu_wide.sv": "facd742662079cc4dbb19c8e292b91cf58ad715fa44e6397b37ee555282d5f1d"
+  },
+  "input_sha256": {
+    "tmem.hex": "e7dddd8ae213068cc4a8e51c48422191912dcedce8a1ce4037baf93e853c1d2c",
+    "commands.hex": "23036d9905bd203cc0713cd1b8f13234cde32dc6998dfe892a13bc6678007fa4"
+  },
+  "output_sha256": "38fb5093be5a298202674e98a5fa26c7f28518a7f0034c81cb461f4c53260aa8"
+}
