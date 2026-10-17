@@ -1,194 +1,179 @@
-# RTL architecture validation (in progress)
+# RTL architecture validation
 
-The prior 8.23× LPN result used historical token-at-a-time prefill. It is not
-an established normal-inference speedup. This experiment implements hardware
-and measures original/evolved RTL on the unmodified upstream inference path.
+The implemented RTL runs the complete **SmolLM2-135M, 128-input/32-output**
+workload in **15,435,996 cycles**, versus **132,828,263 cycles** for the original
+RTL: **8.6051x fewer hardware cycles at a common clock**. Both execute the same
+compiled programs and numerical DRAM inputs. Every kernel's complete DRAM and
+scratchpad matches the independent ISA model, and all 32 generated token IDs
+match. Upstream `Engine.generate()` owns batching, tiling, decode and EOS.
+
+| Phase | Original RTL cycles | Evolved RTL cycles | Cycle speedup |
+| --- | ---: | ---: | ---: |
+| Prefill: 128 tokens, 16 upstream batches | 62,013,323 | 10,862,492 | 5.709x |
+| Decode: 32 tokens | 70,814,940 | 4,573,504 | 15.484x |
+| Complete inference: 48 kernels | 132,828,263 | 15,435,996 | **8.605x** |
+
+The earlier 8.23x exploration used historical token-at-a-time prompt processing;
+it was not a normal-inference result. The table above is a new measurement of
+actual RTL using standard upstream batched prefill and autoregressive decode.
+
+Corrected native LPN predictions were replayed from all 48 identical programs,
+without rerunning tensor arithmetic or deriving timing from an RTL oracle:
+
+| LPN target | Predicted cycles | Total cycle error | Worst kernel error |
+| --- | ---: | ---: | ---: |
+| Original RTL | 133,654,573 | +0.622% | 2.013% |
+| Evolved RTL | 15,712,791 | +1.793% | 3.462% |
+
+All kernels completed with zero rollbacks. The event-driven scheduler, guard
+synthesis and heartbeat cache are unchanged. The 24 integration tests passed,
+including Python/native/expanded-model agreement, dependency hazards, recorded
+RTL fixtures, actual FIFO capacity and independent DRAM work during quantization.
+
+These are hardware cycle reductions. They do not establish FPGA Fmax or resource
+fit. Memory remains a numerical behavioral model with eight-cycle read latency
+and shared byte-budget arbitration; the evolved limit is 2,816 link bytes per
+cycle. A vendor HBM controller, channel/bank timing and board integration are
+not implemented. Host workers validate separate HALT-drained kernels in parallel;
+the modeled accelerator latency is the sum of all 48 kernels.
+
+## Implemented hardware
 
 `parallel-rtl.patch` applies to FeSens revision
-`f237dab2f196855a59a083b1454786df8f01291f`. It includes the passive wall timer
-and large behavioral-memory representation used by the original validation.
-Apply it in a separate clean worktree; preserve the original baseline checkout.
+`f237dab2f196855a59a083b1454786df8f01291f`. Apply it in a clean separate worktree;
+preserve the original baseline checkout. A clean application was checked against
+all 25 simulated source files, with exact SHA-256 matches. The patch includes the
+passive wall timer and large behavioral-memory representation used for validation.
 
-The implementation adds the following hardware (primitive numerical validation passed; checkpoint validation is in progress):
+* 32 independent single-column systolic engines, with original integer accumulation
+  and FP epilogues. Hardware stripes each decoded MM across weight rows; software
+  and compiled instruction streams are unchanged. Each core has weight/scale
+  FIFOs and an activation RAM copy.
+* Two-command matrix prefetch. Per-core completion epochs and a logical head
+  barrier preserve output ordering and the final reduction of matrix maxima.
+* Shared scratchpad-bank arbitration and shared memory byte-budget arbitration
+  for weights, scales, DMA and quantizer stores.
+* A 64-lane VPU and reduction tree. Ordered sums preserve the ISA's 64 partials
+  and the real four-stage adder feedback limit.
+* 64 parallel QST byte converters and byte-enabled word links for contiguous
+  and strided stores. Each active lane charges four link bytes. This is a
+  logical memory interface, not an HBM burst/coalescing controller.
 
-* 32 independent single-column systolic engines, with integer accumulation and
-  the original FP epilogue. A decoded MM is striped across weight rows inside
-  hardware. Each engine has its own weight/scale FIFO and activation RAM copy.
-* Shared scratchpad-bank arbitration and shared memory byte-budget arbitration,
-  including weight data, scale lines, DMA and scalar quantizer writes.
-* A completion barrier and reduction of per-engine matrix maxima. One logical
-  instruction completes only when every engine and final maximum write finishes.
-* Narrow-column and replay-row indexing in the fused epilogue.
-* A 64-lane VPU and reduction tree. Ordered sums retain the ISA's 64 partials;
-  their issue rate respects the existing four-stage FP adder's feedback latency.
-* 64 parallel QST byte converters and byte-enabled word links, supporting
-  contiguous and strided stores. The shared memory budget charges four link
-  bytes per active store lane (256 bytes for 64 lanes). This is an abstract
-  logical memory interface, not an implemented HBM burst/coalescing controller.
+Parameters are `MXU_ROWS=32`, `LANES=64`, `VPU_LANES=64`, `QST_LANES=64`,
+`MEM_BYTES=2816`. The measured model uses hardware D=64 for its 64-element
+attention heads. This result does not validate a different model or FPGA mapping.
 
-The current configuration uses `MXU_ROWS=32`, `LANES=64`, `VPU_LANES=64`,
-`QST_LANES=64`, `MEM_BYTES=2816`. Two-command parallel-MXU prefetch is implemented:
-per-core completion epochs prevent a leading engine's younger drain from
-passing the logical head, including its final RMAX reduction. Wide ordered sums
-retain the real four-stage adder feedback limit. The multi-link behavioral DRAM retains actual data and fixed
-read latency. It has no HBM channel/bank controller or board integration.
-The independent 64-lane VPU gate has passed bit-exact full scratchpad comparison
-for ADD, MUL, EXP2, RECIP, RSQRT, RSUM, RSSQ, RDOT, RMAX and ARGMAX with
-193-element rows (including feedback and a partial final chunk). All eleven
-matrix/store gates passed, including two queued-command sequences,
-ACC/ASCALE/RMAX, FP4 PAIR, partial engine groups, activation replay and QST
-strides 1, 4 and 17. Full checkpoint validation is still required. The fused-epilogue gate found
-that duplicate ASCALE reads overflowed the slice's per-bank lane counters even
-when they named the same word. The wrapper now admits at most one read per
-bank; the completed eleven-gate run includes this correction and uses nonzero
-accumulator/activation-scale fixtures.
-Cycle speedup at a common clock does not prove FPGA resource fit or Fmax.
+The eleven matrix/store numerical gates cover partial engine groups, activation
+replay, nonzero ACC/ASCALE inputs, RMAX, FP4 PAIR, QST strides 1/4/17 and queued
+sequences with overlapping outputs and epoch wraparound. Traces show younger
+command admission before older completion. The independent VPU gate checks ten
+operators, including reductions with 193-element rows, against bit-exact full
+scratchpad state. Gate builds use unoptimized host C++; checkpoint simulation
+uses `-O3`. Neither flag changes hardware cycle counts.
 
-Run numerical gates with Verilator 5.052 and the NumPy environment:
+## Reproduce
+
+Use Verilator 5.052 and a Python environment with NumPy, Torch, tokenizers and
+safetensors. Set `VERILATOR_ROOT` and `PATH` consistently when using a private
+Verilator installation. Run from the LPN project root with `PYTHONPATH=.` and
+`OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1`. Compile LPN as documented in the
+project README. Keep both project and RTL sources frozen during measurements.
+
+Prepare two clean checkouts at the pinned revision. The original uses the
+observer and large-memory patches; the evolved patch already includes both:
 
 ```sh
-python examples/opentpu/rtl_evolution/check_matrix.py \
-  --opentpu-root ../FeSens-openTPU-arch-rtl --output /tmp/parallel-matrix
+git -C ../FeSens-openTPU-original apply "$PWD/examples/opentpu/verilator-observer.patch"
+git -C ../FeSens-openTPU-original apply "$PWD/examples/opentpu/verilator-large-memory.patch"
+git -C ../FeSens-openTPU-arch-pipeline apply "$PWD/examples/opentpu/rtl_evolution/parallel-rtl.patch"
 ```
 
-Every gate compares the entire DRAM and TMEM against the independent upstream
-ISA model. Gates include incomplete engine groups, replayed activation rows,
-strided outputs, scales, ACC/ASCALE/RMAX, and packed weights. The requested
-128-prompt/32-output real-checkpoint experiment is still required before
-reporting a verified end-to-end architecture speedup.
-
-The original-RTL long run is under
-`~/lpn-runs/rtl-architecture-128x32` on `icdslab2.epfl.ch`. Its
-`baseline-continued-job.json` identifies the current controller and worker;
-inspect their live processes and `baseline-smol128x32-continued/progress.json`
-before starting another job.
-It uses SmolLM2-135M real weights, an exactly 128-token story prompt, capacity
-256, 32 requested output tokens, and a frozen LPN project at `95fd1e6`.
-Upstream `Engine.generate()` owns batching, autoregressive decode and EOS.
-A shorter EOS-terminated run must not be labeled a completed 32-output case.
-
-The first validated bring-up on the server is `~/FeSens-openTPU-arch-wide`;
-`matrix-wide-fixed.log` and `matrix-wide-fixed/source-identity.json` identify its
-current full gates. Verify the owning PID in that identity and its descendants.
-The older `matrix-gates` and `matrix-wide-gates` jobs were deliberately stopped
-when the ASCALE grant deadlock was diagnosed; their stopped manifests explain
-why. Their directories are diagnostic evidence, not completed validation.
-
-Once the baseline and full gates pass, compare the complete checkpoint run:
+First run the original RTL. An empty/nonexistent `--reuse` directory means no
+observations are reused; existing observations require identical inputs and
+simulator hashes and retain their provenance.
 
 ```sh
-PYTHONPATH=. python -m examples.opentpu.rtl_evolution.compare_inference \
-  --opentpu-root ../FeSens-openTPU-arch-wide \
-  --baseline "$HOME/lpn-runs/rtl-architecture-128x32/baseline-smol128x32-continued/report.json" \
-  --output "$HOME/lpn-runs/rtl-architecture-128x32/evolved-smol128x32" \
-  --compiler ../LPNDialect-heartbeat/build/tools/lpn-compile/lpn-compile
-```
+python -m examples.opentpu.rtl_evolution.baseline_inference \
+  --opentpu-root ../FeSens-openTPU-original \
+  --model-dir /path/to/SmolLM2-135M \
+  --prompt-json examples/opentpu/rtl_evolution/validation/prompt128.json \
+  --reuse /tmp/no-retained-observations --output /tmp/original128x32 \
+  --compiler build/tools/lpn-compile/lpn-compile
 
-This checks every program/DRAM input hash against the original run, every final
-kernel memory against independent ISA execution, and generated IDs and kernel
-count against the original report. It also records evolved LPN predictions and
-their errors rather than treating the old architecture forecast as validated.
-Freeze both project and RTL sources for the long comparison. The final report
-must show all 128 prompt tokens and all 32 actual output tokens before this
-experiment can establish the requested end-to-end architecture speedup.
-
-The first strict original-RTL run stopped at prompt position 32: numerical
-memory checks passed, but the LPN prediction was 4,007,659 cycles versus
-3,798,036 measured RTL cycles (+5.52%). This misses the 5% timing target.
-`baseline-continued-job.json` owns the successor, using frozen project
-`95fd1e6` in `~/LPNDialect-rtl-arch-validation`. Its progress is under
-`baseline-smol128x32-continued`. The successor reconstructs upstream state by
-ISA replay, rechecks the program/DRAM hashes and simulator binary before
-reusing each of the first five verified RTL observations, and freshly compares
-the last retained complete RTL memory dump. Later kernels execute RTL normally.
-It records predictor misses explicitly while collecting actual hardware-cycle
-measurements; this policy does not establish the 95% timing-accuracy target.
-The normal `standard_inference` validation still fails on errors over 5%.
-The matrix FIFO capacity regression is now corrected: each request reserves its
-actual chunk count in a free-capacity counter rather than a worst-case packet
-slot. Ten completed prefill chunks (positions 0 through 72) have been replayed
-from the identical programs against measured RTL cycles. Worst error is 2.02%,
-with zero rollbacks. The former 5.52% miss is now 1.70%. These are completed
-prefix observations; full 128/32 timing accuracy is still under validation.
-The scheduler, guard synthesis and heartbeat cache are unchanged.
-
-`compare_inference --baseline-job BASELINE_JOB.json` can consume each completed
-original-RTL observation as the original job progresses. It verifies the live
-worker's PID and command while waiting, then checks the same input hashes and
-full numerical memories for the evolved RTL. It still requires the final
-completed original 128/32 report and matching generated IDs before success.
-This overlaps the two simulations without changing inference scheduling.
-
-To replay timing predictions for completed original-RTL kernels without rerunning
-numerics or RTL:
-
-```sh
-PYTHONPATH=. python -m examples.opentpu.rtl_evolution.replay_baseline_timing \
-  --opentpu-root ../FeSens-openTPU-qwen \
-  --case "$HOME/lpn-runs/rtl-architecture-128x32/baseline-smol128x32-continued" \
-  --output /tmp/corrected-timing-replay \
-  --compiler ../LPNDialect-heartbeat/build/tools/lpn-compile/lpn-compile \
-  --workers 4
-```
-
-This snapshots completed records, verifies each program hash and resolves only
-static dense control. It retains the old predictions alongside corrected ones.
-It rejects data-dependent control and does not establish new numerical evidence.
-
-The queued implementation is `~/FeSens-openTPU-arch-pipeline` on the server.
-All eleven numerical gates passed, including six-command sequences with uneven
-engine groups, epoch wraparound, nonzero ACC/ASCALE data, RMAX and overlapping
-output addresses. Trace checks prove all five younger admissions overlap the
-preceding command's completion. Gate identities include RTL, test, binary and
-input hashes. These gates use an unoptimized host C++ build for faster compilation;
-long inference validation uses `-O3`.
-
-The earlier one-command bring-up has completed two real full-model prefill
-chunks. The first dropped from 3,780,756 to 702,004 hardware cycles (5.39x),
-with identical inputs and bit-exact full memory. This is an eight-row chunk of
-the requested 128/32 workload, not the completed end-to-end result. Its raw
-record and source identity are retained separately from the queued implementation.
-
-`parallel_inference` validates independent HALT-separated kernels in separate
-host processes. The unmodified upstream Engine prepares them in order through
-independent ISA execution. Every complete input and golden device state is
-snapshotted before submission. Workers check the original baseline's input
-hashes, execute actual RTL, compare every DRAM byte/scratchpad word, and run LPN.
-Only after every kernel passes and generated IDs match the completed baseline
-can the report claim success. Hardware cycles are summed; validation parallelism
-does not overlap kernels in the modeled accelerator.
-
-```sh
-PYTHONPATH=. python -m examples.opentpu.rtl_evolution.parallel_inference \
+python -m examples.opentpu.rtl_evolution.parallel_inference \
   --opentpu-root ../FeSens-openTPU-arch-pipeline \
-  --baseline "$HOME/lpn-runs/rtl-architecture-128x32/baseline-smol128x32-continued/report.json" \
-  --baseline-job "$HOME/lpn-runs/rtl-architecture-128x32/baseline-continued-job.json" \
-  --output "$HOME/lpn-runs/rtl-architecture-128x32/evolved-pipeline-parallel" \
-  --compiler ../LPNDialect-heartbeat/build/tools/lpn-compile/lpn-compile \
-  --workers 16
+  --baseline /tmp/original128x32/report.json \
+  --output /tmp/evolved128x32 --workers 16 \
+  --compiler build/tools/lpn-compile/lpn-compile
 ```
 
-The LPN now groups whole parallel row waves independently of its aggregation
-hint, and models the wide reduction feedback/tree pipeline. It preserves the
-original <=16-lane timing model. The recorded 64-lane isolated operator latencies
-match within one cycle. All 23 LPN integration/regression checks passed.
+`parallel_inference` prepares the full workload in upstream inference order using
+independent ISA execution. Workers compare every canonical program/DRAM input hash
+with original RTL, execute the simulator, compare every output byte and scratchpad
+word, and run native LPN. Its simulator configuration is idempotent across reused
+workers, so an equivalent flag list does not trigger another simulator build.
 
-After both full experiments finish, replay all original kernels with the
-corrected timing model. Then independently audit the completed comparison:
+Optional `--reuse-rtl PREVIOUS_CASE` reuses only completed identical-source RTL
+observations after matching configuration, input and binary hashes and comparing
+retained full outputs against fresh ISA execution. It records the source of each
+reused observation. Output directories must be new.
+
+Replay corrected timing and audit the full experiment:
 
 ```sh
+python -m examples.opentpu.rtl_evolution.replay_baseline_timing \
+  --opentpu-root ../FeSens-openTPU-original --case /tmp/original128x32 \
+  --output /tmp/original-timing --workers 4 \
+  --compiler build/tools/lpn-compile/lpn-compile
+
+python -m examples.opentpu.rtl_evolution.replay_baseline_timing \
+  --opentpu-root ../FeSens-openTPU-arch-pipeline --case /tmp/evolved128x32 \
+  --parallel-rtl --output /tmp/evolved-timing --workers 4 \
+  --compiler build/tools/lpn-compile/lpn-compile
+
 python -m examples.opentpu.rtl_evolution.audit_completed \
-  --baseline "$HOME/lpn-runs/rtl-architecture-128x32/baseline-smol128x32-continued" \
-  --evolved "$HOME/lpn-runs/rtl-architecture-128x32/evolved-pipeline-parallel" \
-  --replay /tmp/corrected-timing-replay \
-  --baseline-root ../FeSens-openTPU-qwen \
+  --baseline /tmp/original128x32 --evolved /tmp/evolved128x32 \
+  --replay /tmp/original-timing --evolved-replay /tmp/evolved-timing \
+  --baseline-root ../FeSens-openTPU-original \
   --evolved-root ../FeSens-openTPU-arch-pipeline \
   --output /tmp/rtl-architecture-audit.json
 ```
 
-The audit requires all 48 verified kernels, checks the actual token IDs and
-schedule, rehashes every evolved input and simulator/source, freshly compares
-every evolved DRAM/TMEM dump, checks raw RTL and native LPN completion logs, and
-recomputes total and per-phase cycle speedups and prediction errors. It retains
-the original per-kernel numerical evidence, including the five explicitly
-reused observations. It refuses incomplete or mismatched reports.
+The audit requires all 48 verified kernels and the actual 128/32 token IDs and
+schedule. It freshly compares all evolved raw DRAM/TMEM dumps, rehashes sources,
+simulators and inputs, checks raw RTL/native completion logs, and recomputes
+phase and total cycle counts. Corrected predictions remain separate from the
+original recorded predictions; errors are not silently overwritten.
+
+## Retained evidence
+
+[The complete audit](validation/normal128x32-audit.json),
+[original RTL report](validation/normal128x32-baseline.json),
+[evolved RTL report](validation/normal128x32-evolved.json),
+[corrected original timing](validation/normal128x32-original-timing.json),
+[corrected evolved timing](validation/normal128x32-evolved-timing.json),
+[clean patch proof](validation/normal128x32-patch-proof.json),
+[original patch proof](validation/normal128x32-original-patch-proof.json),
+[upstream/checkpoint proof](validation/normal128x32-upstream-proof.json),
+[final retained-worker check](validation/normal128x32-reuse-proof.json), and
+[integration log](validation/normal128x32-tests.log) retain the measurements and
+source/input/binary hashes. Numerical weights and large memory dumps stay on
+the server rather than in Git.
+
+Raw data on `icdslab2.epfl.ch` is under `~/lpn-runs/rtl-architecture-128x32`:
+`baseline-smol128x32-continued`, `evolved-pipeline-final`,
+`corrected-baseline-full`, `corrected-evolved-full`, and
+`completed-comparison-audit.json`. Both complete inference jobs and the final
+audit are terminal. The original baseline explicitly reused five previously
+verified observations; the evolved successor reused sixteen completed prefill
+observations after fresh input and full numerical rechecks. Superseded jobs and
+all completed evidence are preserved.
+Both RTL checkouts retain all 80 upstream functional/compiler Python files
+unchanged; their hashes and checkpoint file hashes are archived separately.
+
+The long run exposed two model issues. FIFO requests now reserve their actual
+chunk counts rather than a worst-case packet slot. Quantization reserves shared
+DRAM only for stores, allowing unrelated matrix prefetch during its scratchpad
+reads and conversion. Both fixes model hardware resources and preserve the
+original default timing behavior. Early predictor misses remain in the raw
+reports; the two corrected full replays establish the accuracy in the table.

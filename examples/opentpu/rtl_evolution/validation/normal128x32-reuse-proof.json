@@ -1,0 +1,46 @@
+{
+  "status": "complete",
+  "scope": "Recheck the retained real first prefill kernel with the final worker, including input arguments/configuration and full numerical state. No RTL or tensor arithmetic is rerun.",
+  "worker_sha256": "91b87957359e587f15bdeb9607cba69bc6ed11d14a9b0daa3c1012e5a276311d",
+  "result": {
+    "step": 0,
+    "input_sha256": {
+      "prog_0.hex": "715520e9463ef4394a81fd408cc34c0423701c0905593cc90a625fe2c46d9323",
+      "dram_0.bin": "7d8fcc490914493d4c45ed7706b44a49bc5079a32b0cfcd4e3987d0702ba5fcf"
+    },
+    "instructions": [
+      19776
+    ],
+    "rtl_cycles": 664029,
+    "baseline_rtl_cycles": 3780756,
+    "lpn_cycles": 684909.0,
+    "architecture_cycle_speedup": 5.693660969626326,
+    "evolved_lpn_relative_cycle_error": 0.03144440980740293,
+    "lpn_core_seconds": 0.671229321,
+    "rtl_core_seconds": 701.573633054,
+    "rtl_process_seconds": 712.6857135873288,
+    "rtl_build_seconds": 0,
+    "all_dram_and_tmem_bit_exact": true,
+    "identical_input_files": true,
+    "zero_rollbacks": true,
+    "simulator": "/home/ubuntu/FeSens-openTPU-arch-pipeline/build/verilator/tb_top_70b3ed864696/Vtb_top",
+    "baseline_binary_sha256": "7bcc8b6733ebffdd3d9536159ecf5d33679d552306009f42aec7eaac69360a65",
+    "timing": {
+      "dram_latency": 8,
+      "dram_bytes_per_cycle": 2816,
+      "window": 32,
+      "fifo_chunks": 4096,
+      "chain_length": 16,
+      "epilogue_lanes": 1,
+      "quant_buffer_chunks": 1024,
+      "batch_rows": 32,
+      "matrix_engines": 1,
+      "matrix_row_lanes": 32,
+      "dram_port_bytes": 2816,
+      "scale_lanes": 32,
+      "unified_dram": true,
+      "scalar_store_bytes": 256
+    },
+    "rtl_reused_from": "/home/ubuntu/lpn-runs/rtl-architecture-128x32/evolved-pipeline-final/kernels/0000/rtl-result.json"
+  }
+}

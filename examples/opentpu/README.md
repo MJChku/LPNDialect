@@ -1,5 +1,12 @@
 # FeSens/openTPU LPN model
 
+The implemented parallel RTL completes SmolLM2-135M with 128 prompt tokens and
+32 generated tokens in 15,435,996 cycles, versus 132,828,263 for original RTL
+(**8.605x at a common clock**), with identical inputs and bit-exact full device
+memory. Corrected LPN total error is +0.622% / +1.793% for original/evolved RTL.
+See [RTL implementation, reproduction and audited evidence](rtl_evolution/README.md).
+FPGA resource fit, Fmax and a vendor HBM controller are not established.
+
 **Inference workload correction:** earlier `e2e.py`, `replay_e2e.py` and
 weight-free FPGA sequence results used a custom token-by-token prompt loop.
 Their checked numerical/cycle comparisons remain measurements of those streams,

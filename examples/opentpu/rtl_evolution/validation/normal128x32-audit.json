@@ -1,0 +1,532 @@
+{
+  "status": "complete",
+  "scope": "Audit the full original/evolved 128/32 RTL comparison and timing replay.\n\nThis consumes completed experiments. It does not turn preparation records or\nprimitive gates into checkpoint validation evidence.\n",
+  "prompt_tokens": 128,
+  "output_tokens": 32,
+  "numerical_validation": "All evolved raw DRAM/TMEM dumps freshly compared to independent ISA; all original retained per-kernel numerical/input evidence required.",
+  "all_inputs_identical": true,
+  "generated_ids": [
+    3150,
+    30,
+    3768,
+    5738,
+    260,
+    32779,
+    3413,
+    260,
+    22965,
+    563,
+    260,
+    3444,
+    28,
+    5771,
+    6864,
+    28,
+    284,
+    4150,
+    5649,
+    4658,
+    563,
+    260,
+    12487,
+    30,
+    378,
+    6560,
+    29463,
+    13380,
+    253,
+    9675,
+    563,
+    253
+  ],
+  "final_position": 160,
+  "phases": {
+    "prefill": {
+      "baseline_cycles": 62013323,
+      "evolved_cycles": 10862492,
+      "original_lpn_cycles": 62829941.0,
+      "evolved_lpn_cycles": 11217015.0,
+      "recorded_evolved_lpn_cycles": 11751735.0,
+      "kernels": 16,
+      "architecture_cycle_speedup": 5.708940729254392,
+      "original_lpn_relative_error": 0.013168428339181304,
+      "evolved_lpn_relative_error": 0.0326373543013887
+    },
+    "decode": {
+      "baseline_cycles": 70814940,
+      "evolved_cycles": 4573504,
+      "original_lpn_cycles": 70824632.0,
+      "evolved_lpn_cycles": 4495776.0,
+      "recorded_evolved_lpn_cycles": 4754016.0,
+      "kernels": 32,
+      "architecture_cycle_speedup": 15.483738507717495,
+      "original_lpn_relative_error": 0.0001368637747909407,
+      "evolved_lpn_relative_error": -0.016995284140999933
+    }
+  },
+  "total": {
+    "baseline_cycles": 132828263,
+    "evolved_cycles": 15435996,
+    "original_lpn_cycles": 133654573.0,
+    "evolved_lpn_cycles": 15712791.0,
+    "recorded_evolved_lpn_cycles": 16505751.0,
+    "kernels": 48,
+    "architecture_cycle_speedup": 8.605098303990232,
+    "original_lpn_relative_error": 0.006220889902023297,
+    "evolved_lpn_relative_error": 0.017931787492041273
+  },
+  "observations": [
+    {
+      "kernel": 0,
+      "phase": "prefill",
+      "baseline_cycles": 3780756,
+      "evolved_cycles": 664029,
+      "original_lpn_error": 0.0004255762604092883,
+      "evolved_lpn_error": 0.03144440980740293,
+      "recorded_evolved_lpn_error": 0.08177353699913703
+    },
+    {
+      "kernel": 1,
+      "phase": "prefill",
+      "baseline_cycles": 3785376,
+      "evolved_cycles": 664029,
+      "original_lpn_error": 0.0014870385398966235,
+      "evolved_lpn_error": 0.03144440980740293,
+      "recorded_evolved_lpn_error": 0.08177353699913703
+    },
+    {
+      "kernel": 2,
+      "phase": "prefill",
+      "baseline_cycles": 3788346,
+      "evolved_cycles": 666188,
+      "original_lpn_error": 0.003140948582837977,
+      "evolved_lpn_error": 0.03134400499558687,
+      "recorded_evolved_lpn_error": 0.08151002419737363
+    },
+    {
+      "kernel": 3,
+      "phase": "prefill",
+      "baseline_cycles": 3793716,
+      "evolved_cycles": 666188,
+      "original_lpn_error": 0.0039984542859823335,
+      "evolved_lpn_error": 0.03134400499558687,
+      "recorded_evolved_lpn_error": 0.08151002419737363
+    },
+    {
+      "kernel": 4,
+      "phase": "prefill",
+      "baseline_cycles": 3798036,
+      "evolved_cycles": 668442,
+      "original_lpn_error": 0.01704275578219905,
+      "evolved_lpn_error": 0.031232328309711344,
+      "recorded_evolved_lpn_error": 0.08122918667588208
+    },
+    {
+      "kernel": 5,
+      "phase": "prefill",
+      "baseline_cycles": 3801366,
+      "evolved_cycles": 668442,
+      "original_lpn_error": 0.019008693190816217,
+      "evolved_lpn_error": 0.031232328309711344,
+      "recorded_evolved_lpn_error": 0.08122918667588208
+    },
+    {
+      "kernel": 6,
+      "phase": "prefill",
+      "baseline_cycles": 3805686,
+      "evolved_cycles": 671535,
+      "original_lpn_error": 0.020122259166941214,
+      "evolved_lpn_error": 0.029699122160423475,
+      "recorded_evolved_lpn_error": 0.07946570171323897
+    },
+    {
+      "kernel": 7,
+      "phase": "prefill",
+      "baseline_cycles": 3809316,
+      "evolved_cycles": 669037,
+      "original_lpn_error": 0.01911865542265323,
+      "evolved_lpn_error": 0.028656113189554633,
+      "recorded_evolved_lpn_error": 0.0786085074517553
+    },
+    {
+      "kernel": 8,
+      "phase": "prefill",
+      "baseline_cycles": 3883806,
+      "evolved_cycles": 685657,
+      "original_lpn_error": 0.013012750894354719,
+      "evolved_lpn_error": 0.034612058215696795,
+      "recorded_evolved_lpn_error": 0.08335363016785369
+    },
+    {
+      "kernel": 9,
+      "phase": "prefill",
+      "baseline_cycles": 3888876,
+      "evolved_cycles": 685657,
+      "original_lpn_error": 0.013913788971414931,
+      "evolved_lpn_error": 0.034612058215696795,
+      "recorded_evolved_lpn_error": 0.08335363016785369
+    },
+    {
+      "kernel": 10,
+      "phase": "prefill",
+      "baseline_cycles": 3894036,
+      "evolved_cycles": 687817,
+      "original_lpn_error": 0.0147890260901542,
+      "evolved_lpn_error": 0.03450336354001138,
+      "recorded_evolved_lpn_error": 0.08309186891280684
+    },
+    {
+      "kernel": 11,
+      "phase": "prefill",
+      "baseline_cycles": 3900096,
+      "evolved_cycles": 687817,
+      "original_lpn_error": 0.01502757880831651,
+      "evolved_lpn_error": 0.03450336354001138,
+      "recorded_evolved_lpn_error": 0.08309186891280684
+    },
+    {
+      "kernel": 12,
+      "phase": "prefill",
+      "baseline_cycles": 3904416,
+      "evolved_cycles": 690067,
+      "original_lpn_error": 0.016148125609566133,
+      "evolved_lpn_error": 0.0343908634958634,
+      "recorded_evolved_lpn_error": 0.08282094347360469
+    },
+    {
+      "kernel": 13,
+      "phase": "prefill",
+      "baseline_cycles": 3907506,
+      "evolved_cycles": 690067,
+      "original_lpn_error": 0.017670862181657476,
+      "evolved_lpn_error": 0.0343908634958634,
+      "recorded_evolved_lpn_error": 0.08282094347360469
+    },
+    {
+      "kernel": 14,
+      "phase": "prefill",
+      "baseline_cycles": 3913656,
+      "evolved_cycles": 692227,
+      "original_lpn_error": 0.018279327564814096,
+      "evolved_lpn_error": 0.03428355149394635,
+      "recorded_evolved_lpn_error": 0.08256251200834419
+    },
+    {
+      "kernel": 15,
+      "phase": "prefill",
+      "baseline_cycles": 4358333,
+      "evolved_cycles": 705293,
+      "original_lpn_error": 0.016389982133077075,
+      "evolved_lpn_error": 0.03403833584056559,
+      "recorded_evolved_lpn_error": 0.08142289800125613
+    },
+    {
+      "kernel": 16,
+      "phase": "decode",
+      "baseline_cycles": 2211225,
+      "evolved_cycles": 142787,
+      "original_lpn_error": -0.0007864419043742688,
+      "evolved_lpn_error": -0.017011352574113903,
+      "recorded_evolved_lpn_error": 0.03929629448058991
+    },
+    {
+      "kernel": 17,
+      "phase": "decode",
+      "baseline_cycles": 2211285,
+      "evolved_cycles": 142787,
+      "original_lpn_error": -0.0007864205654178891,
+      "evolved_lpn_error": -0.017011352574113903,
+      "recorded_evolved_lpn_error": 0.03929629448058991
+    },
+    {
+      "kernel": 18,
+      "phase": "decode",
+      "baseline_cycles": 2211345,
+      "evolved_cycles": 142787,
+      "original_lpn_error": -0.000786399227619361,
+      "evolved_lpn_error": -0.017011352574113903,
+      "recorded_evolved_lpn_error": 0.03929629448058991
+    },
+    {
+      "kernel": 19,
+      "phase": "decode",
+      "baseline_cycles": 2211405,
+      "evolved_cycles": 142787,
+      "original_lpn_error": -0.00014877419559056193,
+      "evolved_lpn_error": -0.017011352574113903,
+      "recorded_evolved_lpn_error": 0.03929629448058991
+    },
+    {
+      "kernel": 20,
+      "phase": "decode",
+      "baseline_cycles": 2211465,
+      "evolved_cycles": 142787,
+      "original_lpn_error": -0.00014877015914793734,
+      "evolved_lpn_error": -0.017011352574113903,
+      "recorded_evolved_lpn_error": 0.03929629448058991
+    },
+    {
+      "kernel": 21,
+      "phase": "decode",
+      "baseline_cycles": 2211525,
+      "evolved_cycles": 142787,
+      "original_lpn_error": -0.00014876612292424873,
+      "evolved_lpn_error": -0.017011352574113903,
+      "recorded_evolved_lpn_error": 0.03929629448058991
+    },
+    {
+      "kernel": 22,
+      "phase": "decode",
+      "baseline_cycles": 2211585,
+      "evolved_cycles": 142787,
+      "original_lpn_error": -0.00014876208691960713,
+      "evolved_lpn_error": -0.017011352574113903,
+      "recorded_evolved_lpn_error": 0.03929629448058991
+    },
+    {
+      "kernel": 23,
+      "phase": "decode",
+      "baseline_cycles": 2211645,
+      "evolved_cycles": 142787,
+      "original_lpn_error": -0.0001487580511339015,
+      "evolved_lpn_error": -0.017011352574113903,
+      "recorded_evolved_lpn_error": 0.03929629448058991
+    },
+    {
+      "kernel": 24,
+      "phase": "decode",
+      "baseline_cycles": 2212245,
+      "evolved_cycles": 142787,
+      "original_lpn_error": -0.0005419833698346865,
+      "evolved_lpn_error": -0.017011352574113903,
+      "recorded_evolved_lpn_error": 0.03929629448058991
+    },
+    {
+      "kernel": 25,
+      "phase": "decode",
+      "baseline_cycles": 2212305,
+      "evolved_cycles": 142787,
+      "original_lpn_error": 9.537563762673784e-05,
+      "evolved_lpn_error": -0.017011352574113903,
+      "recorded_evolved_lpn_error": 0.03929629448058991
+    },
+    {
+      "kernel": 26,
+      "phase": "decode",
+      "baseline_cycles": 2212365,
+      "evolved_cycles": 142787,
+      "original_lpn_error": 9.537305101092741e-05,
+      "evolved_lpn_error": -0.017011352574113903,
+      "recorded_evolved_lpn_error": 0.03929629448058991
+    },
+    {
+      "kernel": 27,
+      "phase": "decode",
+      "baseline_cycles": 2212425,
+      "evolved_cycles": 142787,
+      "original_lpn_error": 9.537046453544917e-05,
+      "evolved_lpn_error": -0.017011352574113903,
+      "recorded_evolved_lpn_error": 0.03929629448058991
+    },
+    {
+      "kernel": 28,
+      "phase": "decode",
+      "baseline_cycles": 2212485,
+      "evolved_cycles": 142787,
+      "original_lpn_error": 9.536787820030312e-05,
+      "evolved_lpn_error": -0.017011352574113903,
+      "recorded_evolved_lpn_error": 0.03929629448058991
+    },
+    {
+      "kernel": 29,
+      "phase": "decode",
+      "baseline_cycles": 2212545,
+      "evolved_cycles": 142787,
+      "original_lpn_error": 9.536529200526722e-05,
+      "evolved_lpn_error": -0.017011352574113903,
+      "recorded_evolved_lpn_error": 0.03929629448058991
+    },
+    {
+      "kernel": 30,
+      "phase": "decode",
+      "baseline_cycles": 2212605,
+      "evolved_cycles": 142787,
+      "original_lpn_error": 9.536270595078555e-05,
+      "evolved_lpn_error": -0.017011352574113903,
+      "recorded_evolved_lpn_error": 0.03929629448058991
+    },
+    {
+      "kernel": 31,
+      "phase": "decode",
+      "baseline_cycles": 2212665,
+      "evolved_cycles": 142787,
+      "original_lpn_error": 9.536012003619199e-05,
+      "evolved_lpn_error": -0.017011352574113903,
+      "recorded_evolved_lpn_error": 0.03929629448058991
+    },
+    {
+      "kernel": 32,
+      "phase": "decode",
+      "baseline_cycles": 2213265,
+      "evolved_cycles": 143057,
+      "original_lpn_error": 0.00033931770483874857,
+      "evolved_lpn_error": -0.01697924603479728,
+      "recorded_evolved_lpn_error": 0.03964154148346455
+    },
+    {
+      "kernel": 33,
+      "phase": "decode",
+      "baseline_cycles": 2213325,
+      "evolved_cycles": 143057,
+      "original_lpn_error": 0.0003393085064327117,
+      "evolved_lpn_error": -0.01697924603479728,
+      "recorded_evolved_lpn_error": 0.03964154148346455
+    },
+    {
+      "kernel": 34,
+      "phase": "decode",
+      "baseline_cycles": 2213385,
+      "evolved_cycles": 143057,
+      "original_lpn_error": 0.000339299308525165,
+      "evolved_lpn_error": -0.01697924603479728,
+      "recorded_evolved_lpn_error": 0.03964154148346455
+    },
+    {
+      "kernel": 35,
+      "phase": "decode",
+      "baseline_cycles": 2213445,
+      "evolved_cycles": 143057,
+      "original_lpn_error": 0.00033929011111633045,
+      "evolved_lpn_error": -0.01697924603479728,
+      "recorded_evolved_lpn_error": 0.03964154148346455
+    },
+    {
+      "kernel": 36,
+      "phase": "decode",
+      "baseline_cycles": 2213505,
+      "evolved_cycles": 143057,
+      "original_lpn_error": 0.0003392809142062081,
+      "evolved_lpn_error": -0.01697924603479728,
+      "recorded_evolved_lpn_error": 0.03964154148346455
+    },
+    {
+      "kernel": 37,
+      "phase": "decode",
+      "baseline_cycles": 2213565,
+      "evolved_cycles": 143057,
+      "original_lpn_error": 0.0003392717177945759,
+      "evolved_lpn_error": -0.01697924603479728,
+      "recorded_evolved_lpn_error": 0.03964154148346455
+    },
+    {
+      "kernel": 38,
+      "phase": "decode",
+      "baseline_cycles": 2213625,
+      "evolved_cycles": 143057,
+      "original_lpn_error": 0.0003392625218814338,
+      "evolved_lpn_error": -0.01697924603479728,
+      "recorded_evolved_lpn_error": 0.03964154148346455
+    },
+    {
+      "kernel": 39,
+      "phase": "decode",
+      "baseline_cycles": 2213685,
+      "evolved_cycles": 143057,
+      "original_lpn_error": 0.0003392533264670039,
+      "evolved_lpn_error": -0.01697924603479728,
+      "recorded_evolved_lpn_error": 0.03964154148346455
+    },
+    {
+      "kernel": 40,
+      "phase": "decode",
+      "baseline_cycles": 2214285,
+      "evolved_cycles": 143057,
+      "original_lpn_error": 0.0005830324461395531,
+      "evolved_lpn_error": -0.01697924603479728,
+      "recorded_evolved_lpn_error": 0.03964154148346455
+    },
+    {
+      "kernel": 41,
+      "phase": "decode",
+      "baseline_cycles": 2214345,
+      "evolved_cycles": 143057,
+      "original_lpn_error": 0.0005830166482638788,
+      "evolved_lpn_error": -0.01697924603479728,
+      "recorded_evolved_lpn_error": 0.03964154148346455
+    },
+    {
+      "kernel": 42,
+      "phase": "decode",
+      "baseline_cycles": 2214405,
+      "evolved_cycles": 143057,
+      "original_lpn_error": 0.0005830008512444085,
+      "evolved_lpn_error": -0.01697924603479728,
+      "recorded_evolved_lpn_error": 0.03964154148346455
+    },
+    {
+      "kernel": 43,
+      "phase": "decode",
+      "baseline_cycles": 2214465,
+      "evolved_cycles": 143057,
+      "original_lpn_error": 0.0005829850550809201,
+      "evolved_lpn_error": -0.01697924603479728,
+      "recorded_evolved_lpn_error": 0.03964154148346455
+    },
+    {
+      "kernel": 44,
+      "phase": "decode",
+      "baseline_cycles": 2214525,
+      "evolved_cycles": 143057,
+      "original_lpn_error": 0.0005829692597736358,
+      "evolved_lpn_error": -0.01697924603479728,
+      "recorded_evolved_lpn_error": 0.03964154148346455
+    },
+    {
+      "kernel": 45,
+      "phase": "decode",
+      "baseline_cycles": 2214585,
+      "evolved_cycles": 143057,
+      "original_lpn_error": 0.0005829534653218893,
+      "evolved_lpn_error": -0.01697924603479728,
+      "recorded_evolved_lpn_error": 0.03964154148346455
+    },
+    {
+      "kernel": 46,
+      "phase": "decode",
+      "baseline_cycles": 2214645,
+      "evolved_cycles": 143057,
+      "original_lpn_error": 0.0005829376717261248,
+      "evolved_lpn_error": -0.01697924603479728,
+      "recorded_evolved_lpn_error": 0.03964154148346455
+    },
+    {
+      "kernel": 47,
+      "phase": "decode",
+      "baseline_cycles": 2214765,
+      "evolved_cycles": 143057,
+      "original_lpn_error": 0.000555815176779495,
+      "evolved_lpn_error": -0.01697924603479728,
+      "recorded_evolved_lpn_error": 0.03964154148346455
+    }
+  ],
+  "simulator_sha256": {
+    "original": {
+      "/home/ubuntu/FeSens-openTPU-qwen/build/verilator/tb_top_ebde8ec4210b/Vtb_top": "f8409bcead313f3f3996b965f12c7236936863ed4cce7ce925b0fed5337f4a79",
+      "/home/ubuntu/FeSens-openTPU-qwen/build/verilator/tb_top_7ff7c9c500fa/Vtb_top": "9950e6ac3788dc4bc58f75adbcde2e82183a8a62a4232ab9b61109d4c3c7cde8",
+      "/home/ubuntu/FeSens-openTPU-qwen/build/verilator/tb_top_ff501a93570e/Vtb_top": "7d69512175034f8a6d9a8001b2509b8007f51ea9a1d61c97155e0bfc6d4928ca",
+      "/home/ubuntu/FeSens-openTPU-qwen/build/verilator/tb_top_48de7129c1b0/Vtb_top": "252ff783f7ebc4594b6a1ba005288be92d2d7dbe468067775d7fb8c9fcdb8100"
+    },
+    "evolved": {
+      "/home/ubuntu/FeSens-openTPU-arch-pipeline/build/verilator/tb_top_70b3ed864696/Vtb_top": "7bcc8b6733ebffdd3d9536159ecf5d33679d552306009f42aec7eaac69360a65"
+    }
+  },
+  "worst_original_lpn_error": 0.020122259166941214,
+  "worst_evolved_lpn_error": 0.034612058215696795,
+  "report_sha256": {
+    "/home/ubuntu/lpn-runs/rtl-architecture-128x32/baseline-smol128x32-continued/report.json": "707397e09544ea7ab2482346917c6dbf168f0c6492355474499442a9fb50d5ad",
+    "/home/ubuntu/lpn-runs/rtl-architecture-128x32/evolved-pipeline-final/report.json": "f037e875e73760f7c3d70b6851d0ce4f01bbdd9f0c62ef27ccd75ba5659f07fe",
+    "/home/ubuntu/lpn-runs/rtl-architecture-128x32/corrected-baseline-full/report.json": "94ca26efed7b11a1ada422e0d742ba88ab662725b61ac29978c8af427ff37973",
+    "/home/ubuntu/lpn-runs/rtl-architecture-128x32/corrected-evolved-full/report.json": "f601fe90c064ae6801c784bcc1641b00bc1a4350c651bd0850b3b149a8d26279"
+  },
+  "interpretation": "Hardware cycles at a common clock; FPGA resource fit, Fmax and a vendor HBM controller are not established. Host validation processes run independently; the accelerator workload latency is the sum of all 48 kernels."
+}

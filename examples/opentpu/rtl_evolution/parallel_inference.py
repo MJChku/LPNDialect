@@ -50,6 +50,8 @@ def check_kernel(task):
                 for name in (f'prog_{sid}.hex',f'dram_{sid}.bin')}
         if hashes!=task['input_sha256'] or hashes!=original['input_sha256']:
             raise RuntimeError(f'kernel {index}: input hashes differ from original RTL')
+        if task['args']!=original['args']:
+            raise RuntimeError(f'kernel {index}: argument registers differ from original RTL')
         configure_rtlsim(rtlsim)
         atomic_json(directory/'worker.json',dict(status='building',pid=os.getpid()))
         reused=None
@@ -58,6 +60,9 @@ def check_kernel(task):
             previous=source/'rtl-result.json'
             if previous.exists():
                 reused=json.loads(previous.read_text())
+                prior_input=json.loads((source/'input.json').read_text())
+                if prior_input['args']!=task['args'] or prior_input['config']!=task['config']:
+                    raise RuntimeError('retained input arguments or configuration differ')
                 if (reused['input_sha256']!=hashes or not reused['all_dram_and_tmem_bit_exact'] or
                     not reused['identical_input_files'] or reused['step']!=index):
                     raise RuntimeError(f'kernel {index}: retained RTL evidence differs')
@@ -77,7 +82,8 @@ def check_kernel(task):
         cmd=[str(exe),f'+dir={directory}',f'+max_cycles={max(10000,2*original["rtl_cycles"])}',
              '+lpn_wall']+[f'+arg{k}={int(v)&0xffffffff}' for k,v in enumerate(task['args'])]
         if index==0:cmd.append('+trace')
-        atomic_json(directory/'worker.json',dict(status='simulating',pid=os.getpid(),command=cmd))
+        atomic_json(directory/'worker.json',dict(
+            status='simulating' if reused is None else 'checking_retained_rtl',pid=os.getpid(),command=cmd))
         if reused is None:
             before=time.perf_counter();run=rtlsim.run_sim(cmd,timeout=task['rtl_timeout'])
             process=time.perf_counter()-before

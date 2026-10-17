@@ -8,8 +8,11 @@ end-to-end inference speedup. LPN models hardware; upstream inference code must
 own batching, tiling and decode order. Use
 [standard_inference.py](standard_inference.py), which calls the unmodified
 upstream `Engine.generate()`, for the corrected shared-backend path described
-in [README.md](README.md). Architecture predictions for that path still need
-to be measured and validated.
+in [README.md](README.md). A 32-row, 64-lane architecture is now implemented
+and validated in actual RTL on SmolLM2-135M with 128 prompt / 32 output tokens:
+8.605x fewer cycles, identical inputs and bit-exact full device memory. See
+[the implementation and audited results](rtl_evolution/README.md). The Qwen
+sweeps below remain predictions rather than new modified-RTL validations.
 The archived microbenchmark results used revision `bc97ee3`; later vector timing
 and dependency fixes can change predictions when those historical streams are rerun.
 
