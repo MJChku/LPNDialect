@@ -90,13 +90,14 @@ def dependencies(commands,I,W,matrix_engines=1,streaming_producers=None):
 class CompactOpenTPU(OpenTPU):
   supports_multiple_matrix_engines = True
 
-  def __init__(self,workload,timing=None,input_capacity=None):
+  def __init__(self,workload,timing=None,input_capacity=None,prefetch_profile=None):
     if input_capacity is not None and (not isinstance(input_capacity,int) or
         input_capacity<max(len(c) for c in workload.commands)):
       raise ValueError("input_capacity must cover every slice's command count")
     self.input_capacity = input_capacity
     self.input_tables = {}
     self.components = {}
+    self.prefetch_profile=prefetch_profile
     super().__init__(workload,timing)
 
   def _table(self,name,values):
@@ -120,6 +121,31 @@ class CompactOpenTPU(OpenTPU):
     ncommands = len(commands)
     if not ncommands:
       raise ValueError("empty command trace")
+    cache_offsets,cache_prefix=[],[0]
+    if t.pinned_cache_bytes:
+      profile=self.prefetch_profile
+      if (cfg.S!=1 or profile is None or profile.get('version')!=1
+          or profile.get('cache_bytes')!=t.pinned_cache_bytes):
+        raise ValueError('matching validated single-slice prefetch profile required')
+      base=profile.get('base')
+      if type(base) is not int or base<0 or base%64 or base+t.pinned_cache_bytes>cfg.DRAM_BYTES:
+        raise ValueError('cache profile region is outside physical memory')
+      row_hits=profile['hit_bytes_by_command_row']
+      if len(row_hits)!=ncommands:raise ValueError('cache profile command count differs')
+      for idx,c in enumerate(commands):
+        ins,w=c.instruction,c.instruction.w
+        n=w[3]&65535 if ins.op==I.MM else 0
+        kb=(w[3]>>16)&255 if ins.op==I.MM else 0
+        chunks=kb if ((ins.flags>>I.WF_SHIFT)&3)==I.W8 else ceil(kb/2)
+        if len(row_hits[idx])!=n or any(type(v) is not int or v<0 or v>chunks*cfg.D or v%64 for v in row_hits[idx]):
+          raise ValueError('invalid per-row cached byte count')
+        for row,value in enumerate(row_hits[idx]):
+          address=w[0]+row*w[4]
+          covered=max(0,min(address+chunks*cfg.D,base+t.pinned_cache_bytes)-max(address,base))
+          if value>covered:raise ValueError('cache hit exceeds the configured pinned region')
+        cache_offsets.append(len(cache_prefix));cache_prefix.append(0)
+        for value in row_hits[idx]:cache_prefix.append(cache_prefix[-1]+value)
+    else:cache_offsets=[0]*ncommands
     memory = DRAM(net,prefix+"_dram",t)
     nsig = self.input_capacity or ncommands
     # Immutable flag banks replace thousands of individual completion places.
@@ -206,7 +232,7 @@ class CompactOpenTPU(OpenTPU):
       scale_bytes.append(max(4,w[6]) if ins.op==I.MM and scaled else 0)
       write_full.append(bank_write_cycles(batch,m,w[5]&65535,cfg.LANES) if ins.op==I.MM else 0)
       write_tail.append(bank_write_cycles(n%batch or batch,m,w[5]&65535,cfg.LANES) if ins.op==I.MM else 0)
-    parameter_values = [latencies,services,port_ids,batches,chunkses,scale_flags,kbs,ns,row_services,tails,scale_bytes,write_full,write_tail]
+    parameter_values = [latencies,services,port_ids,batches,chunkses,scale_flags,kbs,ns,row_services,tails,scale_bytes,write_full,write_tail,cache_offsets,cache_prefix]
     parameters = CommandTiming(*(self._table(prefix+"_"+name,values)
         for name,values in zip(CommandTiming.__dataclass_fields__,parameter_values)))
     metadata = self._table(prefix+"_metadata",[ncommands])

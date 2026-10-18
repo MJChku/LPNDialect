@@ -14,8 +14,10 @@ class PinnedCacheTest(unittest.TestCase):
     cold,prior=study_kernel(cfg,[command,command],image,None,states,0,I,W)
     self.assertEqual(cold['128']['cache_hit_bytes'],0)
     self.assertEqual(cold['128']['hbm_weight_bytes'],128)
-    warm,prior=study_kernel(cfg,[command,command],image,prior,states,0,I,W)
+    profiles={128:None}
+    warm,prior=study_kernel(cfg,[command,command],image,prior,states,0,I,W,profiles)
     self.assertEqual(warm['128']['cache_hit_bytes'],128)
+    self.assertEqual(profiles[128],[[64],[64]])
     changed=image.copy();changed[3]^=1
     invalid,prior=study_kernel(cfg,[command],changed,prior,states,0,I,W)
     self.assertEqual(invalid['128']['invalidated_valid_lines'],1)

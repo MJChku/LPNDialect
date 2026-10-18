@@ -115,6 +115,8 @@ class Timing:
   quant_scale_lookup: bool = False
   scalar_recip_lookup: bool = False
   reciprocal_lookup_lanes: int = 0 # proposal: independently addressed exact ROM lanes
+  pinned_cache_bytes: int = 0
+  cache_read_bytes_per_cycle: int = 8192
   vector_row_contexts: int = 1
   vector_engines: int = 1
   vector_result_chunks: int = 0
@@ -124,6 +126,10 @@ class Timing:
   fp_add_latency: int = 4
 
   def __post_init__(self):
+    if type(self.pinned_cache_bytes) is not int or self.pinned_cache_bytes<0 or self.pinned_cache_bytes%64:
+      raise ValueError('pinned cache size must be a nonnegative multiple of 64 bytes')
+    if type(self.cache_read_bytes_per_cycle) is not int or self.cache_read_bytes_per_cycle<1:
+      raise ValueError('cache bandwidth must be a positive integer')
     if min(self.dram_latency,self.dram_bytes_per_cycle,self.window,self.fifo_chunks,
            self.chain_length,self.epilogue_lanes,self.batch_rows,self.matrix_engines)<1:
       raise ValueError("timing parameters must be positive")
@@ -167,6 +173,7 @@ class DRAM:
     self.b = net.place(prefix+"_port_b",initial_tokens=1)
     self.a = net.place(prefix+"_port_a",initial_tokens=1)
     self.sw = self.b if timing.unified_dram else net.place(prefix+"_scalar_write",initial_tokens=1)
+    self.cache = net.place(prefix+'_cache_read',initial_tokens=1) if timing.pinned_cache_bytes else None
 
 
 class SystolicArray:
@@ -243,6 +250,8 @@ class OpenTPU:
   def __init__(self,workload,timing=None):
     from opentpu import isa as I, waits as W
     self.workload,self.timing = workload,timing or Timing()
+    if self.timing.pinned_cache_bytes and not self.supports_multiple_matrix_engines:
+      raise ValueError('pinned cache requires CompactOpenTPU and a validated prefetch profile')
     if self.timing.matrix_engines!=1 and not self.supports_multiple_matrix_engines:
       raise ValueError("multiple matrix engines require CompactOpenTPU")
     if self.timing.activation_streaming and not self.supports_multiple_matrix_engines:

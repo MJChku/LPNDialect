@@ -40,6 +40,8 @@ class CommandTiming:
   scale_bytes: list
   write_full: list
   write_tail: list
+  cache_offsets: list
+  cached_prefix: list
 
 
 class ExecutionUnit:
@@ -120,6 +122,7 @@ class MatrixEngine:
     scale_bytes = parameters.scale_bytes
     write_full,write_tail = parameters.write_full,parameters.write_tail
     row_services,tails = parameters.row_services,parameters.tails
+    cache_offsets,cached_prefix=parameters.cache_offsets,parameters.cached_prefix
 
     @net.transition(prefix+"_start")
     def start():
@@ -140,33 +143,54 @@ class MatrixEngine:
     def prefetch():
       guard(count(request)>0)
       guard(count(resources.buffers)>0)
-      guard(count(memory.b)>0)
+      if not t.pinned_cache_bytes:
+        guard(count(memory.b)>0)
       idx = peek(request).get("id")
       row = peek(request).get("row")
       n,batch,chunk = array(rows)[idx],array(batches)[idx],array(chunks)[idx]
       width = select(row+batch<n,batch,n-row)
       needed = muli(width,chunk)
       guard(peek(resources.buffers).get('free')>=needed)
+      cached=const_i64(0)
+      if t.pinned_cache_bytes:
+        begin=array(cache_offsets)[idx]+row
+        cached=array(cached_prefix)[begin+width]-array(cached_prefix)[begin]
+        miss=muli(needed,cfg.D)-cached
+        if t.unified_dram:miss=miss+muli(width,array(scale_bytes)[idx])
+        guard(select(miss>0,count(memory.b)>0,True,typ='i1'))
+        guard(select(cached>0,count(memory.cache)>0,True,typ='i1'))
       needs_scale = array(scaled)[idx]
       guard(count(memory.a)>=needs_scale)
       token = take(request)
       capacity = take(resources.buffers)
       emit(resources.buffers,capacity.set('free',capacity.get('free')-needed))
-      bus = take(memory.b)
       bytes_per_row = muli(chunk,cfg.D)
       if t.unified_dram:
         bytes_per_row = addi(bytes_per_row,array(scale_bytes)[idx])
       transfer_cycles = divi(muli(width,bytes_per_row)+t.dram_bytes_per_cycle-1,t.dram_bytes_per_cycle)
+      cache_cycles=const_i64(0)
+      if t.pinned_cache_bytes:
+        transfer_cycles=divi(miss+t.dram_bytes_per_cycle-1,t.dram_bytes_per_cycle)
+        cache_cycles=divi(cached+t.cache_read_bytes_per_cycle-1,t.cache_read_bytes_per_cycle)
+        if miss>0:
+          bus=take(memory.b)
+          emit(memory.b,bus,delay=sitofp(transfer_cycles))
+        if cached>0:
+          cache_port=take(memory.cache)
+          emit(memory.cache,cache_port,delay=sitofp(cache_cycles))
+      else:
+        bus=take(memory.b)
+        emit(memory.b,bus,delay=sitofp(transfer_cycles))
       scale_cycles = divi(muli(muli(width,array(kbs)[idx]),needs_scale)+t.scale_lanes-1,t.scale_lanes)
       service = sitofp(transfer_cycles)
-      emit(memory.b,bus,delay=service)
       if needs_scale>0:
         scale_port = take(memory.a)
         emit(memory.a,scale_port,delay=sitofp(scale_cycles))
-      arrival = sitofp(select(transfer_cycles>scale_cycles,transfer_cycles,scale_cycles))
+      stream_cycles=select(transfer_cycles>cache_cycles,transfer_cycles,cache_cycles)
+      arrival = sitofp(select(stream_cycles>scale_cycles,stream_cycles,scale_cycles))
       emit(ready,token.set("width",width),delay=arrival+float(t.dram_latency+4))
       if row+batch<n:
-        emit(request,token.set("row",row+batch),delay=service)
+        emit(request,token.set("row",row+batch),delay=arrival if t.pinned_cache_bytes else service)
       else:
         # A later unscaled command must not bypass this command's scale
         # decoder and reach the FIFO before its last batch. Common arrival

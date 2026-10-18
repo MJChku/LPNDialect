@@ -16,6 +16,8 @@ def main():
     from .parallel_inference import files_equal
     from examples.opentpu.retained_inputs import verified_program
     report=json.loads((a.case/'report.json').read_text())
+    if report.get('timing',{}).get('pinned_cache_bytes',0):
+        raise ValueError('pinned cache proposal has no matching RTL implementation')
     if report.get('timing',{}).get('reciprocal_lookup_lanes',0):
         raise ValueError('wide reciprocal proposal has no matching RTL implementation')
     full=report['indices']==list(range(48))

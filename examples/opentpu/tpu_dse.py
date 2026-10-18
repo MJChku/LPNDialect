@@ -28,6 +28,8 @@ class Architecture:
     quant_scale_lookup: bool = False
     scalar_recip_lookup: bool = False
     reciprocal_lookup_lanes: int = 0
+    pinned_cache_bytes: int = 0
+    cache_read_bytes_per_cycle: int = 8192
     vector_row_contexts: int = 1
     vector_engines: int = 1
     vector_result_chunks: int = 0
@@ -40,6 +42,9 @@ class Architecture:
 
 def architectures():
     return [
+        *[Architecture(f'proposal_pinned{mib}m_128x1_add2',128,1,2816,buffered_quant=True,
+                       vector_row_contexts=4,activation_streaming=True,quant_scale_lookup=True,
+                       scalar_recip_lookup=True,fp_add_latency=2,pinned_cache_bytes=mib<<20) for mib in (24,48)],
         *[Architecture(f'proposal_geometry_{rows}x{cols}_add2',rows,cols,2816,buffered_quant=True,
                        vector_row_contexts=4,quant_scale_lookup=True,scalar_recip_lookup=True,
                        fp_add_latency=2) for rows,cols in ((128,1),(64,2),(32,4),(16,8))],
@@ -131,7 +136,8 @@ def resources(point, config, clock_mhz):
     scalar_lookup_bytes=point.vector_engines*((1<<21)+4096*51//8) if point.scalar_recip_lookup else 0
     # Two independently addressed ports share each ROM instance and enable.
     wide_lookup_bytes=point.vector_engines*((point.reciprocal_lookup_lanes+1)//2)*((1<<21)+4096*51//8)
-    sram = activation + fifo + 4 * config['TMEM_WORDS']+vector_results+vector_read_copies+lookup_bytes+scalar_lookup_bytes+wide_lookup_bytes
+    cache_valid_bytes=point.pinned_cache_bytes//64//8
+    sram = activation + fifo + 4 * config['TMEM_WORDS']+vector_results+vector_read_copies+lookup_bytes+scalar_lookup_bytes+wide_lookup_bytes+point.pinned_cache_bytes+cache_valid_bytes
     limits = dict(matrix_mac_lanes=20000, onchip_bytes=64 << 20, memory_bytes_per_cycle=2816)
     # Board is an illustrative reference, not a user-selected target. Reserve
     # 20% of DSPs and half of embedded memory for shell/other units and mapping.
@@ -145,6 +151,11 @@ def resources(point, config, clock_mhz):
     conservative=(macs<=v80_limits['matrix_mac_lanes'] and sram<=v80_limits['onchip_bytes'] and
                   point.bandwidth*clock_mhz/1000<=v80_limits['memory_gbs'])
     return dict(matrix_mac_lanes=macs, onchip_bytes_lower_bound=sram,
+        pinned_cache_data_bytes=point.pinned_cache_bytes,pinned_cache_valid_bytes=cache_valid_bytes,
+        pinned_cache_read_bytes_per_cycle=point.cache_read_bytes_per_cycle if point.pinned_cache_bytes else 0,
+        pinned_cache_rtl_implemented=False,
+        passes_v80_80pct_sram_capacity_screen=(macs<=v80_limits['matrix_mac_lanes'] and
+            sram<=673e6/8*.8 and point.bandwidth*clock_mhz/1000<=v80_limits['memory_gbs']),
         quant_scale_lookup_bytes=lookup_bytes,scalar_reciprocal_lookup_bytes=scalar_lookup_bytes,
         wide_reciprocal_lookup_bytes=wide_lookup_bytes,wide_reciprocal_rtl_implemented=False,
         reciprocal_predictor_integer_multipliers=(int(point.quant_scale_lookup)+point.vector_engines*
@@ -197,16 +208,26 @@ def run_kernel(task):
         dram_bytes_per_cycle=point.bandwidth, dram_port_bytes=point.bandwidth,
         dram_latency=point.latency, fifo_chunks=128 * point.rows, scale_lanes=point.rows,
         unified_dram=True, scalar_store_bytes=256, epilogue_lanes=max(1, point.columns // 2),
-        quant_row_banks=8 if point.buffered_quant else 0,quant_store_buffered=point.buffered_quant,quant_scale_lookup=point.quant_scale_lookup,scalar_recip_lookup=point.scalar_recip_lookup,reciprocal_lookup_lanes=point.reciprocal_lookup_lanes,
+        quant_row_banks=8 if point.buffered_quant else 0,quant_store_buffered=point.buffered_quant,quant_scale_lookup=point.quant_scale_lookup,scalar_recip_lookup=point.scalar_recip_lookup,reciprocal_lookup_lanes=point.reciprocal_lookup_lanes,pinned_cache_bytes=point.pinned_cache_bytes,cache_read_bytes_per_cycle=point.cache_read_bytes_per_cycle,
         vector_row_contexts=point.vector_row_contexts,
         fp_mul_latency=point.fp_mul_latency,fp_add_latency=point.fp_add_latency,activation_streaming=point.activation_streaming,vector_engines=point.vector_engines,vector_result_chunks=point.vector_result_chunks,vector_compatible_issue=point.vector_compatible_issue)
+    profile=None;profile_hash=None
+    if point.pinned_cache_bytes:
+        root=Path(task['memory_profile_root']);manifest=json.loads((root/'manifest.json').read_text())
+        profile_path=root/str(point.pinned_cache_bytes)/f'{record["step"]:04d}.json'
+        profile_hash=digest(profile_path);profile=json.loads(profile_path.read_text())
+        if (manifest['status']!='complete' or manifest['reference_report_sha256']!=task['reference_report_sha256'] or
+            manifest['records'][record['step']]['caches'][str(point.pinned_cache_bytes)]['profile_sha256']!=profile_hash or
+            profile['kernel']!=record['step'] or profile['input_sha256']!=record['input_sha256'] or
+            profile['program_json_sha256']!=program_json_hashes['program_0.json']):
+            raise ValueError('cache prepass identity differs from retained workload')
     prepared = ReusableTiming(Path(task['compiler']), Path(task['cache']), capacity=65536).prepare(
-        workload, timing, directory / 'timing.tables')
+        workload, timing, directory / 'timing.tables',prefetch_profile=profile)
     cycles, core, _, log = prepared.run()
     (directory / 'lpn.log').write_text(log)
     accelerated=sum(c.instruction.op==I.VOP and bool(reciprocal_lookup_width(c.instruction,I,timing))
                     for commands in workload.commands for c in commands)
-    result = dict(accelerated_reciprocal_commands=accelerated,kernel=record['step'], phase=record['phase'], position_before=record['position_before'],
+    result = dict(prefetch_profile_sha256=profile_hash,accelerated_reciprocal_commands=accelerated,kernel=record['step'], phase=record['phase'], position_before=record['position_before'],
         cycles=cycles, original_rtl_cycles=record['baseline_rtl_cycles'],
         validated_evolved_rtl_cycles=record['rtl_cycles'],
         predicted_speedup_vs_original=record['baseline_rtl_cycles'] / cycles,
@@ -226,6 +247,7 @@ def main():
     for name in ('case', 'opentpu-root', 'compiler', 'output'):
         parser.add_argument('--' + name, type=Path, required=True)
     parser.add_argument('--cache',type=Path,help='Reuse compiled timing architectures across studies')
+    parser.add_argument('--memory-profile-root',type=Path,help='Verified cold/coherent pinned-region prepass profiles')
     parser.add_argument('--indices', default='0,15,16,47',
         help='Comma-separated kernel indices or all; the default is a representative pilot')
     parser.add_argument('--architectures', help='Comma-separated architecture names; default all')
@@ -246,16 +268,20 @@ def main():
     if not indices or not set(indices) <= set(range(48)):
         parser.error('indices must select kernels in [0,47]')
     points = architectures()
+    if not args.architectures and args.memory_profile_root is None:points=[p for p in points if not p.pinned_cache_bytes]
     if args.architectures:
         wanted = set(args.architectures.split(','))
         points = [p for p in points if p.name in wanted]
         if {p.name for p in points} != wanted:
             parser.error('unknown architecture name')
+    if any(p.pinned_cache_bytes for p in points) and args.memory_profile_root is None:
+        parser.error('pinned-cache candidates require --memory-profile-root')
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=False)
     project = Path(__file__).resolve().parent
     files = [project / name for name in ('tpu_dse.py', 'model.py', 'compact.py', 'components.py',
                                        'workload.py', 'shape_workload.py', 'native_timing.py', 'benchmark.py','activation_stream.py','vector_pool.py','vector_select.py','retained_inputs.py')]
+    if args.memory_profile_root:files.append(args.memory_profile_root.resolve()/'manifest.json')
     sources = {str(p): digest(p) for p in files}
     observations = {p.name: [] for p in points}
     failures = []
@@ -296,7 +322,9 @@ def main():
                     source=str(case / 'kernels' / f'{index:04d}'),
                     directory=str(output / point.name / f'{index:04d}'),
                     opentpu_root=str(args.opentpu_root.resolve()), compiler=str(args.compiler.resolve()),
-                    cache=str(args.cache.resolve() if args.cache else output / 'native-cache'))
+                    cache=str(args.cache.resolve() if args.cache else output / 'native-cache'),
+                    memory_profile_root=str(args.memory_profile_root.resolve()) if args.memory_profile_root else None,
+                    reference_report_sha256=digest(case/'report.json'))
                 pending[pool.submit(run_kernel, task)] = (point.name, index)
         for future in as_completed(pending):
             point, index = pending[future]

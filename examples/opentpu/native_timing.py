@@ -25,9 +25,9 @@ class ReusableTiming:
       identity += hashlib.file_digest(f,"sha256").hexdigest()
     self.compiler_identity = identity
 
-  def prepare(self,workload,timing,inputs):
+  def prepare(self,workload,timing,inputs,prefetch_profile=None):
     before = time.perf_counter()
-    model = CompactOpenTPU(workload,timing,input_capacity=self.capacity)
+    model = CompactOpenTPU(workload,timing,input_capacity=self.capacity,prefetch_profile=prefetch_profile)
     # Builder IDs are per-process counters. They distinguish SSA scopes but
     # carry no model semantics; normalize them for a stable architecture key.
     source = re.sub(r"%t[0-9]+_","%v_",model.build())

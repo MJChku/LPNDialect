@@ -40,6 +40,9 @@ also finds no complete-workload benefit from wider fixed column counts.
 The [resource profile and necessary budgets](FPGA_PROFILE.md) identify an
 uncached-weight bandwidth ceiling near 60x under the current FPGA assumptions;
 100x requires reducing physical traffic as well as improving compute efficiency.
+The [real-weight storage study](WEIGHT_STORAGE.md) finds only modest lossless
+compression. The [pinned-cache timing proposal](PINNED_CACHE.md) evaluates cold,
+coherent persistent regions with separately bounded SRAM and HBM ports.
 
 **Inference workload correction:** earlier `e2e.py`, `replay_e2e.py` and
 weight-free FPGA sequence results used a custom token-by-token prompt loop.

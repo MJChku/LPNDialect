@@ -11,7 +11,7 @@ from pathlib import Path
 import time
 
 
-def study_kernel(cfg,commands,image,previous,states,base,I,W):
+def study_kernel(cfg,commands,image,previous,states,base,I,W,profiles=None):
   import numpy as np
   maximum=max(len(valid) for valid in states.values())
   current=image[base:base+64*maximum].reshape(-1,64)
@@ -19,7 +19,7 @@ def study_kernel(cfg,commands,image,previous,states,base,I,W):
   written=np.zeros(maximum+1,dtype=np.int64)
   reads=np.zeros(maximum+1,dtype=np.int64)
   requests=[];total=0
-  for c in commands:
+  for index,c in enumerate(commands):
     for space,lo,hi in c.footprint.wr:
       if space==W.SP_DRAM:
         begin=max(0,min(maximum,(lo-base)//64));end=max(0,min(maximum,(hi-base+63)//64))
@@ -31,7 +31,7 @@ def study_kernel(cfg,commands,image,previous,states,base,I,W):
     if w[0]%64 or w[4]%64 or size%64:raise ValueError('aligned MM weight blocks required')
     addresses=w[0]+np.arange(n,dtype=np.int64)*w[4]
     begin=np.clip((addresses-base)//64,0,maximum);end=np.clip((addresses+size-base)//64,0,maximum)
-    requests.append((begin,end));total+=n*size
+    requests.append((index,begin,end));total+=n*size
     np.add.at(reads,begin,1);np.add.at(reads,end,-1)
   forbidden=np.cumsum(written[:-1])>0;fetched=np.cumsum(reads[:-1])>0
   result={}
@@ -39,7 +39,13 @@ def study_kernel(cfg,commands,image,previous,states,base,I,W):
     n=len(valid);invalidated=int(np.count_nonzero(valid & (changed[:n]|forbidden[:n])))
     valid &= ~(changed[:n]|forbidden[:n])
     prefix=np.empty(n+1,dtype=np.int64);prefix[0]=0;np.cumsum(valid,out=prefix[1:])
-    hits=sum(int((prefix[np.minimum(end,n)]-prefix[np.minimum(begin,n)]).sum())*64 for begin,end in requests)
+    hits=0
+    rows=[[] for _ in commands] if profiles is not None and size in profiles else None
+    for index,begin,end in requests:
+      row_hits=(prefix[np.minimum(end,n)]-prefix[np.minimum(begin,n)])*64
+      hits+=int(row_hits.sum())
+      if rows is not None:rows[index]=row_hits.tolist()
+    if rows is not None:profiles[size]=rows
     result[str(size)]=dict(requested_weight_bytes=total,cache_hit_bytes=hits,
         hbm_weight_bytes=total-hits,invalidated_valid_lines=invalidated,
         valid_lines_at_start=int(valid.sum()),cold=True if previous is None else False)
@@ -52,6 +58,8 @@ def main():
   for name in ('case','opentpu-root','output'):p.add_argument('--'+name,type=Path,required=True)
   p.add_argument('--base',type=lambda x:int(x,0),default=2<<20)
   p.add_argument('--mib',default='8,16,24,32,44,48,64')
+  p.add_argument('--profile-root',type=Path,help='Write exact per-command row-hit metadata for LPN')
+  p.add_argument('--profile-mib',default='24,48')
   a=p.parse_args()
   import numpy as np
   from .e2e import atomic_json,digest
@@ -69,6 +77,11 @@ def main():
   cfg=Config(**reference['config']);sizes=sorted(set(int(x)*(1<<20) for x in a.mib.split(',')))
   if cfg.S!=1 or a.base<0 or a.base%64 or not sizes or sizes[0]<=0 or a.base+sizes[-1]>cfg.DRAM_BYTES:
     p.error('one slice, aligned valid region and positive bounded sizes required')
+  captured=set(int(x)*(1<<20) for x in a.profile_mib.split(',')) if a.profile_root else set()
+  if not captured<=set(sizes):p.error('profile capacities must also be studied')
+  if a.profile_root:
+    a.profile_root.mkdir(parents=True,exist_ok=False)
+    for size in captured:(a.profile_root/str(size)).mkdir()
   files=[Path(__file__).with_name(n) for n in ('pinned_cache_study.py','weight_storage.py','shape_workload.py','retained_inputs.py')]
   hashes={str(f):digest(f) for f in files};states={size:np.zeros(size//64,dtype=bool) for size in sizes}
   previous=None;records=[];started=time.perf_counter()
@@ -79,7 +92,13 @@ def main():
     encoded,identity=verified_program(source,0)
     work=resolve_static(cfg,[[I.Instr.decode(words) for words in encoded]],record['args'])
     if [len(c) for c in work.commands]!=record['instructions']:raise ValueError('instruction count differs from verified RTL')
-    observations,previous=study_kernel(cfg,work.commands[0],read_image(source/'dram_0.bin',cfg.DRAM_BYTES),previous,states,a.base,I,W)
+    profiles={size:None for size in captured}
+    observations,previous=study_kernel(cfg,work.commands[0],read_image(source/'dram_0.bin',cfg.DRAM_BYTES),previous,states,a.base,I,W,profiles)
+    for size,rows in profiles.items():
+      path=a.profile_root/str(size)/f'{index:04d}.json'
+      atomic_json(path,dict(version=1,base=a.base,cache_bytes=size,kernel=index,
+          program_json_sha256=identity,input_sha256=record['input_sha256'],hit_bytes_by_command_row=rows))
+      observations[str(size)]['profile_sha256']=digest(path)
     records.append(dict(kernel=index,phase=record['phase'],program_json_sha256=identity,
                         input_sha256=record['input_sha256'],caches=observations))
     print(json.dumps(dict(kernel=index,caches=observations)),flush=True)
@@ -95,14 +114,16 @@ def main():
         optimistic_hbm_weight_speedup_ceiling=original/(misses/2816),
         optimistic_parallel_cache_read_floor_cycles=hits/8192,
         assumed_hbm_bytes_per_cycle=2816,assumed_cache_read_bytes_per_cycle=8192))
-  atomic_json(a.output,dict(status='complete',scope=__doc__,base=a.base,records=records,points=points,
+  result=dict(status='complete',scope=__doc__,base=a.base,records=records,points=points,
       source_sha256=hashes,reference_report_sha256=digest(a.case/'report.json'),
       seconds=time.perf_counter()-started,numerical_arithmetic_executed=False,hardware_implemented=False,
       limitations=['Weight traffic only, not a cycle prediction or hardware speedup',
           'Cold lines are unavailable for the rest of that kernel, conservatively',
           'Every changed input line and potentially written line invalidates prior cache state',
           'Data/valid storage is counted; bank conflicts, control, mapping and Fmax remain unproven',
-          'Independent SRAM and HBM read ports are assumed by separate floor calculations']))
+          'Independent SRAM and HBM read ports are assumed by separate floor calculations'])
+  atomic_json(a.output,result)
+  if a.profile_root:atomic_json(a.profile_root/'manifest.json',result)
 
 
 if __name__=='__main__':main()

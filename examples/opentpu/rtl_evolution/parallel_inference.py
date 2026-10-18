@@ -45,6 +45,8 @@ def configure_rtlsim(rtlsim,fp_mul_latency=2,fp_add_latency=4):
 
 
 def validate_variant(timing,uarch):
+    if timing.get('pinned_cache_bytes',0):
+        raise ValueError('pinned cache proposal has no matching RTL implementation')
     if timing.get('reciprocal_lookup_lanes',0):
         raise ValueError('wide reciprocal proposal has no matching RTL implementation')
     for field,parameter in (('activation_streaming','ACT_STREAMING'),('quant_scale_lookup','QUANT_LOOKUP'),('scalar_recip_lookup','VPU_SCALAR_RECIP')):
