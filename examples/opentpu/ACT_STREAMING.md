@@ -134,4 +134,6 @@ completed at 1,583,564 RTL cycles, against 1,600,365 for its matching control
 1,582,986 cycles: −0.0365% total error and 2.308% worst kernel error. A fresh
 selected-kernel audit verified inputs, binaries, sources, logs and memories.
 This is four selected kernels, not a complete inference timing result.
-See `validation/act-streaming/inference-pilot{,-audit}.json`.
+See `validation/act-streaming/inference-pilot{,-audit}.json`. The additional
+`inference-pilot-canonical-audit.json` also verifies decoded-program identity
+against RTL hex and rechecks LPN cycle counts from the raw native logs.
