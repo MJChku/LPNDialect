@@ -14,6 +14,8 @@ def main():
     p.add_argument('--output',type=Path,required=True)
     p.add_argument('--chunks',type=int,default=32)
     p.add_argument('--stall',type=int,choices=(0,1),default=0)
+    p.add_argument('--fp-mul-latency',type=int,choices=(1,2),default=2)
+    p.add_argument('--fp-add-latency',type=int,choices=(1,2,3,4),default=4)
     a=p.parse_args()
     sys.path.insert(0,str(a.opentpu_root.resolve()))
     import numpy as np
@@ -54,6 +56,7 @@ def main():
     sources.append(Path(__file__).with_name('tb_quant_buffered.sv'))
     source_hashes={str(s):hashlib.sha256(s.read_bytes()).hexdigest() for s in sources}
     rtlsim.VFLAGS[rtlsim.VFLAGS.index('-j')+1]='12'
+    rtlsim.VFLAGS += [f'-DOTPU_FP_MUL_LAT={a.fp_mul_latency}',f'-DOTPU_FP_ADD_LAT={a.fp_add_latency}']
     exe=rtlsim.build('tb_quant_buffered',sources,dict(XD=a.chunks))
     run=subprocess.run([str(exe),f'+dir={a.output}',f'+ncmd={len(specs)}',f'+stall={a.stall}'],
                        capture_output=True,text=True,timeout=120)
@@ -79,6 +82,7 @@ def main():
             if len(bad):raise RuntimeError(f'{name}: {field} differs at {bad[:16].tolist()}')
         records.append(dict(name=name,rtl_cycles=observed[index],all_state_bit_exact=True))
     report=dict(status='complete',records=records,stall=a.stall,chunks=a.chunks,
+                fp_mul_latency=a.fp_mul_latency,fp_add_latency=a.fp_add_latency,
                 simulator=str(exe),source_sha256=source_hashes)
     (a.output/'report.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report),flush=True)

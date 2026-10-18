@@ -18,6 +18,8 @@ def main():
     ap.add_argument('--lanes',type=int,default=64)
     ap.add_argument('--host-opt',choices=('0','3'),default='0')
     ap.add_argument('--tree-source',type=Path,help='Explicit alternate reduction-tree source for portability gates')
+    ap.add_argument('--fp-mul-latency',type=int,choices=(1,2),default=2)
+    ap.add_argument('--fp-add-latency',type=int,choices=(1,2,3,4),default=4)
     a=ap.parse_args()
     sys.path.insert(0,str(a.opentpu_root.resolve()))
     import numpy as np
@@ -30,6 +32,7 @@ def main():
     a.output.mkdir(parents=True,exist_ok=True)
     rtlsim.VFLAGS[rtlsim.VFLAGS.index('-j')+1]='12'
     rtlsim.VFLAGS+=['-CFLAGS','-O'+a.host_opt]
+    rtlsim.VFLAGS += [f'-DOTPU_FP_MUL_LAT={a.fp_mul_latency}',f'-DOTPU_FP_ADD_LAT={a.fp_add_latency}']
     results=[]
     # Partial engine groups, bank-wrapping output strides, activation replay,
     # scale dependencies, fused accumulation, matrix max, and packed weights.

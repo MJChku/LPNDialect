@@ -15,6 +15,8 @@ def main():
     p.add_argument('--row-contexts',type=int,choices=(1,4),default=4)
     p.add_argument('--stall',type=int,choices=(0,1),default=0)
     p.add_argument('--write-buffer',type=int,choices=(0,1),default=0)
+    p.add_argument('--fp-mul-latency',type=int,choices=(1,2),default=2)
+    p.add_argument('--fp-add-latency',type=int,choices=(1,2,3,4),default=4)
     a=p.parse_args();sys.path.insert(0,str(a.opentpu_root.resolve()))
     import numpy as np
     from opentpu import Config,isa as I,rtlsim
@@ -53,6 +55,7 @@ def main():
     sources.append(Path(__file__).with_name('tb_vpu_rows.sv'))
     hashes={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in sources}
     rtlsim.VFLAGS[rtlsim.VFLAGS.index('-j')+1]='12'
+    rtlsim.VFLAGS += [f'-DOTPU_FP_MUL_LAT={a.fp_mul_latency}',f'-DOTPU_FP_ADD_LAT={a.fp_add_latency}']
     exe=rtlsim.build('tb_vpu_rows',sources,dict(LANES=64,ROWS=a.row_contexts,BUFFERED=a.write_buffer))
     run=subprocess.run([str(exe),f'+dir={a.output}',f'+ncmd={len(specs)}',f'+stall={a.stall}'],
                        capture_output=True,text=True,timeout=120)
@@ -70,6 +73,7 @@ def main():
     if hashes!={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in sources}:
         raise RuntimeError('RTL sources changed during the gate')
     report=dict(status='complete',records=records,row_contexts=a.row_contexts,stall=a.stall,write_buffer=a.write_buffer,
+                fp_mul_latency=a.fp_mul_latency,fp_add_latency=a.fp_add_latency,
                 simulator=str(exe),source_sha256=hashes)
     (a.output/'report.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report),flush=True)

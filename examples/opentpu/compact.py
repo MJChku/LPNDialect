@@ -181,7 +181,8 @@ class CompactOpenTPU(OpenTPU):
         scaled = int(not bool(ins.flags&I.F_UNIT))
         drain = ceil(m/min(t.epilogue_lanes,cfg.MCOLS,cfg.LANES//gcd(w[5]&65535,cfg.LANES)))
         row_service = max((chunks if pair else kb)*ceil(m/cfg.MCOLS),drain)
-        tail = min(cfg.D//8,t.chain_length)+cfg.MCOLS+5+9+(6 if ins.flags&I.F_ACC else 0)+drain
+        tail = min(cfg.D//8,t.chain_length)+cfg.MCOLS+5+(5+2*t.fp_mul_latency)+(
+            t.fp_mul_latency+t.fp_add_latency if ins.flags&I.F_ACC else 0)+drain
         self.matrix_batch_sizes.append(batch)
       batches.append(batch)
       chunkses.append(chunks)

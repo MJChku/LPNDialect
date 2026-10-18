@@ -27,7 +27,7 @@ def matrix_batch_rows(rows,chunks,timing):
   return batch//parallel*parallel if batch>=parallel else batch
 
 
-def buffered_quant_cycles(rows,chunks,capacity,banks,scale_words=0):
+def buffered_quant_cycles(rows,chunks,capacity,banks,scale_words=0,mul_latency=2,add_latency=4):
   """Finite row/FIFO credits for the buffered quantizer's two overlapping passes.
 
   Each chunk takes one read and one pop. Read-to-scale-to-pop is 43 clocks;
@@ -48,10 +48,11 @@ def buffered_quant_cycles(rows,chunks,capacity,banks,scale_words=0):
       index=row*chunks+chunk
       free=popped[index-capacity]+1 if index>=capacity else 1
       read=max(read+1,free,bank_free)
-    first=max(read+43,(popped[-1]+2 if popped else 1))+scale_words
+    setup=9*mul_latency+4*add_latency+9
+    first=max(read+setup,(popped[-1]+2 if popped else 1))+scale_words
     popped.extend(range(first,first+chunks))
     row_ends.append(popped[-1])
-  return popped[-1]+10+(4 if scale_words else 0)
+  return popped[-1]+mul_latency+8+(4 if scale_words else 0)
 
 
 def disjoint_sum_rows(ins,I):
@@ -99,6 +100,8 @@ class Timing:
   quant_row_banks: int = 0
   quant_store_buffered: bool = False
   vector_row_contexts: int = 1
+  fp_mul_latency: int = 2
+  fp_add_latency: int = 4
 
   def __post_init__(self):
     if min(self.dram_latency,self.dram_bytes_per_cycle,self.window,self.fifo_chunks,
@@ -116,6 +119,9 @@ class Timing:
       raise ValueError('buffered QST requires explicit row banks')
     if self.vector_row_contexts not in (1,4):
       raise ValueError('vector_row_contexts must be 1 or 4')
+    if (not isinstance(self.fp_mul_latency,int) or not 1<=self.fp_mul_latency<=2 or
+        not isinstance(self.fp_add_latency,int) or not 1<=self.fp_add_latency<=4):
+      raise ValueError('FP latency ranges: multiply 1..2, add 1..4')
     for name in ('matrix_row_lanes','scale_lanes','dram_port_bytes','scalar_store_bytes'):
       value=getattr(self,name)
       if not isinstance(value,int) or value<(0 if name in ('dram_port_bytes','scalar_store_bytes') else 1):
@@ -184,6 +190,8 @@ class OpenTPU:
       raise ValueError("multiple matrix engines require CompactOpenTPU")
     self.matrix_batch_sizes = []
     cfg,t = workload.config,self.timing
+    if (t.fp_mul_latency,t.fp_add_latency)!=(2,4) and cfg.LANES!=64:
+      raise ValueError('experimental FP partition timing requires the 64-lane architecture')
     if cfg.SEQ_WC:
       raise ValueError("the timing model currently requires the range-scoreboard sequencer")
     if t.dram_bytes_per_cycle>(t.dram_port_bytes or cfg.D):
@@ -280,11 +288,13 @@ class OpenTPU:
     elif ins.op==I.QACT:
       rows,kb = w[1]&255,w[1]>>16
       chunks = ceil(kb*cfg.D/cfg.LANES)
+      overhead=60-12*(2-t.fp_mul_latency)-4*(4-t.fp_add_latency)
       # QACT's row buffer overlaps pass 0 of the following row with pass 1.
-      latency = ((rows+1)*chunks+60 if t.quant_buffer_chunks>=2*chunks else
-                 rows*(2*chunks+60))
+      latency = ((rows+1)*chunks+overhead if t.quant_buffer_chunks>=2*chunks else
+                 rows*(2*chunks+overhead))
       if t.quant_row_banks and chunks<=t.quant_buffer_chunks:
-        latency=buffered_quant_cycles(rows,chunks,t.quant_buffer_chunks,t.quant_row_banks)
+        latency=buffered_quant_cycles(rows,chunks,t.quant_buffer_chunks,t.quant_row_banks,
+            mul_latency=t.fp_mul_latency,add_latency=t.fp_add_latency)
       port,service = None,0
     elif ins.op==I.QST:
       rows,kb = w[3]&65535,w[3]>>16
@@ -292,13 +302,15 @@ class OpenTPU:
       width = 4 if w[6]==1 else 1
       store = (ceil(elems*4/t.scalar_store_bytes)
                if t.scalar_store_bytes else ceil(elems/width))
-      latency = rows*(ceil(elems/cfg.LANES)+store+60)
+      overhead=60-12*(2-t.fp_mul_latency)-4*(4-t.fp_add_latency)
+      latency = rows*(ceil(elems/cfg.LANES)+store+overhead)
       chunks=ceil(elems/cfg.LANES)
       half=bool(ins.flags&1 and ins.flags&2)
       if (t.quant_store_buffered and t.scalar_store_bytes==4*cfg.LANES and
           not half and chunks<=t.quant_buffer_chunks):
         scale_words=1 if ins.flags&1 else 1+ceil(kb/4)
-        latency=buffered_quant_cycles(rows,chunks,t.quant_buffer_chunks,t.quant_row_banks,scale_words)
+        latency=buffered_quant_cycles(rows,chunks,t.quant_buffer_chunks,t.quant_row_banks,scale_words,
+            t.fp_mul_latency,t.fp_add_latency)
       # The shared memory link is occupied by byte-enabled stores, not by
       # scratchpad reads, max reduction or FP conversion in the quantizer.
       # Charging its complete latency here stalls unrelated matrix prefetch.
@@ -314,7 +326,9 @@ class OpenTPU:
       else:
         lanes = max(1,cfg.LANES//4) if composite else cfg.LANES
         slots = {I.V_EXP2:9,I.V_EXP2SUB:9,I.V_RECIP:6,I.V_RSQRT:10,I.V_LOG2:10}.get(function,0)
-        latency = rows*ceil(cols/lanes)+(7*slots+8 if composite else 12)
+        slot_one=function in (I.V_ADD,I.V_SUB,I.V_RSUB,I.V_MUL,I.V_OUTER)
+        ordinary=12-((2-t.fp_mul_latency)+(4-t.fp_add_latency) if slot_one else 0)
+        latency = rows*ceil(cols/lanes)+((1+t.fp_mul_latency+t.fp_add_latency)*slots+8 if composite else ordinary)
       if function==I.V_OUTER:
         latency += max(2,ceil(cols/cfg.LANES))
       if function in I.REDUCE:
@@ -325,10 +339,11 @@ class OpenTPU:
             # The real wide datapath preserves 64 ordered partial sums. Its
             # four-stage adder limits recurrence; the six-level tree drains
             # once, after the last issued partial (read/product/add/tree/retire).
-            interval=4//partial_chunks
-            latency=(chunks-1)*interval+36
+            interval=max(1,ceil(t.fp_add_latency/partial_chunks))
+            tail=7*t.fp_add_latency+t.fp_mul_latency+6
+            latency=(chunks-1)*interval+tail
             if t.vector_row_contexts==4 and cfg.LANES==64 and disjoint_sum_rows(ins,I):
-              latency=interleaved_sum_span(rows,ceil(cols/64))+36
+              latency=interleaved_sum_span(rows,ceil(cols/64),adder_latency=t.fp_add_latency)+tail
             if function==I.V_RDOT and rows<=256 and w[4]&65535==1:
               latency+=ceil(rows/cfg.LANES)
           else:
@@ -422,7 +437,8 @@ class OpenTPU:
     drain = ceil(m/drain_width)
     # ACC's multiply/add stages increase result latency, not the row initiation
     # interval: read/modify/write is pipelined alongside subsequent rows.
-    pipeline = min(cfg.D//8,t.chain_length)+cfg.MCOLS+5+9+(6 if flags&I.F_ACC else 0)
+    pipeline = min(cfg.D//8,t.chain_length)+cfg.MCOLS+5+(5+2*t.fp_mul_latency)+(
+        t.fp_mul_latency+t.fp_add_latency if flags&I.F_ACC else 0)
     row_service = max(steps*groups,drain)
     write_full = bank_write_cycles(batch,m,w[5]&65535,cfg.LANES)
     write_tail = bank_write_cycles(n%batch or batch,m,w[5]&65535,cfg.LANES)

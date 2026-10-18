@@ -16,6 +16,40 @@ from examples.opentpu.workload import load, use_checkout
 class OpenTPUTest(unittest.TestCase):
   tool = None
 
+  def test_lowlat_fp_quantizer_pipeline_matches_rtl(self):
+    from examples.opentpu.model import buffered_quant_cycles
+    self.assertEqual(buffered_quant_cycles(1,1,1024,8,mul_latency=1,add_latency=1),32)
+    self.assertEqual(buffered_quant_cycles(8,9,1024,8,mul_latency=1,add_latency=1),118)
+    self.assertEqual(buffered_quant_cycles(8,1,1024,8,2,1,1),66)
+    with self.assertRaises(ValueError):Timing(fp_add_latency=0)
+    with self.assertRaises(ValueError):Timing(fp_mul_latency=3)
+
+  def test_lowlat_fp_native_matches_expanded_dataflow(self):
+    from examples.opentpu.shape_workload import resolve_static
+    from opentpu import Config,isa as I
+    cfg=Config(D=64,MCOLS=1,LANES=64,DRAM_BYTES=1<<20)
+    program=[I.qact(0,8,0,9,576),I.mm(65536,0,8192,67,9,576,70,8,0,4,unit=True),
+             I.vop(I.V_RSSQ,16384,8192,0,8,67,1,70,0),
+             I.qst(8192,0x80000,0x90000,8,1,70,64,1),I.halt()]
+    workload=resolve_static(cfg,[program])
+    common=dict(dram_bytes_per_cycle=64,vector_row_contexts=4,quant_row_banks=8,
+                quant_store_buffered=True,scalar_store_bytes=256)
+    baseline=CompactOpenTPU(workload,Timing(**common)).net.python_simulator().run(max_time=100000)
+    timing=Timing(**common,fp_mul_latency=1,fp_add_latency=1)
+    times=[]
+    with tempfile.TemporaryDirectory() as directory:
+      for cls in (OpenTPU,CompactOpenTPU):
+        model=cls(workload,timing);sim=model.net.python_simulator()
+        times.append(sim.run(max_time=100000))
+        self.assertEqual(sim.place_dicts('program_completed'),[{}])
+        if self.tool:
+          ir=Path(directory)/f'{cls.__name__}.mlir';binary=ir.with_suffix('.native')
+          ir.write_text(model.build())
+          subprocess.run([self.tool,str(ir),'-o',str(binary)],check=True,capture_output=True,text=True)
+          self.assertEqual(native_observation(binary)[0],times[-1])
+    self.assertEqual(*times)
+    self.assertLess(times[0],baseline)
+
   def test_interleaved_sum_credit_spacing_and_alias_fallback(self):
     from examples.opentpu.model import interleaved_sum_span,disjoint_sum_rows
     from opentpu import isa as I

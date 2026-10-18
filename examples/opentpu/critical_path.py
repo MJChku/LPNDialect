@@ -41,6 +41,9 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ('case','opentpu-root','output'):p.add_argument('--'+name,type=Path,required=True)
     p.add_argument('--indices',default='0,15,16,47')
+    p.add_argument('--matrix-rows',type=int,default=128)
+    p.add_argument('--fp-mul-latency',type=int,choices=(1,2),default=2)
+    p.add_argument('--fp-add-latency',type=int,choices=(1,2,3,4),default=4)
     a=p.parse_args()
     from examples.opentpu.workload import use_checkout
     from examples.opentpu.shape_workload import resolve_static
@@ -53,9 +56,10 @@ def main():
     if reference['status']!='complete' or not reference['all_dram_and_tmem_bit_exact']:
         raise ValueError('completed numerical reference required')
     original=Config(**reference['config']);cfg=replace(original,LANES=64,MCOLS=1)
-    t=Timing(batch_rows=128,matrix_row_lanes=128,dram_bytes_per_cycle=2816,dram_port_bytes=2816,
-        fifo_chunks=16384,scale_lanes=128,epilogue_lanes=1,unified_dram=True,scalar_store_bytes=256,
-        quant_row_banks=8,quant_store_buffered=True)
+    t=Timing(batch_rows=a.matrix_rows,matrix_row_lanes=a.matrix_rows,dram_bytes_per_cycle=2816,dram_port_bytes=2816,
+        fifo_chunks=128*a.matrix_rows,scale_lanes=a.matrix_rows,epilogue_lanes=1,unified_dram=True,scalar_store_bytes=256,
+        quant_row_banks=8,quant_store_buffered=True,vector_row_contexts=4,
+        fp_mul_latency=a.fp_mul_latency,fp_add_latency=a.fp_add_latency)
     results=[]
     for index in map(int,a.indices.split(',')):
         record=reference['kernels'][index];source=a.case/'kernels'/f'{index:04d}'
@@ -80,7 +84,8 @@ def main():
                         chunks=kb if wf==I.W8 else ceil(kb/2)
                         drain=ceil(m/min(t.epilogue_lanes,cfg.MCOLS,cfg.LANES//gcd(w[5]&65535,cfg.LANES)))
                         service=max((chunks if pair else kb)*ceil(m/cfg.MCOLS),drain)
-                        tail=min(cfg.D//8,t.chain_length)+cfg.MCOLS+14+(6 if ins.flags&I.F_ACC else 0)+drain
+                        tail=min(cfg.D//8,t.chain_length)+cfg.MCOLS+10+2*t.fp_mul_latency+(
+                            t.fp_mul_latency+t.fp_add_latency if ins.flags&I.F_ACC else 0)+drain
                         latency=max(ceil(n/t.matrix_row_lanes)*service,
                                     bank_write_cycles(n,m,w[5]&65535,cfg.LANES))+tail
                     elif W.UNIT.get(ins.op,5)==5:latency=0

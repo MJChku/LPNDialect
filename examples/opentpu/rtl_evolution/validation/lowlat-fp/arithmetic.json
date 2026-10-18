@@ -1,0 +1,33 @@
+{
+  "status": "complete",
+  "vectors": 8192,
+  "corner_pairs": 256,
+  "add_latencies": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "multiply_latencies": [
+    1,
+    2,
+    3
+  ],
+  "madd_latencies": [
+    2,
+    6,
+    4
+  ],
+  "mma_latency": 2,
+  "enable_stalls_verified": true,
+  "all_outputs_bit_exact_to_numpy": true,
+  "source_sha256": {
+    "/home/ubuntu/FeSens-openTPU-lowlat-fp/rtl/vpu/otpu_fp.sv": "b476c83913d88ef5b4bcbc8cc07378ade8b2aeaaf7642b20976bd1fce33cd416",
+    "/home/ubuntu/FeSens-openTPU-lowlat-fp/rtl/vpu/otpu_fpipe.sv": "6f9feaf92b539bb989e90dd77d8c066c92ae01c1b9c826f335e6b45231c45bd0",
+    "/home/ubuntu/LPNDialect-lowlat-fp/examples/opentpu/rtl_evolution/tb_fp_partition.sv": "c9614c479dea1561bd748a9bc7fd6ab76d46e1b3a8024db03d00d49d0f0df0ef"
+  },
+  "simulator": "/home/ubuntu/FeSens-openTPU-lowlat-fp/build/verilator/tb_fp_partition_fd6c15356842/Vtb_fp_partition",
+  "physical_clock_or_fpga_fit_validated": false
+}

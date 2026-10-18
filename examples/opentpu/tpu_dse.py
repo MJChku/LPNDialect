@@ -26,6 +26,8 @@ class Architecture:
     ceiling_only: bool = False
     buffered_quant: bool = False
     vector_row_contexts: int = 1
+    fp_mul_latency: int = 2
+    fp_add_latency: int = 4
 
 
 def architectures():
@@ -34,6 +36,16 @@ def architectures():
         Architecture('fpga_quant_32x1', 32, 1, 2816, buffered_quant=True),
         Architecture('fpga_quant_128x1', 128, 1, 2816, buffered_quant=True),
         Architecture('fpga_quant_reductions_128x1', 128, 1, 2816, buffered_quant=True,vector_row_contexts=4),
+        Architecture('experimental_fpga_128x1_add2', 128, 1, 2816, buffered_quant=True,
+                     vector_row_contexts=4,fp_add_latency=2),
+        Architecture('experimental_128x1_add1_mul1', 128, 1, 2816, buffered_quant=True,
+                     vector_row_contexts=4,fp_add_latency=1,fp_mul_latency=1),
+        Architecture('asic_256x1_add1_mul1_memory8192', 256, 1, 8192, buffered_quant=True,
+                     vector_row_contexts=4,fp_add_latency=1,fp_mul_latency=1),
+        Architecture('asic_512x1_add1_mul1_memory16384', 512, 1, 16384, buffered_quant=True,
+                     vector_row_contexts=4,fp_add_latency=1,fp_mul_latency=1),
+        Architecture('asic_1024x1_add1_mul1_memory65536', 1024, 1, 65536, buffered_quant=True,
+                     vector_row_contexts=4,fp_add_latency=1,fp_mul_latency=1),
         Architecture('fpga_quant_256x1', 256, 1, 2816, buffered_quant=True),
         Architecture('fpga_quant_64x4', 64, 4, 2816, buffered_quant=True),
         Architecture('rows128_memory2816', 128, 1, 2816),
@@ -109,7 +121,8 @@ def run_kernel(task):
         dram_latency=point.latency, fifo_chunks=128 * point.rows, scale_lanes=point.rows,
         unified_dram=True, scalar_store_bytes=256, epilogue_lanes=max(1, point.columns // 2),
         quant_row_banks=8 if point.buffered_quant else 0,quant_store_buffered=point.buffered_quant,
-        vector_row_contexts=point.vector_row_contexts)
+        vector_row_contexts=point.vector_row_contexts,
+        fp_mul_latency=point.fp_mul_latency,fp_add_latency=point.fp_add_latency)
     prepared = ReusableTiming(Path(task['compiler']), Path(task['cache']), capacity=65536).prepare(
         workload, timing, directory / 'timing.tables')
     cycles, core, _, log = prepared.run()
