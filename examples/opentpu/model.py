@@ -27,20 +27,20 @@ def matrix_batch_rows(rows,chunks,timing):
   return batch//parallel*parallel if batch>=parallel else batch
 
 
-def quant_scale_setup(mul_latency=2,add_latency=4):
+def quant_scale_setup(mul_latency=2,add_latency=4,scale_lookup=False):
   # Registered TMEM read, prescale, max fold, scale pipeline and reader restart.
-  return 9*mul_latency+4*add_latency+9
+  return 3*mul_latency+11 if scale_lookup else 9*mul_latency+4*add_latency+9
 
 
-def legacy_quant_cycles(rows,reads,writes,scale_words=0,mul_latency=2,add_latency=4):
+def legacy_quant_cycles(rows,reads,writes,scale_words=0,mul_latency=2,add_latency=4,scale_lookup=False):
   """Two-pass reader: scale writes and both passes repeat for every row."""
   if not rows or not reads:
     return 3
-  setup=quant_scale_setup(mul_latency,add_latency)
+  setup=quant_scale_setup(mul_latency,add_latency,scale_lookup)
   return rows*(reads+writes+setup+scale_words-2)+3*mul_latency+(12 if scale_words else 8)
 
 
-def buffered_quant_cycles(rows,chunks,capacity,banks,scale_words=0,mul_latency=2,add_latency=4):
+def buffered_quant_cycles(rows,chunks,capacity,banks,scale_words=0,mul_latency=2,add_latency=4,scale_lookup=False):
   """Finite row/FIFO credits for the buffered quantizer's two overlapping passes.
 
   Each chunk takes one read and one pop. Read-to-scale-to-pop is 43 clocks;
@@ -61,7 +61,7 @@ def buffered_quant_cycles(rows,chunks,capacity,banks,scale_words=0,mul_latency=2
       index=row*chunks+chunk
       free=popped[index-capacity]+1 if index>=capacity else 1
       read=max(read+1,free,bank_free)
-    setup=quant_scale_setup(mul_latency,add_latency)
+    setup=quant_scale_setup(mul_latency,add_latency,scale_lookup)
     first=max(read+setup,(popped[-1]+2 if popped else 1))+scale_words
     popped.extend(range(first,first+chunks))
     row_ends.append(popped[-1])
@@ -112,6 +112,7 @@ class Timing:
   # Zero retains the original validated quantizer approximation.
   quant_row_banks: int = 0
   quant_store_buffered: bool = False
+  quant_scale_lookup: bool = False
   vector_row_contexts: int = 1
   vector_engines: int = 1
   vector_result_chunks: int = 0
@@ -134,6 +135,8 @@ class Timing:
       raise ValueError('quant_row_banks must be zero or a power of two from 2 to 256')
     if self.activation_streaming and (not self.quant_row_banks or self.batch_rows>self.matrix_row_lanes):
       raise ValueError('ACT streaming requires row banks and at most one parallel matrix wave per batch')
+    if self.quant_scale_lookup and not self.quant_row_banks:
+      raise ValueError('lookup quantizer scale requires explicit row banks')
     if self.quant_store_buffered and not self.quant_row_banks:
       raise ValueError('buffered QST requires explicit row banks')
     if not isinstance(self.vector_engines,int) or self.vector_engines<1:
@@ -327,10 +330,10 @@ class OpenTPU:
                  rows*(2*chunks+overhead))
       if t.quant_row_banks and chunks<=t.quant_buffer_chunks:
         latency=buffered_quant_cycles(rows,chunks,t.quant_buffer_chunks,t.quant_row_banks,
-            mul_latency=t.fp_mul_latency,add_latency=t.fp_add_latency)
+            mul_latency=t.fp_mul_latency,add_latency=t.fp_add_latency,scale_lookup=t.quant_scale_lookup)
       elif t.quant_row_banks:
         latency=legacy_quant_cycles(rows,chunks,chunks,mul_latency=t.fp_mul_latency,
-            add_latency=t.fp_add_latency)
+            add_latency=t.fp_add_latency,scale_lookup=t.quant_scale_lookup)
       port,service = None,0
     elif ins.op==I.QST:
       rows,kb = w[3]&65535,w[3]>>16
@@ -346,12 +349,12 @@ class OpenTPU:
       if parallel_stores:
         store=ceil((elems//2 if half else elems)/cfg.LANES)
         scale_words=1 if ins.flags&1 else 1+ceil(kb/4)
-        latency=legacy_quant_cycles(rows,chunks,store,scale_words,t.fp_mul_latency,t.fp_add_latency)
+        latency=legacy_quant_cycles(rows,chunks,store,scale_words,t.fp_mul_latency,t.fp_add_latency,t.quant_scale_lookup)
       if (t.quant_store_buffered and t.scalar_store_bytes==4*cfg.LANES and
           not half and chunks<=t.quant_buffer_chunks):
         scale_words=1 if ins.flags&1 else 1+ceil(kb/4)
         latency=buffered_quant_cycles(rows,chunks,t.quant_buffer_chunks,t.quant_row_banks,scale_words,
-            t.fp_mul_latency,t.fp_add_latency)
+            t.fp_mul_latency,t.fp_add_latency,t.quant_scale_lookup)
       # The shared memory link is occupied by byte-enabled stores, not by
       # scratchpad reads, max reduction or FP conversion in the quantizer.
       # Charging its complete latency here stalls unrelated matrix prefetch.

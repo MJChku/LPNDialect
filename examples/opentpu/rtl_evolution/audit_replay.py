@@ -14,6 +14,7 @@ def main():
     a=p.parse_args()
     from examples.opentpu.e2e import atomic_json,digest
     from .parallel_inference import files_equal
+    from examples.opentpu.retained_inputs import verified_program
     report=json.loads((a.case/'report.json').read_text())
     full=report['indices']==list(range(48))
     if report['status']!='complete' or report['failures'] or (not full and not a.selected_kernels):
@@ -34,12 +35,19 @@ def main():
     for record in report['records']:
         index=record['step']
         source=original['kernels'][index]
-        if record['step']!=index or not record['all_dram_and_tmem_bit_exact'] or not record['identical_input_files']:
+        if not record['all_dram_and_tmem_bit_exact'] or not record['identical_input_files']:
             raise RuntimeError('invalid kernel evidence')
         if record['timing']!=report['timing']:
             raise RuntimeError('worker timing parameters differ from the requested architecture')
         if 'rtl_top_parameters' in record and bool(record['rtl_top_parameters'].get('ACT_STREAMING',0))!=bool(record['timing'].get('activation_streaming',False)):
             raise RuntimeError('RTL streaming parameter differs from model timing')
+        if 'rtl_top_parameters' in record and bool(record['rtl_top_parameters'].get('QUANT_LOOKUP',0))!=bool(record['timing'].get('quant_scale_lookup',False)):
+            raise RuntimeError('RTL lookup scale parameter differs from model timing')
+        if record['timing'].get('quant_scale_lookup',False):
+            expected_tables={Path(n).name:h for n,h in report['rtl_and_model_source_sha256'].items()
+                             if Path(n).name in ('coeff.hex','correction.hex')}
+            if len(expected_tables)!=2 or record.get('lookup_table_sha256')!=expected_tables:
+                raise RuntimeError('worker lookup table data differs from global source evidence')
         if 'rtl_compile_flags' in record:
             flags=record['rtl_compile_flags']
             for field,define,default in (('fp_mul_latency','OTPU_FP_MUL_LAT',2),
@@ -64,9 +72,17 @@ def main():
         instructions=[int(n) for n in re.findall(r'SLICE \d+ icount=(\d+)',log)]
         if instructions!=record['instructions'] or instructions!=source['instructions']:
             raise RuntimeError('RTL instruction count differs from upstream trace')
-        if 'rollbacks: 0' not in (directory/'lpn.log').read_text():
-            raise RuntimeError('missing zero-rollback native evidence')
+        native_log=(directory/'lpn.log').read_text()
+        native_time=re.search(r'Simulation finished at t=([0-9.]+)',native_log)
+        if ('rollbacks: 0' not in native_log or 'place program_completed: 1 token(s)' not in native_log
+            or not native_time or float(native_time[1])!=record['lpn_cycles']):
+            raise RuntimeError('native completion log disagrees with recorded timing')
+        if abs((record['lpn_cycles']/record['rtl_cycles']-1)-record['evolved_lpn_relative_cycle_error'])>1e-12:
+            raise RuntimeError('recorded model error disagrees with cycle counts')
         for sid in range(original['config']['S']):
+            _,identity=verified_program(directory,sid)
+            if 'program_json_sha256' in record and record['program_json_sha256'][f'program_{sid}.json']!=identity:
+                raise RuntimeError('decoded program hash changed')
             if not files_equal(directory/f'dram_out_{sid}.bin',reference/'kernels'/f'{index:04d}'/f'dram_out_{sid}.bin'):
                 raise RuntimeError('full DRAM differs from previously validated independent ISA state')
             words=[int(w,16) for w in (directory/f'tmem_{sid}.hex').read_text().split()]
@@ -85,7 +101,7 @@ def main():
     result=dict(status='complete',report_sha256=digest(a.case/'report.json'),script_sha256=digest(Path(__file__)),
         full_inference=full,kernel_indices=report['indices'],selected_rtl_cycles=rtl,original_rtl_cycles=before,lpn_cycles=native,cycle_speedup=before/rtl,
         relative_cycle_error=native/rtl-1,worst_kernel_error=max(abs(r['relative_cycle_error']) for r in records),
-        all_inputs_and_simulator_hashes_verified=True,all_full_dram_and_tmem_bit_exact=True,
+        all_inputs_and_simulator_hashes_verified=True,all_program_json_matches_canonical_hex=True,all_full_dram_and_tmem_bit_exact=True,
         all_raw_rtl_logs_and_instruction_counts_verified=True,all_model_and_rtl_source_hashes_verified=True,
         schedule='Retained unmodified upstream Engine.generate, 128 input and 32 output tokens',
         generated_ids_preserved_by_full_output_equivalence=full,simulator_sha256=binary_hashes,

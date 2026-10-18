@@ -1,0 +1,7 @@
+test_native_matches_python_and_retains_activation_readiness (__main__.LookupScaleTest.test_native_matches_python_and_retains_activation_readiness) ... ok
+test_timing_matches_every_production_quantizer_case (__main__.LookupScaleTest.test_timing_matches_every_production_quantizer_case) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.663s
+
+OK

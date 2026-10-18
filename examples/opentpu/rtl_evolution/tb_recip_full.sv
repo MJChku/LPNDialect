@@ -1,6 +1,7 @@
 module tb_recip_full;
   import otpu_fp::*;
   parameter int PORTS=2;
+  parameter string COEFF_FILE="",CORRECTION_FILE="";
   logic clk=0,rst=1,en=0;
   always #5 clk=~clk;
   logic [PORTS-1:0] iv,ov;
@@ -12,7 +13,7 @@ module tb_recip_full;
   logic [PORTS-1:0] expected_valid [4];
   int unsigned count=0,cycles=0,checked=0,held=0;
   int unsigned limit=1<<20;
-  otpu_recip_lookup #(.PORTS(PORTS)) dut (.*);
+  otpu_recip_lookup #(.PORTS(PORTS),.COEFF_FILE(COEFF_FILE),.CORRECTION_FILE(CORRECTION_FILE)) dut (.*);
   always @(posedge clk) begin
     if (rst) begin
       for (int t=0;t<4;t++) expected_valid[t]='0;

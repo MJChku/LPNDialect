@@ -2,7 +2,7 @@
 from .model import quant_scale_setup
 
 
-def quant_row_first_pops(rows,chunks,capacity,banks,mul_latency=2,add_latency=4):
+def quant_row_first_pops(rows,chunks,capacity,banks,mul_latency=2,add_latency=4,scale_lookup=False):
   """Finite FIFO/bank schedule, before output conversion and ACT RAM landing.
 
   A scale follows a complete buffered row. Its pop stream has no TMEM stalls
@@ -18,7 +18,7 @@ def quant_row_first_pops(rows,chunks,capacity,banks,mul_latency=2,add_latency=4)
       index=row*chunks+chunk
       free=popped[index-capacity]+1 if index>=capacity else 1
       read=max(read+1,free,bank_free)
-    first=max(read+quant_scale_setup(mul_latency,add_latency),popped[-1]+2 if popped else 1)
+    first=max(read+quant_scale_setup(mul_latency,add_latency,scale_lookup),popped[-1]+2 if popped else 1)
     firsts.append(first)
     popped.extend(range(first,first+chunks))
     ends.append(popped[-1])
@@ -76,7 +76,7 @@ class ActivationStream:
       tail.append(2 if buffered else 0)
       if buffered:
         firsts=quant_row_first_pops(n,kb,timing.quant_buffer_chunks,timing.quant_row_banks,
-                                   timing.fp_mul_latency,timing.fp_add_latency)
+                                   timing.fp_mul_latency,timing.fp_add_latency,timing.quant_scale_lookup)
         # Output conversion plus three ACT RAM write registers. A synchronous
         # reader can consume the block on the following edge.
         delays.extend(f+timing.fp_mul_latency+10 for f in firsts)

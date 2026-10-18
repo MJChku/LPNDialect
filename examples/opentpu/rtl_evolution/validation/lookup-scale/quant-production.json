@@ -1,0 +1,183 @@
+{
+  "status": "complete",
+  "stream_act": true,
+  "lookup_scale": true,
+  "records": [
+    {
+      "name": "qst_r1_kb1_row0_half0_es1",
+      "rtl_cycles": 34,
+      "all_state_bit_exact": true
+    },
+    {
+      "name": "qst_r1_kb1_row0_half0_es17",
+      "rtl_cycles": 34,
+      "all_state_bit_exact": true
+    },
+    {
+      "name": "qst_r1_kb1_row1_half0_es4",
+      "rtl_cycles": 33,
+      "all_state_bit_exact": true
+    },
+    {
+      "name": "qst_r1_kb1_row1_half1_es1",
+      "rtl_cycles": 36,
+      "all_state_bit_exact": true
+    },
+    {
+      "name": "qst_r8_kb1_row0_half0_es1",
+      "rtl_cycles": 62,
+      "all_state_bit_exact": true
+    },
+    {
+      "name": "qst_r8_kb1_row0_half0_es17",
+      "rtl_cycles": 62,
+      "all_state_bit_exact": true
+    },
+    {
+      "name": "qst_r8_kb1_row1_half0_es4",
+      "rtl_cycles": 54,
+      "all_state_bit_exact": true
+    },
+    {
+      "name": "qst_r8_kb1_row1_half1_es1",
+      "rtl_cycles": 162,
+      "all_state_bit_exact": true
+    },
+    {
+      "name": "qst_r9_kb3_row0_half0_es1",
+      "rtl_cycles": 86,
+      "all_state_bit_exact": true
+    },
+    {
+      "name": "qst_r9_kb3_row0_half0_es17",
+      "rtl_cycles": 86,
+      "all_state_bit_exact": true
+    },
+    {
+      "name": "qst_r9_kb3_row1_half0_es4",
+      "rtl_cycles": 77,
+      "all_state_bit_exact": true
+    },
+    {
+      "name": "qst_r9_kb3_row1_half1_es1",
+      "rtl_cycles": 207,
+      "all_state_bit_exact": true
+    },
+    {
+      "name": "qst_r8_kb9_row0_half0_es1",
+      "rtl_cycles": 150,
+      "all_state_bit_exact": true
+    },
+    {
+      "name": "qst_r8_kb9_row0_half0_es17",
+      "rtl_cycles": 150,
+      "all_state_bit_exact": true
+    },
+    {
+      "name": "qst_r8_kb9_row1_half0_es4",
+      "rtl_cycles": 126,
+      "all_state_bit_exact": true
+    },
+    {
+      "name": "qst_r8_kb9_row1_half1_es1",
+      "rtl_cycles": 258,
+      "all_state_bit_exact": true
+    },
+    {
+      "name": "qst_r9_kb33_row0_half0_es1",
+      "rtl_cycles": 458,
+      "all_state_bit_exact": true
+    },
+    {
+      "name": "qst_r9_kb33_row0_half0_es17",
+      "rtl_cycles": 458,
+      "all_state_bit_exact": true
+    },
+    {
+      "name": "qst_r9_kb33_row1_half0_es4",
+      "rtl_cycles": 377,
+      "all_state_bit_exact": true
+    },
+    {
+      "name": "qst_r9_kb33_row1_half1_es1",
+      "rtl_cycles": 612,
+      "all_state_bit_exact": true
+    },
+    {
+      "name": "qact_r1_kb1",
+      "rtl_cycles": 28,
+      "all_state_bit_exact": true
+    },
+    {
+      "name": "qact_r8_kb1",
+      "rtl_cycles": 42,
+      "all_state_bit_exact": true
+    },
+    {
+      "name": "qact_r9_kb3",
+      "rtl_cycles": 64,
+      "all_state_bit_exact": true
+    },
+    {
+      "name": "qact_r8_kb9",
+      "rtl_cycles": 114,
+      "all_state_bit_exact": true
+    },
+    {
+      "name": "qact_r9_kb33",
+      "rtl_cycles": 364,
+      "all_state_bit_exact": true
+    },
+    {
+      "name": "qact_prescaled",
+      "rtl_cycles": 114,
+      "all_state_bit_exact": true
+    },
+    {
+      "name": "qact_dup",
+      "rtl_cycles": 60,
+      "all_state_bit_exact": true
+    },
+    {
+      "name": "qst_ties",
+      "rtl_cycles": 72,
+      "all_state_bit_exact": true
+    }
+  ],
+  "stall": 0,
+  "chunks": 1024,
+  "fp_mul_latency": 2,
+  "fp_add_latency": 4,
+  "simulator": "/home/ubuntu/FeSens-openTPU-fast-scale/build/verilator/tb_quant_buffered_10d8e4aa46f0/Vtb_quant_buffered",
+  "source_sha256": {
+    "/home/ubuntu/FeSens-openTPU-fast-scale/rtl/vpu/otpu_fp.sv": "b476c83913d88ef5b4bcbc8cc07378ade8b2aeaaf7642b20976bd1fce33cd416",
+    "/home/ubuntu/FeSens-openTPU-fast-scale/rtl/vpu/otpu_fpipe.sv": "6f9feaf92b539bb989e90dd77d8c066c92ae01c1b9c826f335e6b45231c45bd0",
+    "/home/ubuntu/FeSens-openTPU-fast-scale/rtl/top/otpu_pkg.sv": "ca41c32141fdf224d24481842b182063ce5692a976176eca82c4c78d4d7ad3c6",
+    "/home/ubuntu/FeSens-openTPU-fast-scale/rtl/tech/generic/otpu_tech_ram.sv": "f2c74dc55f26ad01568271ec22469208d93af2d9248ff1f9cfef3dafe1083881",
+    "/home/ubuntu/FeSens-openTPU-fast-scale/rtl/vpu/otpu_quant.sv": "6664b00f953ed26120e6cc084929fe4b044c4df07f35fc5034158c088b2bf0ec",
+    "/home/ubuntu/LPNDialect-vector-pool/examples/opentpu/rtl_evolution/tb_quant_buffered.sv": "270e060fac92b7757b9613023684c6e9a8b774bb3e538191df55b1d70a50ff83",
+    "/home/ubuntu/FeSens-openTPU-fast-scale/rtl/vpu/otpu_recip_rom.sv": "e253c9b4d1a1f7c2ed834d42e7389dc523f20efd530545c072e1a7289e97efc4",
+    "/home/ubuntu/FeSens-openTPU-fast-scale/rtl/vpu/otpu_qscale_lookup.sv": "4e4b4337fbd8c9fa1be68f18c7cd0c8c7d476615ac2005714dd4a82be524ffd2",
+    "/home/ubuntu/lpn-runs/tpu-100x/recip-two-bit-table/coeff.hex": "2ed322e9987b727d73cb592a2b886b85c138095f4b7babfee27224477b3ee9a3",
+    "/home/ubuntu/lpn-runs/tpu-100x/recip-two-bit-table/correction.hex": "1d868c04b7226b703f299f2c3df4016fe3caf4be7b0c7af7a46a4fb7153fbf10"
+  },
+  "rtl_compile_flags": [
+    "--binary",
+    "-j",
+    "12",
+    "-Wno-fatal",
+    "-Wno-WIDTHEXPAND",
+    "-Wno-WIDTHTRUNC",
+    "-Wno-UNUSEDSIGNAL",
+    "-Wno-UNUSEDPARAM",
+    "-O3",
+    "--x-assign",
+    "0",
+    "--x-initial",
+    "0",
+    "-DOTPU_HAS_STREAM_ACT",
+    "-DOTPU_HAS_LOOKUP_SCALE",
+    "-DOTPU_FP_MUL_LAT=2",
+    "-DOTPU_FP_ADD_LAT=4"
+  ]
+}

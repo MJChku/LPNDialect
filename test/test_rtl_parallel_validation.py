@@ -1,10 +1,18 @@
 import unittest
 from types import SimpleNamespace
 
-from examples.opentpu.rtl_evolution.parallel_inference import configure_rtlsim
+from examples.opentpu.rtl_evolution.parallel_inference import configure_rtlsim,validate_variant
 
 
 class WorkerConfigurationTest(unittest.TestCase):
+    def test_hardware_and_model_feature_mismatches_are_rejected(self):
+        for field,parameter in (('activation_streaming','ACT_STREAMING'),('quant_scale_lookup','QUANT_LOOKUP')):
+            with self.subTest(field=field):
+                validate_variant({field:True},{parameter:1})
+                with self.assertRaises(ValueError):validate_variant({field:True},{})
+                with self.assertRaises(ValueError):validate_variant({},{parameter:1})
+        validate_variant({}, {})
+
     def test_reused_worker_selects_and_resets_arithmetic_architecture(self):
         simulation=SimpleNamespace(VFLAGS=['--binary','-j','4','-O3'])
         configure_rtlsim(simulation,1,2)

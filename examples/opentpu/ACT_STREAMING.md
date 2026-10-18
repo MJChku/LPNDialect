@@ -124,3 +124,14 @@ streaming mismatch between the hardware parameters and LPN timing. Source and
 binary hashes distinguish these simulators from previous architectures.
 Reports and the clean seven-patch reproduction proof are in
 [validation/act-streaming](rtl_evolution/validation/act-streaming).
+
+
+## Completed real-workload streaming pilot
+
+The 32-engine, original-FP-stage replay of original kernels 0, 15, 16 and 47
+completed at 1,583,564 RTL cycles, against 1,600,365 for its matching control
+(1.01061x fewer cycles). Every full DRAM/TMEM state is bit-exact. LPN predicts
+1,582,986 cycles: −0.0365% total error and 2.308% worst kernel error. A fresh
+selected-kernel audit verified inputs, binaries, sources, logs and memories.
+This is four selected kernels, not a complete inference timing result.
+See `validation/act-streaming/inference-pilot{,-audit}.json`.

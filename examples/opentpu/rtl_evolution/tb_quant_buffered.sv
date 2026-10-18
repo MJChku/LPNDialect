@@ -3,6 +3,7 @@ module tb_quant_buffered;
   import otpu_pkg::*;
   parameter int XD=32;
   parameter bit STREAM_ACT=0;
+  parameter bit LOOKUP_SCALE=0;
   localparam int LANES=64, WORDS=32768, DB=1<<20, AB=64, AR=16;
   logic clk=0, rst=1, start=0, ready, done, gnt, wr_idle;
   always #5 clk=~clk;
@@ -26,7 +27,14 @@ module tb_quant_buffered;
   assign gnt=(stall==0) || ((stall==1) && cycles%11!=3 && cycles%11!=4)
       || ((stall==2) && !(cycles%71>=17 && cycles%71<34));
   assign wr_idle=ack==0;
-  otpu_quant #(.D(64),.LANES(LANES),.STORE_LANES(LANES),.XD(XD),.STREAM_ACT(STREAM_ACT)) dut (
+  otpu_quant #(.D(64),.LANES(LANES),.STORE_LANES(LANES),.XD(XD)
+`ifdef OTPU_HAS_STREAM_ACT
+      ,.STREAM_ACT(STREAM_ACT)
+`endif
+`ifdef OTPU_HAS_LOOKUP_SCALE
+      ,.LOOKUP_SCALE(LOOKUP_SCALE)
+`endif
+  ) dut (
     .clk,.rst,.start,.cmd,.rdy(ready),.done,.gnt,
     .t_ren(re),.t_raddr(ra),.t_rdata(rd),.t_ren2(re2),.t_raddr2(ra2),.t_rdata2(rd2),
     .t_ren3(re3),.t_raddr3(ra3),.t_rdata3(rd3),

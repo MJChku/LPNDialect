@@ -16,17 +16,22 @@ module otpu_recip_rom
   initial if (PORTS<1 || PORTS>2) $fatal(1,"reciprocal ROM has one or two physical read ports");
   (* ram_style="block" *) logic [50:0] coefficients [4096];
   (* ram_style="block" *) logic [1:0] corrections [1<<23];
+`ifdef SYNTHESIS
+  initial begin
+    $readmemh(COEFF_FILE,coefficients);
+    $readmemh(CORRECTION_FILE,corrections);
+  end
+`else
   initial begin
     string coeff_path,correction_path;
     coeff_path=COEFF_FILE;correction_path=CORRECTION_FILE;
-`ifndef SYNTHESIS
     void'($value$plusargs("recip_coeff=%s",coeff_path));
     void'($value$plusargs("recip_correction=%s",correction_path));
-`endif
     if (coeff_path=="" || correction_path=="") $fatal(1,"missing reciprocal ROM files");
     $readmemh(coeff_path,coefficients);
     $readmemh(correction_path,corrections);
   end
+`endif
   for (genvar p=0;p<PORTS;p++) begin : g_port
     logic [3:0] valid;
     logic [TW-1:0] tags [4];

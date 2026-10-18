@@ -43,6 +43,13 @@ def configure_rtlsim(rtlsim,fp_mul_latency=2,fp_add_latency=4):
         rtlsim.VFLAGS += [f'-DOTPU_FP_MUL_LAT={fp_mul_latency}',f'-DOTPU_FP_ADD_LAT={fp_add_latency}']
 
 
+
+def validate_variant(timing,uarch):
+    for field,parameter in (('activation_streaming','ACT_STREAMING'),('quant_scale_lookup','QUANT_LOOKUP')):
+        if bool(uarch.get(parameter,0))!=bool(timing.get(field,False)):
+            raise ValueError(f'RTL {parameter} setting differs from LPN timing')
+
+
 def simulator_cache_key(rtlsim,cfg,uarch):
     sources=[rtlsim.RTL/s for s in rtlsim.RTL_SOURCES]+[rtlsim.TB/'lpn_wall.cpp',rtlsim.TB/'tb_top.sv']
     return rtlsim.build_dir('tb_top',sources,rtlsim.top_params(cfg,8,uarch,False,None)).name
@@ -65,9 +72,18 @@ def check_kernel(task):
             raise RuntimeError(f'kernel {index}: input hashes differ from original RTL')
         if task['args']!=original['args']:
             raise RuntimeError(f'kernel {index}: argument registers differ from original RTL')
+        from examples.opentpu.retained_inputs import verified_program
+        programs=[];program_json_hashes={}
+        for sid in range(cfg.S):
+            encoded,identity=verified_program(directory,sid)
+            programs.append([I.Instr.decode(word) for word in encoded])
+            program_json_hashes[f'program_{sid}.json']=identity
         requested=task.get('timing') or {}
-        if bool(task['uarch'].get('ACT_STREAMING',0))!=bool(requested.get('activation_streaming',False)):
-            raise ValueError('RTL ACT streaming setting differs from LPN timing')
+        validate_variant(requested,task['uarch'])
+        lookup_hashes={};lookup_args=[]
+        if requested.get('quant_scale_lookup',False):
+            from .rom_inputs import reciprocal_inputs
+            _,lookup_hashes,lookup_args=reciprocal_inputs(task['recip_table'])
         configure_rtlsim(rtlsim,requested.get('fp_mul_latency',2),requested.get('fp_add_latency',4))
         atomic_json(directory/'worker.json',dict(status='building',pid=os.getpid()))
         reused=None
@@ -82,6 +98,8 @@ def check_kernel(task):
                 if (reused['input_sha256']!=hashes or not reused['all_dram_and_tmem_bit_exact'] or
                     not reused['identical_input_files'] or reused['step']!=index):
                     raise RuntimeError(f'kernel {index}: retained RTL evidence differs')
+                if reused.get('lookup_table_sha256',{})!=lookup_hashes:
+                    raise RuntimeError('retained lookup initialization data differs')
                 exe=Path(reused['simulator'])
                 if exe.parent.name!=simulator_cache_key(rtlsim,cfg,task['uarch']):
                     raise RuntimeError('retained simulator source/parameters/flags cache key differs')
@@ -99,6 +117,7 @@ def check_kernel(task):
         # already serialized once by its canonical writer in the producer.
         cmd=[str(exe),f'+dir={directory}',f'+max_cycles={max(10000,2*original["rtl_cycles"])}',
              '+lpn_wall']+[f'+arg{k}={int(v)&0xffffffff}' for k,v in enumerate(task['args'])]
+        cmd+=lookup_args
         if index==0:cmd.append('+trace')
         atomic_json(directory/'worker.json',dict(
             status='simulating' if reused is None else 'checking_retained_rtl',pid=os.getpid(),command=cmd))
@@ -127,8 +146,6 @@ def check_kernel(task):
         from examples.opentpu.shape_workload import resolve_static
         from examples.opentpu.native_timing import ReusableTiming
         from examples.opentpu.model import Timing
-        programs=[[I.Instr.decode(w) for w in json.loads((directory/f'program_{sid}.json').read_text())]
-                  for sid in range(cfg.S)]
         workload=resolve_static(cfg,programs,task['args'])
         physical=replace(workload,config=replace(cfg,MCOLS=1,LANES=64))
         timing=Timing(**task['timing']) if task.get('timing') else Timing(batch_rows=32,matrix_row_lanes=32,dram_bytes_per_cycle=2816,
@@ -137,8 +154,11 @@ def check_kernel(task):
         prepared=ReusableTiming(Path(task['compiler']),Path(task['cache']),capacity=65536).prepare(
             physical,timing,directory/'timing.tables')
         cycles,lpn_core,_,native_log=prepared.run();(directory/'lpn.log').write_text(native_log)
+        for name,expected in program_json_hashes.items():
+            if digest(directory/name)!=expected:raise RuntimeError('decoded timing program changed during validation')
         observed=int(result[1])
-        record=dict(step=index,input_sha256=hashes,instructions=counts,
+        record=dict(step=index,input_sha256=hashes,instructions=counts,canonical_program_json_verified=True,
+            program_json_sha256=program_json_hashes,
             rtl_cycles=observed,baseline_rtl_cycles=original['rtl_cycles'],lpn_cycles=cycles,
             architecture_cycle_speedup=original['rtl_cycles']/observed,
             evolved_lpn_relative_cycle_error=cycles/observed-1,
@@ -146,7 +166,7 @@ def check_kernel(task):
             rtl_process_seconds=process,rtl_build_seconds=build,
             all_dram_and_tmem_bit_exact=True,identical_input_files=True,zero_rollbacks=True,
             simulator=str(exe),baseline_binary_sha256=digest(exe),timing=asdict(timing),
-            rtl_compile_flags=list(rtlsim.VFLAGS),rtl_top_parameters=rtlsim.top_params(cfg,8,task['uarch'],False,None))
+            lookup_table_sha256=lookup_hashes,rtl_compile_flags=list(rtlsim.VFLAGS),rtl_top_parameters=rtlsim.top_params(cfg,8,task['uarch'],False,None))
         if reused is not None:record['rtl_reused_from']=str(previous)
         atomic_json(directory/'rtl-result.json',record)
         atomic_json(directory/'worker.json',dict(status='complete',pid=os.getpid()))

@@ -1,0 +1,7 @@
+test_incomplete_instruction_is_rejected (__main__.RetainedProgramTest.test_incomplete_instruction_is_rejected) ... ok
+test_omitted_zero_tail_still_preserves_full_instruction_identity (__main__.RetainedProgramTest.test_omitted_zero_tail_still_preserves_full_instruction_identity) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.002s
+
+OK

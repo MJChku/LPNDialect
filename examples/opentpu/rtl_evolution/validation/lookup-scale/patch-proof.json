@@ -1,0 +1,16 @@
+{
+  "status": "complete",
+  "base": "f237dab2f196855a59a083b1454786df8f01291f",
+  "patches": {
+    "parallel-rtl.patch": "d2868151a7082900fdfd8e33dea00667a21ca8fd1887c8d97c3897d978b6d423",
+    "buffered-quant.patch": "24023f4af0e56c057486b9c7474dbb56b8b22f0b87c19a31b857a0a1d84db1a7",
+    "interleaved-reductions.patch": "2c49c94214259a6c490c66050dec693ffdeb4acee16621b33eda9502da938c3f",
+    "shared-matrix-banks.patch": "b0581b014d27e4d7361cd5e39ca513daedb0a0aaf1d079ff2b5d00a4dd75375a",
+    "portable-tree.patch": "cfde654c7cf3129844a228b001a3bc7d07d3ac16998dde5d3e7ecd50dd8171ca",
+    "lowlat-fp.patch": "6d3483dd0761c17085465aca6c54c1f9c292d0a8a95da83785906a008ed29174",
+    "act-streaming.patch": "65facbee190a3bc96bbca36aed2bfbf845add64c6dc1a5b05056f9afc1ba3ed9",
+    "lookup-scale.patch": "7e68b87fb67acbcc39747fff6a85e5909669b68e61a4f2ac2f9fd803d2fa4776"
+  },
+  "all_rtl_and_harness_files_identical": true,
+  "verified_files": 54
+}

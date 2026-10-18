@@ -28,7 +28,9 @@ original-adder / shorter-adder candidates; these remain LPN forecasts.
 The next [bounded-vector proposal study](VECTOR_PROPOSALS.md) finds diminishing
 returns from extra VPUs and larger windows. A standalone [exact reciprocal
 ROM primitive](RECIP_ROM.md) passes exhaustive normalized arithmetic checks;
-its QACT/VPU integration and inference performance remain pending.
+its [QACT/QST integration](LOOKUP_SCALE.md) passes numerical component gates
+and predicts 13.617x / 15.720x for the 128-engine candidates. Full-inference RTL
+validation and FPGA synthesis remain pending.
 
 **Inference workload correction:** earlier `e2e.py`, `replay_e2e.py` and
 weight-free FPGA sequence results used a custom token-by-token prompt loop.

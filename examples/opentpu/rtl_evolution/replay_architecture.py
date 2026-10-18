@@ -24,9 +24,12 @@ def main():
     p.add_argument('--rtl-timeout',type=float,default=7200)
     p.add_argument('--matrix-rows',type=int,choices=(32,128),default=128)
     p.add_argument('--activation-streaming',action='store_true')
+    p.add_argument('--lookup-scale',action='store_true')
+    p.add_argument('--recip-table',type=Path)
     p.add_argument('--fp-mul-latency',type=int,choices=(1,2),default=2)
     p.add_argument('--fp-add-latency',type=int,choices=(1,2,3,4),default=4)
     a=p.parse_args()
+    if a.lookup_scale and a.recip_table is None:p.error('--lookup-scale requires --recip-table')
     from examples.opentpu.e2e import atomic_json,digest
     from examples.opentpu.model import Timing
     from examples.opentpu.workload import use_checkout
@@ -45,15 +48,20 @@ def main():
     from opentpu import rtlsim
     sources=[rtlsim.RTL/name for name in rtlsim.RTL_SOURCES]+[rtlsim.TB/'tb_top.sv',rtlsim.TB/'lpn_wall.cpp']
     project=Path(__file__).resolve().parents[1]
-    sources += [project/name for name in ('model.py','components.py','compact.py','native_timing.py','shape_workload.py','activation_stream.py')]
+    sources += [project/name for name in ('model.py','components.py','compact.py','native_timing.py','shape_workload.py','activation_stream.py','retained_inputs.py')]
     sources += [Path(__file__).resolve(),Path(__file__).with_name('parallel_inference.py')]
+    if a.lookup_scale:
+        from .rom_inputs import reciprocal_inputs
+        table_files,_,_=reciprocal_inputs(a.recip_table)
+        sources += table_files+[a.recip_table.resolve()/'report.json',Path(__file__).with_name('rom_inputs.py')]
     hashes={str(s):digest(s) for s in sources}
     uarch=dict(reference['uarch'],MXU_ROWS=a.matrix_rows)
     if a.activation_streaming:uarch['ACT_STREAMING']=1
+    if a.lookup_scale:uarch['QUANT_LOOKUP']=1
     timing=Timing(batch_rows=a.matrix_rows,matrix_row_lanes=a.matrix_rows,dram_bytes_per_cycle=2816,dram_port_bytes=2816,
         dram_latency=8,fifo_chunks=128*a.matrix_rows,scale_lanes=a.matrix_rows,unified_dram=True,scalar_store_bytes=256,
         epilogue_lanes=1,quant_row_banks=8,quant_store_buffered=True,vector_row_contexts=4,
-        fp_mul_latency=a.fp_mul_latency,fp_add_latency=a.fp_add_latency,activation_streaming=a.activation_streaming)
+        fp_mul_latency=a.fp_mul_latency,fp_add_latency=a.fp_add_latency,activation_streaming=a.activation_streaming,quant_scale_lookup=a.lookup_scale)
     records=[];failures=[];started=time.perf_counter()
     def save(status):
         result=dict(status=status,pid=os.getpid(),scope=__doc__,case=str(case),
@@ -95,7 +103,7 @@ def main():
             opentpu_root=str(a.opentpu_root.resolve()),baseline=str(a.baseline.resolve()),baseline_job=None,
             compiler=str(a.compiler.resolve()),cache=str(output/'timing-cache'),timing=asdict(timing),
             instructions=record['instructions'],args=record['args'],input_sha256=record['input_sha256'],
-            rtl_timeout=a.rtl_timeout,reuse_directory=None)
+            rtl_timeout=a.rtl_timeout,reuse_directory=None,recip_table=str(a.recip_table.resolve()) if a.lookup_scale else None)
         tasks.append(task)
     save('running')
     with ProcessPoolExecutor(max_workers=a.workers,mp_context=multiprocessing.get_context('spawn')) as pool:

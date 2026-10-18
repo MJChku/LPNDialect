@@ -15,9 +15,13 @@ def main():
     p.add_argument('--chunks',type=int,default=32)
     p.add_argument('--stall',type=int,choices=(0,1,2),default=0)
     p.add_argument('--stream-act',action='store_true')
+    p.add_argument('--lookup-scale',action='store_true')
+    p.add_argument('--recip-table',type=Path)
     p.add_argument('--fp-mul-latency',type=int,choices=(1,2),default=2)
     p.add_argument('--fp-add-latency',type=int,choices=(1,2,3,4),default=4)
     a=p.parse_args()
+    if a.lookup_scale and a.recip_table is None:p.error('--lookup-scale requires --recip-table')
+    if a.recip_table:a.recip_table=a.recip_table.resolve()
     sys.path.insert(0,str(a.opentpu_root.resolve()))
     import numpy as np
     from opentpu import Config,isa as I,rtlsim
@@ -55,15 +59,30 @@ def main():
     sources=[rtlsim.RTL/s for s in ('vpu/otpu_fp.sv','vpu/otpu_fpipe.sv','top/otpu_pkg.sv',
                                   'tech/generic/otpu_tech_ram.sv','vpu/otpu_quant.sv')]
     sources.append(Path(__file__).with_name('tb_quant_buffered.sv'))
-    source_hashes={str(s):hashlib.sha256(s.read_bytes()).hexdigest() for s in sources}
+    table_files=[];table_args=[]
+    if a.lookup_scale:
+        sources += [rtlsim.RTL/'vpu/otpu_recip_rom.sv',rtlsim.RTL/'vpu/otpu_qscale_lookup.sv']
+        calibration=json.loads((a.recip_table/'report.json').read_text())
+        if calibration['status']!='complete' or calibration['correction_bits']!=2:raise RuntimeError('unverified reciprocal table')
+        table_files=[a.recip_table/'coeff.hex',a.recip_table/'correction.hex']
+        for f in table_files:
+            if hashlib.sha256(f.read_bytes()).hexdigest()!=calibration['files'][f.name]['sha256']:raise RuntimeError('reciprocal table changed')
+        table_args=[f'+recip_coeff={table_files[0]}',f'+recip_correction={table_files[1]}']
+    files=sources+table_files
+    source_hashes={str(s):hashlib.sha256(s.read_bytes()).hexdigest() for s in files}
+    quant_source=(rtlsim.RTL/'vpu/otpu_quant.sv').read_text()
+    for parameter,requested in (('STREAM_ACT',a.stream_act),('LOOKUP_SCALE',a.lookup_scale)):
+        supported=bool(re.search(r'parameter\s+bit\s+'+parameter+r'\b',quant_source))
+        if requested and not supported:raise RuntimeError(f'quantizer does not support {parameter}')
+        if supported:rtlsim.VFLAGS.append('-DOTPU_HAS_'+parameter)
     rtlsim.VFLAGS[rtlsim.VFLAGS.index('-j')+1]='12'
     rtlsim.VFLAGS += [f'-DOTPU_FP_MUL_LAT={a.fp_mul_latency}',f'-DOTPU_FP_ADD_LAT={a.fp_add_latency}']
-    exe=rtlsim.build('tb_quant_buffered',sources,dict(XD=a.chunks,STREAM_ACT=int(a.stream_act)))
-    run=subprocess.run([str(exe),f'+dir={a.output}',f'+ncmd={len(specs)}',f'+stall={a.stall}'],
+    exe=rtlsim.build('tb_quant_buffered',sources,dict(XD=a.chunks,STREAM_ACT=int(a.stream_act),LOOKUP_SCALE=int(a.lookup_scale)))
+    run=subprocess.run([str(exe),f'+dir={a.output}',f'+ncmd={len(specs)}',f'+stall={a.stall}']+table_args,
                        capture_output=True,text=True,timeout=120)
     (a.output/'rtl.log').write_text(run.stdout+run.stderr)
     run.check_returncode()
-    if source_hashes!={str(s):hashlib.sha256(s.read_bytes()).hexdigest() for s in sources}:
+    if source_hashes!={str(s):hashlib.sha256(s.read_bytes()).hexdigest() for s in files}:
         raise RuntimeError('quantizer sources changed during the gate')
     observed=[int(c) for _,c in re.findall(r'QCMD index=(\d+) cycles=(\d+)',run.stdout)]
     if len(observed)!=len(specs):raise RuntimeError('missing command measurements')
@@ -82,9 +101,9 @@ def main():
             bad=np.flatnonzero(actual!=expected.reshape(-1))
             if len(bad):raise RuntimeError(f'{name}: {field} differs at {bad[:16].tolist()}')
         records.append(dict(name=name,rtl_cycles=observed[index],all_state_bit_exact=True))
-    report=dict(status='complete',stream_act=a.stream_act,records=records,stall=a.stall,chunks=a.chunks,
+    report=dict(status='complete',stream_act=a.stream_act,lookup_scale=a.lookup_scale,records=records,stall=a.stall,chunks=a.chunks,
                 fp_mul_latency=a.fp_mul_latency,fp_add_latency=a.fp_add_latency,
-                simulator=str(exe),source_sha256=source_hashes)
+                simulator=str(exe),source_sha256=source_hashes,rtl_compile_flags=list(rtlsim.VFLAGS))
     (a.output/'report.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report),flush=True)
 

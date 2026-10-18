@@ -1,0 +1,31 @@
+{
+  "status": "complete",
+  "scope": "Compare original and lookup QACT scale units under identical enabled clocks.",
+  "checked": 131072,
+  "old_enabled_clocks": 24,
+  "new_enabled_clocks": 6,
+  "enable_holds": 36415,
+  "all_scale_and_inverse_bits_identical": true,
+  "fp_mul_latency": 2,
+  "fp_add_latency": 2,
+  "simulator": "/home/ubuntu/FeSens-openTPU-fast-scale/build/verilator/tb_qscale_lookup_e06c179df448/Vtb_qscale_lookup",
+  "simulator_sha256": "b4a10e70fbe3e385fcd275b3fa7492acd4ca3ac7761c9f5801e719dd243a4492",
+  "source_and_table_sha256": {
+    "/home/ubuntu/FeSens-openTPU-fast-scale/rtl/vpu/otpu_fp.sv": "b476c83913d88ef5b4bcbc8cc07378ade8b2aeaaf7642b20976bd1fce33cd416",
+    "/home/ubuntu/FeSens-openTPU-fast-scale/rtl/vpu/otpu_fpipe.sv": "6f9feaf92b539bb989e90dd77d8c066c92ae01c1b9c826f335e6b45231c45bd0",
+    "/home/ubuntu/FeSens-openTPU-fast-scale/rtl/top/otpu_pkg.sv": "ca41c32141fdf224d24481842b182063ce5692a976176eca82c4c78d4d7ad3c6",
+    "/home/ubuntu/FeSens-openTPU-fast-scale/rtl/vpu/otpu_quant.sv": "6664b00f953ed26120e6cc084929fe4b044c4df07f35fc5034158c088b2bf0ec",
+    "/home/ubuntu/LPNDialect-vector-pool/examples/opentpu/rtl_evolution/otpu_recip_rom.sv": "e253c9b4d1a1f7c2ed834d42e7389dc523f20efd530545c072e1a7289e97efc4",
+    "/home/ubuntu/LPNDialect-vector-pool/examples/opentpu/rtl_evolution/otpu_qscale_lookup.sv": "4e4b4337fbd8c9fa1be68f18c7cd0c8c7d476615ac2005714dd4a82be524ffd2",
+    "/home/ubuntu/LPNDialect-vector-pool/examples/opentpu/rtl_evolution/tb_qscale_lookup.sv": "5d719ce0e2e7c24d5d5132d50b3bb3bb0d83fd0a3eb9ed8e49a14cfceff15c65",
+    "/home/ubuntu/lpn-runs/tpu-100x/recip-two-bit-table/coeff.hex": "2ed322e9987b727d73cb592a2b886b85c138095f4b7babfee27224477b3ee9a3",
+    "/home/ubuntu/lpn-runs/tpu-100x/recip-two-bit-table/correction.hex": "1d868c04b7226b703f299f2c3df4016fe3caf4be7b0c7af7a46a4fb7153fbf10"
+  },
+  "build_seconds": 7.244685230776668,
+  "run_seconds": 0.5303644388914108,
+  "limitations": [
+    "Scale-unit component comparison",
+    "Not yet integrated with quantizer, VPU or inference",
+    "FPGA synthesis/clock not verified"
+  ]
+}

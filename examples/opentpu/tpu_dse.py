@@ -25,6 +25,7 @@ class Architecture:
     latency: int = 8
     ceiling_only: bool = False
     buffered_quant: bool = False
+    quant_scale_lookup: bool = False
     vector_row_contexts: int = 1
     vector_engines: int = 1
     vector_result_chunks: int = 0
@@ -41,6 +42,12 @@ def architectures():
         Architecture('fpga_quant_32x1', 32, 1, 2816, buffered_quant=True),
         Architecture('fpga_quant_128x1', 128, 1, 2816, buffered_quant=True),
         Architecture('fpga_quant_reductions_128x1', 128, 1, 2816, buffered_quant=True,vector_row_contexts=4),
+        Architecture('experimental_lookup_32x1',32,1,2816,buffered_quant=True,
+                     vector_row_contexts=4,activation_streaming=True,quant_scale_lookup=True),
+        Architecture('experimental_lookup_128x1',128,1,2816,buffered_quant=True,
+                     vector_row_contexts=4,activation_streaming=True,quant_scale_lookup=True),
+        Architecture('experimental_lookup_128x1_add2',128,1,2816,buffered_quant=True,
+                     vector_row_contexts=4,activation_streaming=True,quant_scale_lookup=True,fp_add_latency=2),
         *[Architecture(f'proposal_window{w}_vector2_128x1',128,1,2816,buffered_quant=True,
                        vector_row_contexts=4,activation_streaming=True,vector_compatible_issue=True,
                        vector_engines=2,vector_result_chunks=1024,window=w) for w in (128,512)],
@@ -103,7 +110,8 @@ def resources(point, config, clock_mhz):
     vector_results=point.vector_engines*point.vector_result_chunks*64*4
     # Two private input copies for each extra engine, propagated by every write.
     vector_read_copies=2*max(0,point.vector_engines-1)*4*config['TMEM_WORDS']
-    sram = activation + fifo + 4 * config['TMEM_WORDS']+vector_results+vector_read_copies
+    lookup_bytes=(1<<21)+4096*51//8 if point.quant_scale_lookup else 0
+    sram = activation + fifo + 4 * config['TMEM_WORDS']+vector_results+vector_read_copies+lookup_bytes
     limits = dict(matrix_mac_lanes=20000, onchip_bytes=64 << 20, memory_bytes_per_cycle=2816)
     # Board is an illustrative reference, not a user-selected target. Reserve
     # 20% of DSPs and half of embedded memory for shell/other units and mapping.
@@ -117,6 +125,7 @@ def resources(point, config, clock_mhz):
     conservative=(macs<=v80_limits['matrix_mac_lanes'] and sram<=v80_limits['onchip_bytes'] and
                   point.bandwidth*clock_mhz/1000<=v80_limits['memory_gbs'])
     return dict(matrix_mac_lanes=macs, onchip_bytes_lower_bound=sram,
+        quant_scale_lookup_bytes=lookup_bytes,
         vector_engines=point.vector_engines,vector_result_bytes=vector_results,
         additional_private_vector_read_copy_bytes=vector_read_copies,
         vector_fp32_multiply_sites=272*point.vector_engines,
@@ -152,8 +161,12 @@ def run_kernel(task):
     for sid in range(original.S):
         if digest(source / f'prog_{sid}.hex') != record['input_sha256'][f'prog_{sid}.hex']:
             raise ValueError('retained canonical program changed')
-    programs = [[I.Instr.decode(word) for word in json.loads((source / f'program_{sid}.json').read_text())]
-                for sid in range(original.S)]
+    from .retained_inputs import verified_program
+    programs=[];program_json_hashes={}
+    for sid in range(original.S):
+        encoded,identity=verified_program(source,sid)
+        programs.append([I.Instr.decode(word) for word in encoded])
+        program_json_hashes[f'program_{sid}.json']=identity
     start = time.perf_counter()
     workload = resolve_static(original, programs, record['args'])
     workload = replace(workload, config=replace(original, MCOLS=point.columns, LANES=64))
@@ -161,7 +174,7 @@ def run_kernel(task):
         dram_bytes_per_cycle=point.bandwidth, dram_port_bytes=point.bandwidth,
         dram_latency=point.latency, fifo_chunks=128 * point.rows, scale_lanes=point.rows,
         unified_dram=True, scalar_store_bytes=256, epilogue_lanes=max(1, point.columns // 2),
-        quant_row_banks=8 if point.buffered_quant else 0,quant_store_buffered=point.buffered_quant,
+        quant_row_banks=8 if point.buffered_quant else 0,quant_store_buffered=point.buffered_quant,quant_scale_lookup=point.quant_scale_lookup,
         vector_row_contexts=point.vector_row_contexts,
         fp_mul_latency=point.fp_mul_latency,fp_add_latency=point.fp_add_latency,activation_streaming=point.activation_streaming,vector_engines=point.vector_engines,vector_result_chunks=point.vector_result_chunks,vector_compatible_issue=point.vector_compatible_issue)
     prepared = ReusableTiming(Path(task['compiler']), Path(task['cache']), capacity=65536).prepare(
@@ -173,6 +186,7 @@ def run_kernel(task):
         validated_evolved_rtl_cycles=record['rtl_cycles'],
         predicted_speedup_vs_original=record['baseline_rtl_cycles'] / cycles,
         native_seconds=core, host_seconds=time.perf_counter() - start,
+        canonical_program_json_verified=True,program_json_sha256=program_json_hashes,
         zero_rollbacks=True, original_program_hash_verified=True, args=record['args'], timing=asdict(timing))
     if point.name == 'validated_32x1':
         result['control_relative_error'] = cycles / record['rtl_cycles'] - 1
@@ -186,6 +200,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('case', 'opentpu-root', 'compiler', 'output'):
         parser.add_argument('--' + name, type=Path, required=True)
+    parser.add_argument('--cache',type=Path,help='Reuse compiled timing architectures across studies')
     parser.add_argument('--indices', default='0,15,16,47',
         help='Comma-separated kernel indices or all; the default is a representative pilot')
     parser.add_argument('--architectures', help='Comma-separated architecture names; default all')
@@ -215,7 +230,7 @@ def main():
     output.mkdir(parents=True, exist_ok=False)
     project = Path(__file__).resolve().parent
     files = [project / name for name in ('tpu_dse.py', 'model.py', 'compact.py', 'components.py',
-                                       'workload.py', 'shape_workload.py', 'native_timing.py', 'benchmark.py','activation_stream.py','vector_pool.py','vector_select.py')]
+                                       'workload.py', 'shape_workload.py', 'native_timing.py', 'benchmark.py','activation_stream.py','vector_pool.py','vector_select.py','retained_inputs.py')]
     sources = {str(p): digest(p) for p in files}
     observations = {p.name: [] for p in points}
     failures = []
@@ -256,7 +271,7 @@ def main():
                     source=str(case / 'kernels' / f'{index:04d}'),
                     directory=str(output / point.name / f'{index:04d}'),
                     opentpu_root=str(args.opentpu_root.resolve()), compiler=str(args.compiler.resolve()),
-                    cache=str(output / 'native-cache'))
+                    cache=str(args.cache.resolve() if args.cache else output / 'native-cache'))
                 pending[pool.submit(run_kernel, task)] = (point.name, index)
         for future in as_completed(pending):
             point, index = pending[future]

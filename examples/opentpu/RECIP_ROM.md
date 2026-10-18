@@ -1,8 +1,9 @@
 # Exact reciprocal through a compact correction ROM
 
 The standalone RTL primitive reproduces the original openTPU reciprocal
-sequence with four enabled clocks. This is a component result: it has not yet
-been connected to QACT/VPU, measured on inference, or synthesized for an FPGA.
+sequence with four enabled clocks. The [QACT/QST integration](LOOKUP_SCALE.md) now passes quantizer and matrix
+component gates. Its inference RTL timing, VPU integration and FPGA synthesis
+remain pending.
 
 A 4096-entry table holds a fixed-point piecewise linear approximation of the
 normalized significand. One signed 14x12 multiply, integer add/rounding, and a
@@ -31,7 +32,9 @@ The complete normalized table's required correction is only −1, 0 or +1.
 The wrapper preserves the original `fp_recip` exponent, sign and FTZ rules.
 This does not exhaust all 2^32 full words; normalized coverage is exhaustive,
 while exponent/sign handling has an edge grid plus randomized coverage.
-The tests do not prove FPGA RAM inference, placement, frequency, or an end-to-end
+An exhaustive gate also checks the constant-file initialization branch with
+`SYNTHESIS` defined. The tests do not prove FPGA RAM inference, placement,
+frequency, or an end-to-end
 cycle reduction. Those remain required before promoting it as an architecture.
 
 Generate tables and reproduce the gates from the LPN root:

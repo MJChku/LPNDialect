@@ -16,6 +16,7 @@ def main():
     p.add_argument('--output',type=Path,required=True)
     p.add_argument('--limit',type=int,default=1<<23)
     p.add_argument('--full-reciprocal',action='store_true')
+    p.add_argument('--synthesis-branch',action='store_true')
     a=p.parse_args()
     if not 1<=a.limit<=1<<23:p.error('limit must be 1..2^23')
     a.table=a.table.resolve();a.output=a.output.resolve();a.output.mkdir(parents=True,exist_ok=False)
@@ -34,7 +35,12 @@ def main():
             raise RuntimeError('calibration table hash differs')
     rtlsim.VFLAGS[rtlsim.VFLAGS.index('-j')+1]='12'
     rtlsim.VFLAGS+=['-CFLAGS','-O3']
-    before=time.perf_counter();exe=rtlsim.build(top,sources,dict(PORTS=2))
+    parameters=dict(PORTS=2)
+    if a.synthesis_branch:
+        rtlsim.VFLAGS.append('-DSYNTHESIS')
+        parameters.update(COEFF_FILE='"'+str(a.table/'coeff.hex')+'"',
+                          CORRECTION_FILE='"'+str(a.table/'correction.hex')+'"')
+    before=time.perf_counter();exe=rtlsim.build(top,sources,parameters)
     built=time.perf_counter()-before
     before=time.perf_counter()
     run=subprocess.run([str(exe),f'+recip_coeff={a.table/"coeff.hex"}',
@@ -44,7 +50,7 @@ def main():
     if not observed or int(observed[1])!=a.limit:raise RuntimeError('missing complete primitive result')
     if hashes!={str(f):hashlib.sha256(f.read_bytes()).hexdigest() for f in files}:
         raise RuntimeError('source/table changed during verification')
-    report=dict(status='complete',scope=__doc__,tested_inputs=a.limit,full_reciprocal=a.full_reciprocal,exhaustive_normalized_inputs=not a.full_reciprocal and a.limit==1<<23,
+    report=dict(status='complete',scope=__doc__,synthesis_readmemh_branch=a.synthesis_branch,tested_inputs=a.limit,full_reciprocal=a.full_reciprocal,exhaustive_normalized_inputs=not a.full_reciprocal and a.limit==1<<23,
         original_sv_function_bit_exact=True,enable_holds=int(observed[3]),ports=int(observed[4]),latency_enabled_clocks=4,
         build_seconds=built,run_seconds=time.perf_counter()-before,simulator=str(exe),
         simulator_sha256=hashlib.sha256(exe.read_bytes()).hexdigest(),source_and_table_sha256=hashes,

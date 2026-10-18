@@ -1,0 +1,8 @@
+test_hardware_and_model_feature_mismatches_are_rejected (__main__.WorkerConfigurationTest.test_hardware_and_model_feature_mismatches_are_rejected) ... ok
+test_reused_worker_keeps_the_same_simulator_cache_key (__main__.WorkerConfigurationTest.test_reused_worker_keeps_the_same_simulator_cache_key) ... ok
+test_reused_worker_selects_and_resets_arithmetic_architecture (__main__.WorkerConfigurationTest.test_reused_worker_selects_and_resets_arithmetic_architecture) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.000s
+
+OK
