@@ -23,8 +23,10 @@ both extracted results. The arithmetic retains every integer bit.
 `quick.json` compares both behavioral and vendor-primitive implementations
 against two original scalar PEs, cycle for cycle. It checks 65,536 single-PE
 clocks, 100,079 eight-position chain clocks, 14,300 enable stalls and the
-positive overflow corner. The exhaustive 16,777,216 signed-int8 input-triple
-gate is running separately. This component has not been integrated into the
+positive overflow corner. `exhaustive.json` also passes all **16,777,216**
+signed-int8 input triples, plus the same streaming chain/corner/stall checks.
+It completes 16,842,752 checked single-PE clocks in about 148 host seconds.
+This component has not been integrated into the
 MXU and establishes no inference speedup or FPGA-fit/Fmax result.
 
 The vendor simulation library is the official
@@ -44,7 +46,7 @@ python -m examples.opentpu.rtl_evolution.check_pair_pe \
   --unisim-root ../XilinxUnisimLibrary --exhaustive --output /tmp/paired-dsp
 ```
 
-The same algebra fits the documented DSP58 operand widths, but that device
+The same algebra fits the [documented DSP58 operand widths](https://docs.amd.com/r/en-US/am004-versal-dsp-engine/DSP58-Features), but that device
 mapping is untested. More fundamentally, independent asynchronous row engines
 do not always share an operand at the same clock. Integrating this component
 needs an appropriate array schedule or paired columns; counting all matrix
