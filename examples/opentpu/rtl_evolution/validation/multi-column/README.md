@@ -57,3 +57,16 @@ python -m examples.opentpu.rtl_evolution.check_matrix_pipeline \
   --opentpu-root ../FeSens-openTPU-multi-column --rows 8 --columns 2 \
   --output /tmp/multi-pipeline
 ```
+
+Full unchanged 48-kernel LPN exploration has completed (see
+`fpga-full-predictions.json`). At the same 8192 unpacked MAC lanes, 64 rows x
+2 columns predicts 8,546,863 cycles versus 8,477,788 for compact 128x1: it is
+slightly slower. Higher-resource 128x2 predicts 8,287,843 cycles (16.0269x
+versus original RTL), only 2.24% fewer cycles than the compact control and
+outside the conservative unpacked DSP screen. These results do not justify
+promoting a wider array to full RTL inference validation yet.
+
+The separate ASIC pilot, even with 1024 rows, eight columns, sixteen FP
+engines and much higher bandwidth, extrapolates only 24.4x. It covers four
+kernels, not all 48, and has no matching RTL implementation. Increasing one
+array alone does not approach 100x on this instruction stream.

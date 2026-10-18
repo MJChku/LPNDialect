@@ -52,3 +52,12 @@ these are forecasts, not hardware speedups or FPGA-fit proof. The scale-line
 buffer is separate and is not assumed by these predictions. All traffic,
 source, profile and native timing evidence is retained in the JSON files.
 Neither this work nor the earlier study establishes the 100x goal.
+
+The four retained-kernel compact-storage RTL pilot has now completed and
+passed a fresh full-memory audit; see `inference-pilot{,-audit}.json`.
+Kernels 0/15/16/47 take 314,414 / 345,285 / 109,372 / 109,636 RTL cycles,
+respectively. Native LPN totals 859,054 versus 878,707 RTL cycles (−2.2366%),
+with worst kernel error 3.8144%. All complete DRAM and scratchpad bits match
+independent functional outputs. This verifies the 5 MiB source-level storage
+reduction on representative real workloads, not physical FPGA placement or
+complete-inference compact-storage timing.

@@ -79,7 +79,7 @@ def main():
         all_sources_tables_inputs_binaries_and_raw_counts_verified=True,all_full_dram_and_tmem_bit_exact=True,
         report_sha256=digest(path),control_report_sha256=digest(a.uncached_replay),script_sha256=digest(Path(__file__)),
         numerical_arithmetic_repeated=False,lpn_cache_timing_validated=False,
-        limitations=['One retained decode kernel, not complete inference','No FPGA mapping or clock proof'])
+        limitations=['One retained '+record['phase']+' kernel, not complete inference','No FPGA mapping or clock proof'])
     atomic_json(a.output,result);print(json.dumps(result),flush=True)
 
 

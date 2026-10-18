@@ -67,8 +67,19 @@ instruction counts, all 128 cache counters and full numerical dumps.
 The request count remains **2,113,002**, but only **350,712** reach backing
 memory: **83.4022%** hit rate and scale traffic falling from **67,616,064** to
 **11,222,784 bytes**. Conservative write invalidation and replacement stalls
-are real RTL behavior in this measurement. Additional prefill/decode pilot
-kernels are running; this is not a complete-inference cache speedup claim.
+are real RTL behavior in this measurement. The additional pilot kernels have completed and passed the same fresh audit:
+
+| Kernel | Phase | Uncached cycles | Cached cycles | Fewer cycles |
+| --- | --- | ---: | ---: | ---: |
+| 0 | Prefill | 314,414 | 314,371 | 0.0137% |
+| 15 | Prefill | 345,005 | 343,399 | 0.4655% |
+| 16 | Decode | 109,349 | 99,737 | 8.7902% |
+| 47 | Decode | 109,618 | 100,468 | 8.3472% |
+
+The cache saves backing traffic in both phases, but prefill is limited by
+other work. This is not a complete-inference cache speedup claim. The earlier
+audit script labels every one-kernel limitation as decode; raw kernel indices,
+inputs and counts are correct. The script now uses the actual phase.
 
 The current LPN equations still model the uncached RTL. The workload tool and
 audit explicitly record that cached-RTL LPN timing is **not** yet validated.

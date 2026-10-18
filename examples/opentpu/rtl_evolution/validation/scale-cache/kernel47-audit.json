@@ -1,0 +1,26 @@
+{
+  "status": "complete",
+  "scope": "Freshly audit a retained-input scale-cache RTL workload measurement.",
+  "kernel": 47,
+  "uncached_rtl_cycles": 109618,
+  "cached_rtl_cycles": 100468,
+  "cycle_speedup": 1.0910737747342438,
+  "fraction_fewer_cycles": 0.08347169260522902,
+  "original_rtl_cycles": 2214765,
+  "cache_requests": 2115792,
+  "cache_misses": 353144,
+  "backing_scale_bytes": 11300608,
+  "uncached_scale_bytes": 67705344,
+  "cache_hit_fraction": 0.8330913435725251,
+  "all_sources_tables_inputs_binaries_and_raw_counts_verified": true,
+  "all_full_dram_and_tmem_bit_exact": true,
+  "report_sha256": "33e1437a638da206ce4a1b841b3e20a5cff81316d7b24231d105b0734f60eea1",
+  "control_report_sha256": "2159454b039c284a33c4208300ac1d37773dcb4d98147eea942f02e89b8ea95b",
+  "script_sha256": "c7348c46490be3cda9a34f60375aa9070363fdd02a1ee215bf5c1a14e070c5e0",
+  "numerical_arithmetic_repeated": false,
+  "lpn_cache_timing_validated": false,
+  "limitations": [
+    "One retained decode kernel, not complete inference",
+    "No FPGA mapping or clock proof"
+  ]
+}
