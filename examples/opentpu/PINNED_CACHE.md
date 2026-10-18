@@ -79,3 +79,23 @@ PYTHONPATH=. python -m examples.opentpu.tpu_dse \
 Native timing binds these functional memory descriptors through the existing
 input-table ABI. It does not rerun model arithmetic or serialize token tensors.
 The 100× target remains open; a traffic reduction alone is not a speedup proof.
+
+## Completed full-workload forecasts
+
+| Variant | LPN cycles | Predicted reduction vs original RTL |
+| --- | ---: | ---: |
+| Earlier uncached small-reciprocal candidate | 8,156,090 | 16.286× |
+| 24 MiB pinned region | 8,161,626 | 16.275× |
+| 48 MiB pinned region | 8,165,994 | 16.266× |
+
+Both cache candidates complete all 48 kernels with canonical program identity
+and verified per-row cache-profile hashes. Neither improves this timing model;
+the tiny regressions are below 0.13%. Extensive cache RTL is not selected on
+these results. Evidence is in
+[validation/pinned-cache](rtl_evolution/validation/pinned-cache).
+
+This variant keeps the original memory response latency and leaves scale
+metadata in HBM. Its result does not establish the behavior of a lower-latency
+cache that also serves metadata. The separate 128-engine real-inference RTL
+pilot currently shows 13.4% underprediction on its two completed decode kernels,
+so these candidate forecasts are not validated to the 10% timing target.

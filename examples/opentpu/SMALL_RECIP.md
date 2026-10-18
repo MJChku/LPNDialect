@@ -102,6 +102,18 @@ shorter-adder pilot and full-inference validation remain pending.
 Evidence is `inference-pilot.json` and `inference-pilot-audit.json` under the
 small-reciprocal validation directory.
 
+## 128-engine shorter-adder decode discrepancy
+
+The later 128-engine pilot has completed kernels 16 and 47 with bit-exact full
+DRAM/TMEM states and identical canonical inputs. Their RTL/LPN cycles are
+109,349 / 94,640 and 109,618 / 94,940 respectively. LPN underpredicts by
+13.4514% and 13.3901%, outside the accepted 10% tolerance. This configuration
+must not be promoted as timing-validated. A fresh decode-only audit preserves
+the numerical/input evidence; the other two pilot kernels remain live.
+
+A separate traced rerun of kernel 16 uses the same executable and inputs to
+diagnose the discrepancy. No constant calibration factor has been added.
+
 ## Reproduce
 
 Apply `small-recip.patch` after all eight patches in [LOOKUP_SCALE.md](LOOKUP_SCALE.md)

@@ -1,0 +1,54 @@
+{
+  "status": "complete",
+  "report_sha256": "8b7048ee9e593e873a6718e430ba912876e1e1da623f00f2524d0102d4727d19",
+  "script_sha256": "f4a449c1f56657e4f5d91cb18b3ebc4937477c48891e49db5c3e85f5188ad065",
+  "full_inference": false,
+  "kernel_indices": [
+    16,
+    47
+  ],
+  "selected_rtl_cycles": 218967,
+  "original_rtl_cycles": 4425990,
+  "lpn_cycles": 189580.0,
+  "cycle_speedup": 20.213045801422133,
+  "relative_cycle_error": -0.1342074376504222,
+  "worst_kernel_error": 0.1345142616759184,
+  "all_inputs_and_simulator_hashes_verified": true,
+  "all_program_json_matches_canonical_hex": true,
+  "all_full_dram_and_tmem_bit_exact": true,
+  "all_raw_rtl_logs_and_instruction_counts_verified": true,
+  "all_model_and_rtl_source_hashes_verified": true,
+  "schedule": "Retained unmodified upstream Engine.generate, 128 input and 32 output tokens",
+  "generated_ids_preserved_by_full_output_equivalence": false,
+  "simulator_sha256": {
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/build/verilator/tb_top_6d9d7d79aa21/Vtb_top": "acb7e9e9f5b0ee1ef459e26411649760dca2facbee497138afd19a1c426d254b"
+  },
+  "phases": {
+    "prefill": {
+      "rtl_cycles": 0,
+      "original_rtl_cycles": 0
+    },
+    "decode": {
+      "rtl_cycles": 218967,
+      "original_rtl_cycles": 4425990
+    }
+  },
+  "records": [
+    {
+      "step": 16,
+      "phase": "decode",
+      "rtl_cycles": 109349,
+      "original_rtl_cycles": 2211225,
+      "lpn_cycles": 94640.0,
+      "relative_cycle_error": -0.1345142616759184
+    },
+    {
+      "step": 47,
+      "phase": "decode",
+      "rtl_cycles": 109618,
+      "original_rtl_cycles": 2214765,
+      "lpn_cycles": 94940.0,
+      "relative_cycle_error": -0.13390136656388552
+    }
+  ]
+}

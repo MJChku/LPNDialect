@@ -43,6 +43,9 @@ uncached-weight bandwidth ceiling near 60x under the current FPGA assumptions;
 The [real-weight storage study](WEIGHT_STORAGE.md) finds only modest lossless
 compression. The [pinned-cache timing proposal](PINNED_CACHE.md) evaluates cold,
 coherent persistent regions with separately bounded SRAM and HBM ports.
+Those bandwidth-only cache forecasts show no cycle benefit. The 128-engine
+shorter-adder RTL pilot also exposes 13.4% timing underprediction on its completed
+decode kernels; that configuration is being diagnosed and is not validated.
 
 **Inference workload correction:** earlier `e2e.py`, `replay_e2e.py` and
 weight-free FPGA sequence results used a custom token-by-token prompt loop.
