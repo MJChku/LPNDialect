@@ -104,4 +104,3 @@ The scale cache, packed QST stores, compact ACT/FIFO capacities and pinned
 weight-cache proposals are **not included** in this measured architecture.
 Their gates and forecasts are separate. FPGA mapping, Fmax, a physical HBM
 controller and the 100x target remain unproven.
-
