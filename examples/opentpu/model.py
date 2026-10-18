@@ -27,6 +27,33 @@ def matrix_batch_rows(rows,chunks,timing):
   return batch//parallel*parallel if batch>=parallel else batch
 
 
+def buffered_quant_cycles(rows,chunks,capacity,banks,scale_words=0):
+  """Finite row/FIFO credits for the buffered quantizer's two overlapping passes.
+
+  Each chunk takes one read and one pop. Read-to-scale-to-pop is 43 clocks;
+  the output path drains in ten clocks, plus four for QST acknowledgement.
+  QST sends scale_words on its separate store port before popping each row.
+  This computes command metadata, without adding per-cycle simulator events.
+  """
+  if not rows or not chunks:
+    return 3
+  if capacity<chunks or banks<2:
+    raise ValueError('one row must fit the quantizer FIFO and row banks')
+  popped=[]
+  row_ends=[]
+  read=0
+  for row in range(rows):
+    bank_free=row_ends[row-banks]+1 if row>=banks else 1
+    for chunk in range(chunks):
+      index=row*chunks+chunk
+      free=popped[index-capacity]+1 if index>=capacity else 1
+      read=max(read+1,free,bank_free)
+    first=max(read+43,(popped[-1]+2 if popped else 1))+scale_words
+    popped.extend(range(first,first+chunks))
+    row_ends.append(popped[-1])
+  return popped[-1]+10+(4 if scale_words else 0)
+
+
 @dataclass(frozen=True)
 class Timing:
   dram_latency: int = 8
@@ -44,6 +71,10 @@ class Timing:
   scale_lanes: int = 1
   unified_dram: bool = False
   scalar_store_bytes: int = 0
+  # Opt-in hardware variant: tagged row banks and QST's prescaled row FIFO.
+  # Zero retains the original validated quantizer approximation.
+  quant_row_banks: int = 0
+  quant_store_buffered: bool = False
 
   def __post_init__(self):
     if min(self.dram_latency,self.dram_bytes_per_cycle,self.window,self.fifo_chunks,
@@ -53,6 +84,12 @@ class Timing:
       raise ValueError("matrix_engines must be an integer")
     if self.quant_buffer_chunks<0:
       raise ValueError("quant buffer size must be nonnegative")
+    if (not isinstance(self.quant_row_banks,int) or self.quant_row_banks<0 or
+        (self.quant_row_banks and (self.quant_row_banks<2 or self.quant_row_banks>256 or
+                                  self.quant_row_banks&(self.quant_row_banks-1)))):
+      raise ValueError('quant_row_banks must be zero or a power of two from 2 to 256')
+    if self.quant_store_buffered and not self.quant_row_banks:
+      raise ValueError('buffered QST requires explicit row banks')
     for name in ('matrix_row_lanes','scale_lanes','dram_port_bytes','scalar_store_bytes'):
       value=getattr(self,name)
       if not isinstance(value,int) or value<(0 if name in ('dram_port_bytes','scalar_store_bytes') else 1):
@@ -220,6 +257,8 @@ class OpenTPU:
       # QACT's row buffer overlaps pass 0 of the following row with pass 1.
       latency = ((rows+1)*chunks+60 if t.quant_buffer_chunks>=2*chunks else
                  rows*(2*chunks+60))
+      if t.quant_row_banks and chunks<=t.quant_buffer_chunks:
+        latency=buffered_quant_cycles(rows,chunks,t.quant_buffer_chunks,t.quant_row_banks)
       port,service = None,0
     elif ins.op==I.QST:
       rows,kb = w[3]&65535,w[3]>>16
@@ -228,6 +267,12 @@ class OpenTPU:
       store = (ceil(elems*4/t.scalar_store_bytes)
                if t.scalar_store_bytes else ceil(elems/width))
       latency = rows*(ceil(elems/cfg.LANES)+store+60)
+      chunks=ceil(elems/cfg.LANES)
+      half=bool(ins.flags&1 and ins.flags&2)
+      if (t.quant_store_buffered and t.scalar_store_bytes==4*cfg.LANES and
+          not half and chunks<=t.quant_buffer_chunks):
+        scale_words=1 if ins.flags&1 else 1+ceil(kb/4)
+        latency=buffered_quant_cycles(rows,chunks,t.quant_buffer_chunks,t.quant_row_banks,scale_words)
       # The shared memory link is occupied by byte-enabled stores, not by
       # scratchpad reads, max reduction or FP conversion in the quantizer.
       # Charging its complete latency here stalls unrelated matrix prefetch.

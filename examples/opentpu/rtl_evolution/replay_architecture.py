@@ -1,0 +1,107 @@
+"""Run changed hardware on retained normal-inference programs and full ISA states.
+
+No tensor prepass is repeated. Every new RTL result must equal the independently
+computed retained golden memory at every kernel boundary. This validates a new
+hardware implementation on the original upstream inference, not a new schedule.
+"""
+import argparse
+from concurrent.futures import ProcessPoolExecutor,as_completed
+from dataclasses import asdict
+import json
+import multiprocessing
+import os
+from pathlib import Path
+import subprocess
+import time
+
+
+def main():
+    p=argparse.ArgumentParser(description=__doc__)
+    for name in ('case','baseline','opentpu-root','compiler','output'):
+        p.add_argument('--'+name,type=Path,required=True)
+    p.add_argument('--indices',default='0,15,16,47',help='Kernel indices or all')
+    p.add_argument('--workers',type=int,default=8)
+    p.add_argument('--rtl-timeout',type=float,default=7200)
+    a=p.parse_args()
+    from examples.opentpu.e2e import atomic_json,digest
+    from examples.opentpu.model import Timing
+    from examples.opentpu.workload import use_checkout
+    from .parallel_inference import check_kernel,files_equal
+    case=a.case.resolve()
+    reference=json.loads((case/'report.json').read_text())
+    if (reference['status']!='complete' or reference['prompt_tokens']!=128 or reference['output_tokens']!=32 or
+        reference['entrypoint']!='unmodified upstream Engine.generate' or
+        not reference['all_dram_and_tmem_bit_exact'] or not reference['all_inputs_identical_to_baseline']):
+        raise ValueError('requires completed, verified upstream 128/32 inference')
+    indices=list(range(48)) if a.indices=='all' else sorted(set(map(int,a.indices.split(','))))
+    if a.workers<1 or not indices or not set(indices)<=set(range(48)):
+        p.error('positive workers and indices in [0,47] required')
+    output=a.output.resolve();output.mkdir(parents=True,exist_ok=False)
+    use_checkout(a.opentpu_root.resolve())
+    from opentpu import rtlsim
+    sources=[rtlsim.RTL/name for name in rtlsim.RTL_SOURCES]+[rtlsim.TB/'tb_top.sv',rtlsim.TB/'lpn_wall.cpp']
+    project=Path(__file__).resolve().parents[1]
+    sources += [project/name for name in ('model.py','components.py','compact.py','native_timing.py','shape_workload.py')]
+    sources += [Path(__file__).resolve(),Path(__file__).with_name('parallel_inference.py')]
+    hashes={str(s):digest(s) for s in sources}
+    timing=Timing(batch_rows=32,matrix_row_lanes=32,dram_bytes_per_cycle=2816,dram_port_bytes=2816,
+        dram_latency=8,fifo_chunks=4096,scale_lanes=32,unified_dram=True,scalar_store_bytes=256,
+        epilogue_lanes=1,quant_row_banks=8,quant_store_buffered=True)
+    records=[];failures=[];started=time.perf_counter()
+    def save(status):
+        result=dict(status=status,pid=os.getpid(),scope=__doc__,case=str(case),
+            reference_report_sha256=digest(case/'report.json'),rtl_and_model_source_sha256=hashes,
+            project_revision=subprocess.check_output(['git','rev-parse','HEAD'],cwd=project,text=True).strip(),
+            timing=asdict(timing),uarch=reference['uarch'],indices=indices,workers=a.workers,
+            seconds=time.perf_counter()-started,records=sorted(records,key=lambda r:r['step']),failures=failures,
+            upstream_schedule_unchanged=True,all_dram_and_tmem_bit_exact=bool(records) and
+                all(r['all_dram_and_tmem_bit_exact'] for r in records),
+            numerical_prepass_repeated=False)
+        if len(records)==len(indices):
+            rtl=sum(r['rtl_cycles'] for r in records);predicted=sum(r['lpn_cycles'] for r in records)
+            result.update(selected_rtl_cycles=rtl,selected_lpn_cycles=predicted,
+                selected_speedup_vs_original=sum(r['baseline_rtl_cycles'] for r in records)/rtl,
+                relative_cycle_error=predicted/rtl-1,
+                worst_kernel_relative_cycle_error=max(abs(r['evolved_lpn_relative_cycle_error']) for r in records),
+                timing_target_met_all_kernels=all(abs(r['evolved_lpn_relative_cycle_error'])<=.10 for r in records))
+            if indices==list(range(48)):
+                result.update(full_inference_rtl_cycles=rtl,full_inference_lpn_cycles=predicted,
+                    full_cycle_speedup=reference['baseline_rtl_cycles']/rtl,
+                    incremental_cycle_speedup=reference['evolved_rtl_cycles']/rtl)
+        atomic_json(output/'report.json',result)
+    save('preparing')
+    tasks=[]
+    for index in indices:
+        record=reference['kernels'][index]
+        if not record['all_dram_and_tmem_bit_exact'] or not record['identical_input_files']:
+            raise ValueError('unverified retained kernel')
+        source=case/'kernels'/f'{index:04d}';target=output/'kernels'/f'{index:04d}'
+        target.mkdir(parents=True,exist_ok=False)
+        for sid in range(reference['config']['S']):
+            if not files_equal(source/f'golden_dram_{sid}.bin',source/f'dram_out_{sid}.bin'):
+                raise ValueError('retained ISA golden DRAM no longer matches verified RTL')
+            # These links are inputs only; all new RTL outputs have new paths.
+            for name in (f'prog_{sid}.hex',f'dram_{sid}.bin',f'program_{sid}.json',
+                         f'golden_dram_{sid}.bin',f'golden_tmem_{sid}.bin'):
+                os.link(source/name,target/name)
+        task=dict(index=index,directory=str(target),config=reference['config'],uarch=reference['uarch'],
+            opentpu_root=str(a.opentpu_root.resolve()),baseline=str(a.baseline.resolve()),baseline_job=None,
+            compiler=str(a.compiler.resolve()),cache=str(output/'timing-cache'),timing=asdict(timing),
+            instructions=record['instructions'],args=record['args'],input_sha256=record['input_sha256'],
+            rtl_timeout=a.rtl_timeout,reuse_directory=None)
+        tasks.append(task)
+    save('running')
+    with ProcessPoolExecutor(max_workers=a.workers,mp_context=multiprocessing.get_context('spawn')) as pool:
+        for future in as_completed([pool.submit(check_kernel,t) for t in tasks]):
+            try:
+                record=future.result();records.append(record);print(json.dumps(record),flush=True)
+            except Exception as error:
+                failures.append(repr(error));print(repr(error),flush=True)
+            save('running')
+    if hashes!={str(s):digest(s) for s in sources}:
+        raise RuntimeError('hardware/model sources changed during validation')
+    save('failed' if failures else 'complete')
+    if failures:raise RuntimeError('hardware validation failures; inspect report')
+
+
+if __name__=='__main__':main()

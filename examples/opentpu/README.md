@@ -6,6 +6,9 @@ The implemented parallel RTL completes SmolLM2-135M with 128 prompt tokens and
 memory. Corrected LPN total error is +0.622% / +1.793% for original/evolved RTL.
 See [RTL implementation, reproduction and audited evidence](rtl_evolution/README.md).
 FPGA resource fit, Fmax and a vendor HBM controller are not established.
+The current [FPGA-first architecture exploration](TPU_EXPLORATION.md) retains
+this verified baseline and reports new predictions separately from fresh RTL
+validation. Its 100x cycle-reduction target has not yet been achieved.
 
 **Inference workload correction:** earlier `e2e.py`, `replay_e2e.py` and
 weight-free FPGA sequence results used a custom token-by-token prompt loop.

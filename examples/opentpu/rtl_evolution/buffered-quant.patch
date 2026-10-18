@@ -1,0 +1,275 @@
+--- a/rtl/vpu/otpu_quant.sv
++++ b/rtl/vpu/otpu_quant.sv
+@@ -18,12 +18,13 @@
+ // A row's pass 1 starts once its scale is out of the scale unit (and QST's scale row written);
+ // the next row's pass 0 follows its pass 1 at once.
+ //
+-// QACT rows of up to XD x LANES elements go through the row buffer instead (XD > 0): pass 0
++// QACT rows, and full-width QST rows without HALF, use the bounded row buffer
++// when the row fits (XD > 0): pass 0
+ // also pushes the prescaled chunks into a FIFO (block RAM, XD chunks) and the reader goes on to
+ // the next row's pass 0 at once; pass 1 pops the row's chunks from the FIFO once its scale is
+-// out (a TMEM read and the prescale fewer), while the following rows' pass 0 run. Up to NB = 4
++// out (a TMEM read and the prescale fewer), while the following rows' pass 0 run. Up to NB (default 8)
+ // rows are between the passes: the group maxes and the rows' scales are kept per row in NB banks
+-// (row r in bank r % 4), and pass 0 of row r waits for pass 1 of row r - 4 to have read them; the
++// (row r in bank r % NB), and pass 0 of row r waits for pass 1 of row r - NB to have read them; the
+ // FIFO's free entries are counted at the reads (credits). A row's chunks are popped in order, so
+ // the result is the two-pass one bit for bit.
+ 
+@@ -133,7 +134,8 @@
+   parameter int STORE_LANES = 0, // 0: legacy word port; else parallel byte stores
+   parameter int LANES = 8,
+   parameter int GR    = 1024,               // group maxes of a row (QACT 4*KB, QST KB; not ROW)
+-  parameter int XD    = 1024,               // row buffer chunks (QACT rows <= XD*LANES); 0: none
++  parameter int XD    = 1024,               // row buffer chunks; buffered rows <= XD*LANES; 0: none
++  parameter int NB    = 8,                  // finite rows in flight; power of two
+   parameter int SID   = 0
+ ) (
+   input  logic                    clk,
+@@ -189,8 +191,10 @@
+   localparam int PL = LANES / QN;           // a chunk's lanes per QACT group
+   localparam int GWN = GR / 4;              // group words (four group maxes each)
+   localparam int GA = $clog2(GWN);
+-  localparam int NB = 4;                    // row banks: group maxes and scales of rows in flight
++  localparam int RB = $clog2(NB);
+   localparam int XW = (XD > 1) ? $clog2(XD) : 1;
++  initial if (NB < 2 || NB > 256 || (NB & (NB-1)) != 0)
++    $fatal(1, "otpu_quant: NB a power of two from 2 to 256");
+   initial if (XD == 1 || (XD & (XD - 1)) != 0) $fatal(1, "otpu_quant: XD 0 or a power of two >= 2");
+   initial if (D % LANES != 0 || (D & (D - 1)) != 0)
+     $fatal(1, "otpu_quant: D a power of two, a multiple of LANES");
+@@ -204,7 +208,7 @@
+ 
+   // ------------------------------------------------------------------ command
+   logic        busy, is_st, rowm, csf, rsf, ackw, dup;
+-  logic        bm;                           // QACT through the row buffer
++  logic        bm;                           // QACT or parallel QST through the row buffer
+   logic [31:0] csb, rsb, srs, drs, es;
+   logic [15:0] rows, KB;
+   logic [7:0]  ab;
+@@ -250,13 +254,16 @@
+   logic        p1a;
+   logic [15:0] r1;
+   logic [31:0] e1c;
++  logic [31:0] p1_baddr, p1_bbase;           // buffered QST output row/element address
+   logic [XW-1:0] xw, xr;
+   logic [XW:0] xocc;                         // <= XD: below XD while its top bit is clear
+-  logic [2:0]  dr;                           // r - r1 (<= NB)
++  logic [RB:0] dr;                           // r - r1 (<= NB)
+   // buffered: a read needs a free FIFO entry, and row r's banks free (pass 1 of row r - NB done);
+   // one LUT on the read enables' path
+-  wire xok = !bm || (!xocc[XW] && !dr[2]);
+-  wire riss = busy && !ackw && !rd_done && !rd_wait && !sw_ph && xok;
++  wire xok = !bm || (!xocc[XW] && !dr[RB]);
++  // Buffered pass 0 writes group RAM; scale rows only use its independent
++  // read port. They may progress together while the reader has credits.
++  wire riss = busy && !ackw && !rd_done && !rd_wait && (!sw_ph || bm) && xok;
+ 
+   typedef struct packed {
+     logic             v;
+@@ -265,6 +272,7 @@
+     logic             last;      // last chunk of the pass
+     logic             glast;     // ... of the instruction
+     logic [15:0]      row;
++    logic [31:0]      baddr;     // byte address for a buffered QST pop
+     logic [LANES-1:0] mask;
+   } rm_t;
+   // m0a: the chunk whose read request is in the request register (TMEM reads it this cycle);
+@@ -393,7 +401,7 @@
+   wire [31:0] gix = is_st ? (mce >> DL) : (mce >> QGL);   // the chunk's (first) group
+   assign gnew = (!gfst && mgt(gacc, cmax)) ? gacc : cmax;
+   logic [3:0]       gw_we;
+-  logic [GA+1:0]    gw_a;                    // {row bank, word}
++  logic [GA+RB-1:0]    gw_a;                    // {row bank, word}
+   logic [3:0][30:0] gw_d;
+   always_ff @(posedge clk) if (en) begin
+     gw_we <= '0;
+@@ -407,7 +415,7 @@
+           gw_d[2'(gix[1:0] + 2'(p))] <= pmx[p][30:0];
+         end
+       end
+-      gw_a <= {mc.row[1:0], GA'(gix >> 2)};
++      gw_a <= {mc.row[RB-1:0], GA'(gix >> 2)};
+     end
+   end
+   // the group RAMs' reads: the chunk's group word at a pass 1 read (QACT: the block's four
+@@ -418,8 +426,10 @@
+   // m0 (the TMEM data). A buffered pass 1 reads it at the pop, with mb0 (no TMEM read).
+   logic [3:0][30:0] grd, grd_d;
+   always_ff @(posedge clk) if (en) grd_d <= grd;
+-  wire [GA+1:0] gr_a = sw_ph ? {r[1:0], GA'(sw_i)} : is_st ? {r[1:0], GA'(e >> (DL + 2))}
+-                     : bm ? {r1[1:0], GA'(e1c >> DL)} : {r[1:0], GA'(e >> DL)};
++  wire [RB-1:0] st_bank = bm ? r1[RB-1:0] : r[RB-1:0];
++  wire [31:0] st_element = bm ? e1c : e;
++  wire [GA+RB-1:0] gr_a = sw_ph ? {st_bank, GA'(sw_i)} : is_st ? {st_bank, GA'(st_element >> (DL + 2))}
++                     : bm ? {r1[RB-1:0], GA'(e1c >> DL)} : {r[RB-1:0], GA'(e >> DL)};
+   for (genvar s = 0; s < 4; s++) begin : g_gr
+     otpu_ram_1r1w #(.W(31), .N(NB * GWN), .STYLE("block")) u_g (
+       .clk, .we(en && gw_we[s]), .wa(gw_a), .wd(gw_d[s]), .re(en), .ra(gr_a), .rd(grd[s]));
+@@ -427,11 +437,11 @@
+ 
+   // scale unit (its amax is don't-care while sq_iv is low: sc/inv are read only under sq_ov)
+   logic        sq_iv, sq_ov;
+-  logic [1:0]  sq_ot;
++  logic [RB-1:0] sq_ot;
+   f32_t        sq_amax, sq_sc, sq_inv;
+   assign sq_iv   = mc.v && mc.last && !mc.pass;
+   assign sq_amax = nmax;
+-  otpu_qscale #(.LM(LM), .LA(LA), .TW(2)) u_sc (.clk, .rst, .en, .iv(sq_iv), .itag(mc.row[1:0]),
++  otpu_qscale #(.LM(LM), .LA(LA), .TW(RB)) u_sc (.clk, .rst, .en, .iv(sq_iv), .itag(mc.row[RB-1:0]),
+     .amax(sq_amax), .ov(sq_ov), .otag(sq_ot), .sc(sq_sc), .inv(sq_inv));
+   // the rows' S, inv and amax by bank (row r in r % NB: written at its scale's input / output,
+   // read through its pass 1); sv: the bank's scale is out and its pass 1 not yet started
+@@ -458,11 +468,11 @@
+   // block's record bytes the next, delayed to the prescale's output
+   logic [3:0][4:0] dq;
+   logic [31:0]     e1;
+-  logic [1:0]      b1;                       // the chunk's row bank
++  logic [RB-1:0] b1;                       // the chunk's row bank
+   always_ff @(posedge clk) if (en) begin
+-    for (int s = 0; s < 4; s++) dq[s] <= dval(bm ? grd[s] : grd_d[s], amx_q[m1s.row[1:0]], rowm);
++    for (int s = 0; s < 4; s++) dq[s] <= dval(bm ? grd[s] : grd_d[s], amx_q[m1s.row[RB-1:0]], rowm);
+     e1 <= m1s.e;
+-    b1 <= m1s.row[1:0];
++    b1 <= m1s.row[RB-1:0];
+   end
+   f32_t        invl [LANES], invp [LANES];
+   logic [31:0] dal, dap;
+@@ -520,7 +530,7 @@
+       mb1 <= mb0;
+       mb2 <= mb1;
+     end
+-  // the row buffer: pass 0's prescaled chunks (buffered QACT), popped by pass 1 in order (the
++  // the row buffer: pass 0's prescaled chunks (buffered QACT/QST), popped by pass 1 in order (the
+   // read registered: the popped chunk's data arrives with mb0)
+   wire xpush = bm && mp.v && !mp.pass;
+   if (XD > 0) begin : g_xb
+@@ -564,9 +574,9 @@
+       wq.blk = 16'(ab) + 16'(m.e >> DL);
+       wq.da = mb2.v ? dal : dap;
+       wq.st = is_st;
+-      wq.baddr = mp_baddr;
++      wq.baddr = mb2.v ? mb2.baddr : mp_baddr;
+       wq.fin = m.glast;
+-      wq.sc = sc_q[m.row[1:0]];
++      wq.sc = sc_q[m.row[RB-1:0]];
+     end
+   end
+   // the writer's selection registered in front of the multipliers
+@@ -621,7 +631,7 @@
+     dword = '0;
+     for (int s = 0; s < 4; s++)
+       if (32'(sw_i) * 4 + 32'(s) < 32'(KB) + 4)        // groups 4(sw_i - 1) + s < KB
+-        dword[8*s +: 8] = {3'b0, dval(grd[s], amx_q[r[1:0]], 1'b0)};
++        dword[8*s +: 8] = {3'b0, dval(grd[s], amx_q[st_bank], 1'b0)};
+   end
+   // a DRAM write is waiting (independent of the grant, which the slice derives from it)
+   assign a_want = (busy && !ackw && wqd.v && wqd.st) || sw_ph;
+@@ -674,7 +684,7 @@
+       a_req = 1'b1;
+       a_we = 1'b1;
+       a_addr = (sbase + {sw_i, 2'b00}) >> 2;
+-      a_wdata = (sw_i == 0) ? sc_q[r[1:0]] : dword;
++      a_wdata = (sw_i == 0) ? sc_q[st_bank] : dword;
+       a_be = 4'hF;
+     end
+     if (!gnt) begin
+@@ -684,7 +694,7 @@
+ `ifndef SYNTHESIS
+   // the scale row goes out between a row's passes: no data write is in flight then
+   always @(posedge clk)
+-    if (!rst && busy && sw_ph && wqd.v)
++    if (!rst && busy && sw_ph && wqd.v && !(bm && STORE_LANES == LANES))
+       $fatal(1, "otpu_quant: a QST data write during the scale row");
+ `endif
+ 
+@@ -757,7 +767,12 @@
+       pass <= 1'b0; rd_wait <= 1'b0; wide <= 1'b0; sw_ph <= 1'b0; sw_i <= '0;
+       m0a <= '0;
+       st_frz <= '0;
+-      bm <= XD > 0 && !qst && 32'(kb) * D <= 32'(XD) * LANES;
++      // Buffered QST uses one whole chunk per pop. HALF and narrow legacy
++      // stores keep the original two-pass path; no discarded FIFO entries.
++      bm <= XD > 0 && (!qst || (STORE_LANES == LANES && !(cmd.flags[0] && cmd.flags[1])))
++          && 32'(kb) * D <= 32'(XD) * LANES;
++      p1_baddr <= cmd.w2;
++      p1_bbase <= cmd.w2;
+       p1a <= 1'b0; r1 <= '0; e1c <= '0; xw <= '0; xr <= '0; xocc <= '0; dr <= '0; sv <= '0;
+       mb0 <= '0;
+       if (nr == 0 || kb == 0) begin
+@@ -800,7 +815,7 @@
+           brs <= brs + drs;
+           badr <= brs + drs;
+           row_src <= row_src + srs;
+-          sbase <= sbase + sstep;
++          if (!bm) sbase <= sbase + sstep;
+         end
+       end
+       // ---- buffered pass 1: once row r1's scale is out, pop its chunks (one a cycle, the
+@@ -810,6 +825,7 @@
+         mb0.v <= 1'b1;
+         mb0.e <= e1c;
+         mb0.row <= r1;
++        mb0.baddr <= p1_baddr;
+         mb0.mask <= '1;
+         mb0.last <= (e1c + LANES >= G);
+         mb0.glast <= (e1c + LANES >= G) && (32'(r1) + 1 == 32'(rows));
+@@ -817,22 +833,31 @@
+         if (e1c + LANES >= G) begin
+           p1a <= 1'b0;
+           r1 <= r1 + 1'b1;
+-        end else e1c <= e1c + LANES;
+-      end else if (bm && 32'(r1) < 32'(rows) && sv[r1[1:0]]) begin
+-        p1a <= 1'b1;
++          p1_bbase <= p1_bbase + drs;
++          p1_baddr <= p1_bbase + drs;
++          if (is_st) sbase <= sbase + sstep;
++        end else begin
++          e1c <= e1c + LANES;
++          p1_baddr <= p1_baddr + 32'(LANES) * es;
++        end
++      end else if (bm && !sw_ph && 32'(r1) < 32'(rows) && sv[r1[RB-1:0]]) begin
++        if (is_st) begin
++          sw_ph <= 1'b1;
++          sw_i <= '0;
++        end else p1a <= 1'b1;
+         e1c <= '0;
+       end
+       // the FIFO's entries taken (a buffered read) and given back (a pop); rows between the
+       // passes (r - r1)
+       xocc <= xocc + ((bm && riss) ? 1'b1 : 1'b0) - (p1a ? 1'b1 : 1'b0);
+       if (xpush) xw <= xw + 1'b1;
+-      dr <= dr + ((bm && riss && rlast) ? 3'd1 : 3'd0) - ((p1a && e1c + LANES >= G) ? 3'd1 : 3'd0);
++      dr <= dr + ((bm && riss && rlast) ? (RB+1)'(1) : (RB+1)'(0)) - ((p1a && e1c + LANES >= G) ? (RB+1)'(1) : (RB+1)'(0));
+       // ---- the maxes
+       if (mc.v && !mc.pass) begin
+         amx_r <= nmax;
+         gacc <= gnew;
+       end
+-      if (sq_iv) amx_q[mc.row[1:0]] <= nmax;
++      if (sq_iv) amx_q[mc.row[RB-1:0]] <= nmax;
+       // ---- the row's scale: QST writes its scale row, then pass 1 starts (buffered: pass 1
+       // takes it when it gets to the row)
+       if (sq_ov) begin
+@@ -849,13 +874,16 @@
+           rd_wait <= 1'b0;
+         end
+       end
+-      if (!p1a && bm && 32'(r1) < 32'(rows) && sv[r1[1:0]]) sv[r1[1:0]] <= 1'b0;
++      if (!p1a && !sw_ph && bm && 32'(r1) < 32'(rows) && sv[r1[RB-1:0]]) sv[r1[RB-1:0]] <= 1'b0;
+       if (sw_ph) begin
+         if (sw_i + 16'd1 == swn) begin
+           sw_ph <= 1'b0;
+-          pass <= 1'b1;
+-          rem <= GW;
+-          rd_wait <= 1'b0;
++          if (bm) p1a <= 1'b1;
++          else begin
++            pass <= 1'b1;
++            rem <= GW;
++            rd_wait <= 1'b0;
++          end
+         end else sw_i <= sw_i + 16'd1;
+       end
+       // ---- the last write

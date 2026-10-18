@@ -24,11 +24,16 @@ class Architecture:
     bandwidth: int
     latency: int = 8
     ceiling_only: bool = False
+    buffered_quant: bool = False
 
 
 def architectures():
     return [
         Architecture('validated_32x1', 32, 1, 2816),
+        Architecture('fpga_quant_32x1', 32, 1, 2816, buffered_quant=True),
+        Architecture('fpga_quant_128x1', 128, 1, 2816, buffered_quant=True),
+        Architecture('fpga_quant_256x1', 256, 1, 2816, buffered_quant=True),
+        Architecture('fpga_quant_64x4', 64, 4, 2816, buffered_quant=True),
         Architecture('rows128_memory2816', 128, 1, 2816),
         Architecture('rows512_memory2816', 512, 1, 2816),
         Architecture('rows128_cols4_memory2816', 128, 4, 2816),
@@ -51,8 +56,24 @@ def resources(point, config, clock_mhz):
     fifo = point.rows * 128 * config['D']
     sram = activation + fifo + 4 * config['TMEM_WORDS']
     limits = dict(matrix_mac_lanes=20000, onchip_bytes=64 << 20, memory_bytes_per_cycle=2816)
+    # Board is an illustrative reference, not a user-selected target. Reserve
+    # 20% of DSPs and half of embedded memory for shell/other units and mapping.
+    # DSP packing is deliberately not assumed in the conservative screen.
+    v80=dict(reference='AMD Alveo V80 product brief',
+        source='https://www.amd.com/content/dam/amd/en/documents/products/accelerators/alveo/v80/alveo-v80-product-brief.pdf',
+        dsp_slices=10848,embedded_memory_mbits=673,peak_hbm_gbs=810,
+        matrix_dsp_fraction=.8,onchip_memory_fraction=.5,hbm_efficiency=.7,macs_per_dsp=1)
+    v80_limits=dict(matrix_mac_lanes=int(v80['dsp_slices']*.8),
+        onchip_bytes=int(673e6/8*.5),memory_gbs=810*.7)
+    conservative=(macs<=v80_limits['matrix_mac_lanes'] and sram<=v80_limits['onchip_bytes'] and
+                  point.bandwidth*clock_mhz/1000<=v80_limits['memory_gbs'])
     return dict(matrix_mac_lanes=macs, onchip_bytes_lower_bound=sram,
         memory_bytes_per_cycle=point.bandwidth, memory_gbs=point.bandwidth * clock_mhz / 1000,
+        provisional_v80_reference=v80,provisional_v80_limits=v80_limits,
+        passes_conservative_v80_capacity_screen=conservative,
+        passes_two_macs_per_dsp_capacity_screen=(macs<=2*v80_limits['matrix_mac_lanes'] and
+            sram<=v80_limits['onchip_bytes'] and point.bandwidth*clock_mhz/1000<=v80_limits['memory_gbs']),
+        two_macs_per_dsp_status='Requires an implemented, numerically validated packed DSP datapath; absent from current RTL.',
         illustrative_fpga_screen_limits=limits,
         passes_illustrative_fpga_screen=macs <= limits['matrix_mac_lanes'] and
             sram <= limits['onchip_bytes'] and point.bandwidth <= limits['memory_bytes_per_cycle'],
@@ -84,7 +105,8 @@ def run_kernel(task):
     timing = Timing(batch_rows=point.rows, matrix_row_lanes=point.rows,
         dram_bytes_per_cycle=point.bandwidth, dram_port_bytes=point.bandwidth,
         dram_latency=point.latency, fifo_chunks=128 * point.rows, scale_lanes=point.rows,
-        unified_dram=True, scalar_store_bytes=256, epilogue_lanes=max(1, point.columns // 2))
+        unified_dram=True, scalar_store_bytes=256, epilogue_lanes=max(1, point.columns // 2),
+        quant_row_banks=8 if point.buffered_quant else 0,quant_store_buffered=point.buffered_quant)
     prepared = ReusableTiming(Path(task['compiler']), Path(task['cache']), capacity=65536).prepare(
         workload, timing, directory / 'timing.tables')
     cycles, core, _, log = prepared.run()

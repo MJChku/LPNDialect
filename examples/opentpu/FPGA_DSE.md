@@ -1,5 +1,9 @@
 # Weight-free FPGA architecture exploration
 
+For the current **FPGA-first 100x exploration on normal upstream inference**,
+read [TPU_EXPLORATION.md](TPU_EXPLORATION.md). The historical results below use
+a different prompt-processing schedule and are not its baseline.
+
 **Workload correction:** the studies below used a custom token-by-token prompt
 loop, including a vocabulary-head execution at every prompt position. They are
 historical architecture microbenchmarks, **not results for openTPU's normal

@@ -16,6 +16,46 @@ from examples.opentpu.workload import load, use_checkout
 class OpenTPUTest(unittest.TestCase):
   tool = None
 
+  def test_buffered_quantizer_credits_and_rtl_pipeline(self):
+    from examples.opentpu.model import buffered_quant_cycles
+    # Independent actual-RTL measurements: row-bank wrap and FIFO pressure.
+    for rows,chunks,capacity,banks,scale,cycles in (
+        (1,1,32,8,0,54),(8,1,32,4,0,104),(8,1,32,8,0,68),
+        (9,3,32,8,0,106),(8,9,32,8,0,174),
+        (1,1,32,8,2,60),(8,1,32,8,2,88),(8,1,32,8,1,80),
+        (9,3,32,8,2,114),(8,9,32,8,4,194)):
+      with self.subTest(rows=rows,chunks=chunks,banks=banks,scale=scale):
+        self.assertEqual(buffered_quant_cycles(rows,chunks,capacity,banks,scale),cycles)
+    with self.assertRaises(ValueError):
+      Timing(quant_store_buffered=True)
+    with self.assertRaises(ValueError):
+      Timing(quant_row_banks=3)
+
+  def test_buffered_quantizer_native_matches_expanded(self):
+    from examples.opentpu.shape_workload import resolve_static
+    from opentpu import Config,isa as I
+    cfg=Config(D=64,MCOLS=1,LANES=64,DRAM_BYTES=1<<20)
+    prog=[I.qst(0,65536,131072,8,1,64,64,1),
+          I.qact(0,8,0,9,576),I.halt()]
+    workload=resolve_static(cfg,[prog])
+    timing=Timing(unified_dram=True,scalar_store_bytes=256,
+        dram_bytes_per_cycle=256,dram_port_bytes=256,
+        quant_row_banks=8,quant_store_buffered=True)
+    times=[]
+    with tempfile.TemporaryDirectory() as directory:
+      for cls in (OpenTPU,CompactOpenTPU):
+        model=cls(workload,timing)
+        sim=model.net.python_simulator()
+        times.append(sim.run(max_time=10000))
+        self.assertEqual(sim.place_dicts('program_completed'),[{}])
+        if self.tool:
+          ir=Path(directory)/f'{cls.__name__}.mlir'
+          binary=ir.with_suffix('.native')
+          ir.write_text(model.build())
+          subprocess.run([self.tool,str(ir),'-o',str(binary)],check=True,capture_output=True,text=True)
+          self.assertEqual(native_observation(binary)[0],times[-1])
+    self.assertEqual(*times)
+
   def test_shape_trace_matches_numerical_control_and_footprints(self):
     from examples.opentpu.shape_workload import resolve_static
     from opentpu import Config,isa as I

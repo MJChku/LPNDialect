@@ -113,7 +113,7 @@ def check_kernel(task):
                   for sid in range(cfg.S)]
         workload=resolve_static(cfg,programs,task['args'])
         physical=replace(workload,config=replace(cfg,MCOLS=1,LANES=64))
-        timing=Timing(batch_rows=32,matrix_row_lanes=32,dram_bytes_per_cycle=2816,
+        timing=Timing(**task['timing']) if task.get('timing') else Timing(batch_rows=32,matrix_row_lanes=32,dram_bytes_per_cycle=2816,
             dram_port_bytes=2816,dram_latency=8,fifo_chunks=4096,scale_lanes=32,
             unified_dram=True,scalar_store_bytes=256,epilogue_lanes=1)
         prepared=ReusableTiming(Path(task['compiler']),Path(task['cache']),capacity=65536).prepare(
