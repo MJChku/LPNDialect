@@ -45,6 +45,11 @@ class Architecture:
 
 def architectures():
     return [
+        *[Architecture(f'physical_pinned{mib}m_128x1_add2',128,1,2816,buffered_quant=True,
+                       vector_row_contexts=4,activation_streaming=True,quant_scale_lookup=True,
+                       scalar_recip_lookup=True,fp_add_latency=2,vector_command_queue=2,
+                       matrix_retirement=True,physical_scale_lines=True,pinned_cache_bytes=mib<<20)
+          for mib in (24,48)],
         Architecture('physical_128x1_add2',128,1,2816,buffered_quant=True,
                      vector_row_contexts=4,activation_streaming=True,quant_scale_lookup=True,
                      scalar_recip_lookup=True,fp_add_latency=2,vector_command_queue=2,
