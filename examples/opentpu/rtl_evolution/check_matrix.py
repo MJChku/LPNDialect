@@ -19,6 +19,7 @@ def main():
     ap.add_argument('--vector-lanes',type=int,default=64)
     ap.add_argument('--stores',type=int,default=64)
     ap.add_argument('--scale-cache-entries',type=int,choices=(0,16),default=0)
+    ap.add_argument('--packed-qst',action='store_true')
     ap.add_argument('--depth',type=int,default=64)
     ap.add_argument('--lanes',type=int,default=64)
     ap.add_argument('--host-opt',choices=('0','3'),default='0')
@@ -36,6 +37,7 @@ def main():
     cfg=Config(D=a.depth,MCOLS=4,ACT_ROWS=16,LANES=a.lanes)
     ua=dict(MXU_ROWS=a.rows,VPU_LANES=a.vector_lanes,QST_LANES=a.stores)
     if a.scale_cache_entries:ua['SCALE_CACHE_ENTRIES']=a.scale_cache_entries
+    if a.packed_qst:ua['QST_PACKED_WORDS']=1
     if a.stream_act: ua["ACT_STREAMING"]=1
     lookup_hashes={};lookup_args=[]
     if a.lookup_scale or a.scalar_recip_lookup:
