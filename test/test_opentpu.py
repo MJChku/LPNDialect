@@ -17,10 +17,17 @@ class OpenTPUTest(unittest.TestCase):
   tool = None
 
   def test_lowlat_fp_quantizer_pipeline_matches_rtl(self):
-    from examples.opentpu.model import buffered_quant_cycles
+    from examples.opentpu.model import buffered_quant_cycles,legacy_quant_cycles
     self.assertEqual(buffered_quant_cycles(1,1,1024,8,mul_latency=1,add_latency=1),32)
     self.assertEqual(buffered_quant_cycles(8,9,1024,8,mul_latency=1,add_latency=1),118)
     self.assertEqual(buffered_quant_cycles(8,1,1024,8,2,1,1),66)
+    # HALF keeps the unbuffered path. Its scale/restart work repeats per row;
+    # only half the data is written, with a pipeline tail once per command.
+    for rows,chunks,writes,old,short in ((1,1,1,62,38),(8,1,1,370,199),
+        (9,3,2,441,249),(8,9,5,466,295),(9,33,17,846,654)):
+      self.assertEqual(legacy_quant_cycles(rows,chunks,writes,1),old)
+      self.assertEqual(legacy_quant_cycles(rows,chunks,writes,1,1,1),short)
+    self.assertEqual(legacy_quant_cycles(9,33,33),977)
     with self.assertRaises(ValueError):Timing(fp_add_latency=0)
     with self.assertRaises(ValueError):Timing(fp_mul_latency=3)
 

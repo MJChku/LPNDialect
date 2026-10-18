@@ -27,6 +27,19 @@ def matrix_batch_rows(rows,chunks,timing):
   return batch//parallel*parallel if batch>=parallel else batch
 
 
+def quant_scale_setup(mul_latency=2,add_latency=4):
+  # Registered TMEM read, prescale, max fold, scale pipeline and reader restart.
+  return 9*mul_latency+4*add_latency+9
+
+
+def legacy_quant_cycles(rows,reads,writes,scale_words=0,mul_latency=2,add_latency=4):
+  """Two-pass reader: scale writes and both passes repeat for every row."""
+  if not rows or not reads:
+    return 3
+  setup=quant_scale_setup(mul_latency,add_latency)
+  return rows*(reads+writes+setup+scale_words-2)+3*mul_latency+(12 if scale_words else 8)
+
+
 def buffered_quant_cycles(rows,chunks,capacity,banks,scale_words=0,mul_latency=2,add_latency=4):
   """Finite row/FIFO credits for the buffered quantizer's two overlapping passes.
 
@@ -48,7 +61,7 @@ def buffered_quant_cycles(rows,chunks,capacity,banks,scale_words=0,mul_latency=2
       index=row*chunks+chunk
       free=popped[index-capacity]+1 if index>=capacity else 1
       read=max(read+1,free,bank_free)
-    setup=9*mul_latency+4*add_latency+9
+    setup=quant_scale_setup(mul_latency,add_latency)
     first=max(read+setup,(popped[-1]+2 if popped else 1))+scale_words
     popped.extend(range(first,first+chunks))
     row_ends.append(popped[-1])
@@ -295,6 +308,9 @@ class OpenTPU:
       if t.quant_row_banks and chunks<=t.quant_buffer_chunks:
         latency=buffered_quant_cycles(rows,chunks,t.quant_buffer_chunks,t.quant_row_banks,
             mul_latency=t.fp_mul_latency,add_latency=t.fp_add_latency)
+      elif t.quant_row_banks:
+        latency=legacy_quant_cycles(rows,chunks,chunks,mul_latency=t.fp_mul_latency,
+            add_latency=t.fp_add_latency)
       port,service = None,0
     elif ins.op==I.QST:
       rows,kb = w[3]&65535,w[3]>>16
@@ -306,6 +322,11 @@ class OpenTPU:
       latency = rows*(ceil(elems/cfg.LANES)+store+overhead)
       chunks=ceil(elems/cfg.LANES)
       half=bool(ins.flags&1 and ins.flags&2)
+      parallel_stores=t.quant_row_banks and t.scalar_store_bytes==4*cfg.LANES
+      if parallel_stores:
+        store=ceil((elems//2 if half else elems)/cfg.LANES)
+        scale_words=1 if ins.flags&1 else 1+ceil(kb/4)
+        latency=legacy_quant_cycles(rows,chunks,store,scale_words,t.fp_mul_latency,t.fp_add_latency)
       if (t.quant_store_buffered and t.scalar_store_bytes==4*cfg.LANES and
           not half and chunks<=t.quant_buffer_chunks):
         scale_words=1 if ins.flags&1 else 1+ceil(kb/4)

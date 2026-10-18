@@ -7,7 +7,7 @@ versions. No such renamer exists in the RTL; its storage/ports are not budgeted.
 import argparse
 from bisect import bisect_left
 from collections import Counter
-from dataclasses import replace
+from dataclasses import replace,asdict
 import json
 from math import ceil,gcd
 from pathlib import Path
@@ -108,6 +108,8 @@ def main():
                     original_rtl_cycles=record['baseline_rtl_cycles']))
     atomic_json(a.output,dict(scope=__doc__,records=results,
         reference_sha256=digest(a.case/'report.json'),script_sha256=digest(Path(__file__)),
+        timing=asdict(t),source_sha256={name:digest(Path(__file__).with_name(name))
+            for name in ('model.py','compact.py','workload.py','shape_workload.py')},
         exclusions=['No unit contention or window capacity','MM weights assumed ready',
                     'Renaming mode has unlimited versions and unbudgeted ports/storage'],
         hardware_implemented=False))

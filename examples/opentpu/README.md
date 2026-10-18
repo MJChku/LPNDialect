@@ -16,6 +16,9 @@ validation. Its 100x cycle-reduction target has not yet been achieved.
 The next [shared-bank and interleaved-reduction candidate](FPGA_REDUCTIONS.md)
 predicts 13.067x and has passed numerical component gates; full inference RTL
 validation is still required.
+The separate [arithmetic partition experiment](LOWLAT_FP.md) checks shorter
+FP32 pipelines bit-exactly and predicts 15.108x for a two-clock-adder candidate.
+Its operating clock and full-inference RTL timing remain unvalidated.
 
 **Inference workload correction:** earlier `e2e.py`, `replay_e2e.py` and
 weight-free FPGA sequence results used a custom token-by-token prompt loop.
