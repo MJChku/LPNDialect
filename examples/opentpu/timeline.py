@@ -40,6 +40,12 @@ class TimelineSimulator(PythonSimulator):
       if re.fullmatch(r's\d+_slot_\d+',place.name) and self.definition.endswith(('_execute','_start')):
         sid=int(place.name.split('_')[0][1:])
         self.command_times[sid,token.get('id')]['started']=now
+      if re.fullmatch(r's\d+_slot_\d+',place.name) and self.definition.endswith('_accept'):
+        sid=int(place.name.split('_')[0][1:])
+        self.command_times[sid,token.get('id')]['accepted']=now
+      if re.fullmatch(r's\d+_unit_\d+_commands',place.name) and self.definition.endswith('_execute'):
+        sid=int(place.name.split('_')[0][1:])
+        self.command_times[sid,token.get('id')]['started']=now
       if re.fullmatch(r's\d+_mxu_\d+_ready',place.name) and self.definition.endswith(('_issue_rows','_accept_rows')):
         sid=int(place.name.split('_')[0][1:])
         self.command_times[sid,token.get('id')].setdefault('compute_started',now)

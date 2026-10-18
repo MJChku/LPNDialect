@@ -325,7 +325,8 @@ class CompactOpenTPU(OpenTPU):
       interface.vector_selector_factory=vector_selector_factory(net,slots,t.window,kinds,begins,ends,
           indices,metadata,is_done,vector_ranks)
     units = [ExecutionUnit(net,prefix+f"_unit_{u}",u,interface,parameters,memory,
-                 vector_ranks if u==W.U_VPU else None)
+                 vector_ranks if u==W.U_VPU else None,
+                 command_queue=t.vector_command_queue if u==W.U_VPU else 0)
              for u in (W.U_DMA,W.U_Q,W.U_VPU,W.U_COLL,5)
              if not (u==W.U_VPU and t.vector_result_chunks)]
     vectors=[]

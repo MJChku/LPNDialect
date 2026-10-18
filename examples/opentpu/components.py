@@ -46,7 +46,7 @@ class CommandTiming:
 
 class ExecutionUnit:
   """One scalar/control, DMA, quantization, vector or collective unit."""
-  def __init__(self,net,prefix,kind,interface,parameters,memory,ranks=None):
+  def __init__(self,net,prefix,kind,interface,parameters,memory,ranks=None,command_queue=0):
     self.resource = resource = net.place(prefix+"_resource",initial_tokens=1)
     slots,pending,window = interface.slots,interface.pending[kind],interface.window
     select_ready,publish = interface.select_ready,interface.publish
@@ -60,15 +60,40 @@ class ExecutionUnit:
     activation=interface.activation if kind==2 else None
     start_activation=activation.start if activation is not None else None
     activation_tail=activation.tail if activation is not None else [0]
+    queued=queue_space=admission=None
+    if command_queue:
+      queued=net.place(prefix+'_commands')
+      queue_space=net.place(prefix+'_command_space',initial_tokens=command_queue)
+      admission=net.place(prefix+'_admission',initial_tokens=1)
+
+      @net.transition(prefix+'_accept')
+      def accept():
+        guard(count(admission)>0)
+        guard(count(queue_space)>0)
+        guard(count(pending)>0)
+        chosen=select_ready(const_i64(kind))
+        guard(chosen>=0)
+        place=array(slots)[chosen]
+        token=take(place)
+        take(pending)
+        emit(place,create())
+        take(queue_space)
+        port=take(admission)
+        emit(admission,port,delay=1.0)
+        emit(queued,token,delay=1.0)
 
     @net.transition(prefix+"_execute")
     def execute():
       guard(count(resource)>0)
-      guard(count(pending)>0)
-      chosen = select_ready(const_i64(kind))
-      guard(chosen>=0)
-      slot_places = array(slots)
-      observed = peek(slot_places[chosen])
+      if command_queue:
+        guard(count(queued)>0)
+        observed=peek(queued)
+      else:
+        guard(count(pending)>0)
+        chosen = select_ready(const_i64(kind))
+        guard(chosen>=0)
+        slot_places = array(slots)
+        observed = peek(slot_places[chosen])
       idx = observed.get("id")
       bus_id = array(port_ids)[idx]
       buses = array(ports)
@@ -78,9 +103,13 @@ class ExecutionUnit:
         rank=array(ranks)[idx]
         guard(select(state.get('live')==0,True,
             select(rank==VECTOR_DRAIN_RANK,False,state.get('rank')<=rank,typ='i1'),typ='i1'))
-      token = take(slot_places[chosen])
-      take(pending)
-      emit(slot_places[chosen],create())
+      if command_queue:
+        token=take(queued)
+        emit(queue_space,create(),delay=1.0)
+      else:
+        token = take(slot_places[chosen])
+        take(pending)
+        emit(slot_places[chosen],create())
       latency = sitofp(array(latencies)[idx])
       credit = take(resource)
       resource_interval=array(intervals)[idx]

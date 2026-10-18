@@ -118,6 +118,7 @@ class Timing:
   pinned_cache_bytes: int = 0
   cache_read_bytes_per_cycle: int = 8192
   vector_row_contexts: int = 1
+  vector_command_queue: int = 0
   vector_engines: int = 1
   vector_result_chunks: int = 0
   vector_compatible_issue: bool = False
@@ -126,6 +127,10 @@ class Timing:
   fp_add_latency: int = 4
 
   def __post_init__(self):
+    if type(self.vector_command_queue) is not int or self.vector_command_queue not in (0,2):
+      raise ValueError('vector command queue must be 0 or the RTL two-entry FIFO')
+    if self.vector_command_queue and (self.vector_result_chunks or self.vector_compatible_issue):
+      raise ValueError('queued VPU model currently requires the single original issue path')
     if type(self.pinned_cache_bytes) is not int or self.pinned_cache_bytes<0 or self.pinned_cache_bytes%64:
       raise ValueError('pinned cache size must be a nonnegative multiple of 64 bytes')
     if type(self.cache_read_bytes_per_cycle) is not int or self.cache_read_bytes_per_cycle<1:
@@ -252,6 +257,8 @@ class OpenTPU:
     self.workload,self.timing = workload,timing or Timing()
     if self.timing.pinned_cache_bytes and not self.supports_multiple_matrix_engines:
       raise ValueError('pinned cache requires CompactOpenTPU and a validated prefetch profile')
+    if self.timing.vector_command_queue and not self.supports_multiple_matrix_engines:
+      raise ValueError('queued VPU requires CompactOpenTPU command acceptance')
     if self.timing.matrix_engines!=1 and not self.supports_multiple_matrix_engines:
       raise ValueError("multiple matrix engines require CompactOpenTPU")
     if self.timing.activation_streaming and not self.supports_multiple_matrix_engines:

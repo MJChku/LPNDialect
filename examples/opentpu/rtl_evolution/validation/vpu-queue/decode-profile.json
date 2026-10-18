@@ -1,0 +1,169 @@
+{
+  "status": "complete",
+  "scope": "Observe existing Python LPN transactions without changing model or scheduler.\n\nProfiling is deliberately separate from simulation speed measurements. Command\nwaits overlap across units and must not be added into an end-to-end runtime.\n",
+  "kernel": 16,
+  "architecture": "diagnostic_queue2",
+  "cycles": 95626.0,
+  "native_cycles": 95626.0,
+  "native_python_cycles_agree": true,
+  "observer_seconds": 109.38293172232807,
+  "program_json_sha256": {
+    "0": "d0cfcb995eb454885223567974802c72acd44e03c0bf0d730424a74ec55d781a"
+  },
+  "source_sha256": {
+    "/home/ubuntu/LPNDialect-vpu-queue/examples/opentpu/timeline.py": "3090f1f890a7d8c53c988cf57c87ceb81fea6015af1983e71399b563179c0130",
+    "/home/ubuntu/LPNDialect-vpu-queue/examples/opentpu/model.py": "49e88004c1c3531eb604d9a2626cbc81c8b3ace01a5d9d110be515e2c982909f",
+    "/home/ubuntu/LPNDialect-vpu-queue/examples/opentpu/compact.py": "f7ec4d894e5a86c63a8d4e017f5159f2f1e84f9f7e47f2dc736f2d8b078057d1",
+    "/home/ubuntu/LPNDialect-vpu-queue/examples/opentpu/components.py": "58de8c986be22b8f6baa41c9ad716fc0fa6e1adc0a5eb13fd8a86003e7fdabe3",
+    "/home/ubuntu/LPNDialect-vpu-queue/examples/opentpu/activation_stream.py": "83446e2b0a14629f734d3496b8f9e6b34afa6eeecd1d28f1a3996a01d9127aaa",
+    "/home/ubuntu/LPNDialect-vpu-queue/examples/opentpu/shape_workload.py": "d0f1db9e2bba7f3b1b1b119e9483b7ebc7ce17823d343ac135b26e5e51b91169",
+    "/home/ubuntu/LPNDialect-vpu-queue/examples/opentpu/retained_inputs.py": "50111fb14a2678b615b34f8b726fd6d4b804b3ef76a116a4d139a00086d18b59"
+  },
+  "reference_report_sha256": "f037e875e73760f7c3d70b6851d0ce4f01bbdd9f0c62ef27ccd75ba5659f07fe",
+  "prediction_report_sha256": "e5247ffc23487e80f34d54fbd630b86abc3e6061d1a540b927746ee7e3d3fcae",
+  "resources": {
+    "s0_unit_0_resource": {
+      "busy_cycles": 8524.0,
+      "utilization": 0.08913893710915441,
+      "holds": 160
+    },
+    "s0_dram_port_b": {
+      "busy_cycles": 58092.0,
+      "utilization": 0.6074916863614498,
+      "holds": 3620
+    },
+    "s0_dram_port_a": {
+      "busy_cycles": 17062.0,
+      "utilization": 0.17842427791604792,
+      "holds": 3190
+    },
+    "s0_unit_2_resource": {
+      "busy_cycles": 24213.0,
+      "utilization": 0.25320519523978835,
+      "holds": 692
+    },
+    "s0_mxu_0_compute": {
+      "busy_cycles": 59978.0,
+      "utilization": 0.627214355928304,
+      "holds": 3280
+    },
+    "s0_unit_3_resource": {
+      "busy_cycles": 30041.0,
+      "utilization": 0.314150963127183,
+      "holds": 3823
+    }
+  },
+  "operations": {
+    "LI": {
+      "resource_or_selection_wait": 0.0,
+      "commands": 1.0,
+      "start_to_completion": 0.0
+    },
+    "LD": {
+      "resource_or_selection_wait": 981.0,
+      "commands": 154.0,
+      "start_to_completion": 5422.0
+    },
+    "QACT": {
+      "resource_or_selection_wait": 5640.0,
+      "commands": 512.0,
+      "start_to_completion": 19297.0
+    },
+    "MM": {
+      "commands": 1102.0,
+      "start_to_completion": 172236.0
+    },
+    "copy": {
+      "resource_or_selection_wait": 4845.0,
+      "commands": 99.0,
+      "start_to_completion": 1854.0
+    },
+    "LOOP": {
+      "resource_or_selection_wait": 0.0,
+      "commands": 1.0,
+      "start_to_completion": 0.0
+    },
+    "rssq": {
+      "resource_or_selection_wait": 74.0,
+      "commands": 61.0,
+      "start_to_completion": 2318.0
+    },
+    "mul": {
+      "resource_or_selection_wait": 18061.0,
+      "commands": 1531.0,
+      "start_to_completion": 20141.0
+    },
+    "add": {
+      "resource_or_selection_wait": 6511.0,
+      "commands": 571.0,
+      "start_to_completion": 7481.0
+    },
+    "rsqrt": {
+      "resource_or_selection_wait": 61.0,
+      "commands": 61.0,
+      "start_to_completion": 3599.0
+    },
+    "sub": {
+      "resource_or_selection_wait": 240.0,
+      "commands": 120.0,
+      "start_to_completion": 1560.0
+    },
+    "QST": {
+      "resource_or_selection_wait": 20130.0,
+      "commands": 180.0,
+      "start_to_completion": 5940.0
+    },
+    "fill": {
+      "resource_or_selection_wait": 3492.0,
+      "commands": 450.0,
+      "start_to_completion": 6750.0
+    },
+    "max": {
+      "resource_or_selection_wait": 2820.0,
+      "commands": 90.0,
+      "start_to_completion": 1170.0
+    },
+    "exp2sub": {
+      "resource_or_selection_wait": 9030.0,
+      "commands": 180.0,
+      "start_to_completion": 12060.0
+    },
+    "rsum": {
+      "resource_or_selection_wait": 3990.0,
+      "commands": 90.0,
+      "start_to_completion": 2700.0
+    },
+    "recip": {
+      "resource_or_selection_wait": 6840.0,
+      "commands": 330.0,
+      "start_to_completion": 13170.0
+    },
+    "exp2": {
+      "resource_or_selection_wait": 480.0,
+      "commands": 240.0,
+      "start_to_completion": 15600.0
+    },
+    "ADDI": {
+      "resource_or_selection_wait": 0.0,
+      "commands": 31.0,
+      "start_to_completion": 0.0
+    },
+    "ST": {
+      "resource_or_selection_wait": 45.0,
+      "commands": 6.0,
+      "start_to_completion": 3102.0
+    },
+    "HALT": {
+      "resource_or_selection_wait": 0.0,
+      "commands": 1.0,
+      "start_to_completion": 0.0
+    }
+  },
+  "command_trace_sha256": "fc8cfb92d3fe179bba4a5f5f62782e6853cfd40921644ff207633f899ff16442",
+  "resource_trace_sha256": "04187b6684b1e2f4adb27e1589778330ae5965cf804bbb89ebfc67b9b7125004",
+  "limitations": [
+    "Wait totals overlap across commands; do not sum as elapsed time",
+    "Matrix streaming dependency waits are not attributed",
+    "Profiling wall time is not a simulator performance measurement"
+  ]
+}

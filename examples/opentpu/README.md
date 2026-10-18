@@ -46,6 +46,8 @@ coherent persistent regions with separately bounded SRAM and HBM ports.
 Those bandwidth-only cache forecasts show no cycle benefit. The 128-engine
 shorter-adder RTL pilot also exposes 13.4% timing underprediction on its completed
 decode kernels; that configuration is being diagnosed and is not validated.
+The [explicit VPU acceptance FIFO](VPU_QUEUE.md) explains part of that error;
+matrix drain and retirement timing are the next diagnostic.
 
 **Inference workload correction:** earlier `e2e.py`, `replay_e2e.py` and
 weight-free FPGA sequence results used a custom token-by-token prompt loop.

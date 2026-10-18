@@ -1,0 +1,333 @@
+{
+  "status": "complete",
+  "scope": "Compare a numerically checked RTL trace with an observed LPN command timeline.\n\nAcceptance and execution are distinct stages. Start-to-end differences alone\ncannot identify unit latency when a command was accepted into a FIFO earlier.\n",
+  "kernel": 16,
+  "rtl_cycles": 109349,
+  "lpn_cycles": 95626.0,
+  "relative_cycle_error": -0.12549726106320136,
+  "timing_target_met": false,
+  "all_full_dram_and_tmem_bit_exact": true,
+  "all_dynamic_commands_aligned": true,
+  "dispatches": 5777,
+  "first_vector_acceptance_order_difference": {
+    "position": 35,
+    "rtl_index": 93,
+    "lpn_index": 54
+  },
+  "first_matrix_commands": [
+    {
+      "index": 3,
+      "pc": 3,
+      "rtl_accept": 9,
+      "rtl_release": 281,
+      "rtl_completed": 405,
+      "lpn_admit": 8.0,
+      "lpn_compute": 275.0,
+      "lpn_completed": 400.0
+    },
+    {
+      "index": 4,
+      "pc": 4,
+      "rtl_accept": 13,
+      "rtl_release": 282,
+      "rtl_completed": 420,
+      "lpn_admit": 263.0,
+      "lpn_compute": 373.0,
+      "lpn_completed": 404.0
+    },
+    {
+      "index": 5,
+      "pc": 5,
+      "rtl_accept": 405,
+      "rtl_release": 406,
+      "rtl_completed": 450,
+      "lpn_admit": 400.0,
+      "lpn_compute": 413.0,
+      "lpn_completed": 444.0
+    },
+    {
+      "index": 6,
+      "pc": 6,
+      "rtl_accept": 420,
+      "rtl_release": 421,
+      "rtl_completed": 465,
+      "lpn_admit": 404.0,
+      "lpn_compute": 417.0,
+      "lpn_completed": 448.0
+    },
+    {
+      "index": 7,
+      "pc": 7,
+      "rtl_accept": 450,
+      "rtl_release": 451,
+      "rtl_completed": 495,
+      "lpn_admit": 444.0,
+      "lpn_compute": 457.0,
+      "lpn_completed": 488.0
+    },
+    {
+      "index": 8,
+      "pc": 8,
+      "rtl_accept": 465,
+      "rtl_release": 466,
+      "rtl_completed": 510,
+      "lpn_admit": 448.0,
+      "lpn_compute": 461.0,
+      "lpn_completed": 492.0
+    },
+    {
+      "index": 9,
+      "pc": 9,
+      "rtl_accept": 495,
+      "rtl_release": 496,
+      "rtl_completed": 540,
+      "lpn_admit": 488.0,
+      "lpn_compute": 501.0,
+      "lpn_completed": 532.0
+    },
+    {
+      "index": 10,
+      "pc": 10,
+      "rtl_accept": 510,
+      "rtl_release": 511,
+      "rtl_completed": 555,
+      "lpn_admit": 492.0,
+      "lpn_compute": 505.0,
+      "lpn_completed": 536.0
+    },
+    {
+      "index": 11,
+      "pc": 11,
+      "rtl_accept": 540,
+      "rtl_release": 541,
+      "rtl_completed": 585,
+      "lpn_admit": 532.0,
+      "lpn_compute": 545.0,
+      "lpn_completed": 576.0
+    },
+    {
+      "index": 12,
+      "pc": 12,
+      "rtl_accept": 555,
+      "rtl_release": 556,
+      "rtl_completed": 600,
+      "lpn_admit": 536.0,
+      "lpn_compute": 549.0,
+      "lpn_completed": 580.0
+    },
+    {
+      "index": 13,
+      "pc": 13,
+      "rtl_accept": 585,
+      "rtl_release": 586,
+      "rtl_completed": 630,
+      "lpn_admit": 576.0,
+      "lpn_compute": 589.0,
+      "lpn_completed": 620.0
+    },
+    {
+      "index": 14,
+      "pc": 14,
+      "rtl_accept": 600,
+      "rtl_release": 601,
+      "rtl_completed": 645,
+      "lpn_admit": 580.0,
+      "lpn_compute": 593.0,
+      "lpn_completed": 624.0
+    },
+    {
+      "index": 15,
+      "pc": 15,
+      "rtl_accept": 630,
+      "rtl_release": 631,
+      "rtl_completed": 675,
+      "lpn_admit": 620.0,
+      "lpn_compute": 633.0,
+      "lpn_completed": 664.0
+    },
+    {
+      "index": 16,
+      "pc": 16,
+      "rtl_accept": 645,
+      "rtl_release": 646,
+      "rtl_completed": 690,
+      "lpn_admit": 624.0,
+      "lpn_compute": 637.0,
+      "lpn_completed": 668.0
+    },
+    {
+      "index": 17,
+      "pc": 17,
+      "rtl_accept": 675,
+      "rtl_release": 676,
+      "rtl_completed": 720,
+      "lpn_admit": 664.0,
+      "lpn_compute": 677.0,
+      "lpn_completed": 708.0
+    },
+    {
+      "index": 18,
+      "pc": 18,
+      "rtl_accept": 690,
+      "rtl_release": 691,
+      "rtl_completed": 735,
+      "lpn_admit": 668.0,
+      "lpn_compute": 681.0,
+      "lpn_completed": 712.0
+    },
+    {
+      "index": 37,
+      "pc": 37,
+      "rtl_accept": 720,
+      "rtl_release": 1467,
+      "rtl_completed": 1550,
+      "lpn_admit": 708.0,
+      "lpn_compute": 747.0,
+      "lpn_completed": 1533.0
+    },
+    {
+      "index": 38,
+      "pc": 38,
+      "rtl_accept": 786,
+      "rtl_release": 1468,
+      "rtl_completed": 1570,
+      "lpn_admit": 749.0,
+      "lpn_compute": 1509.0,
+      "lpn_completed": 1551.0
+    },
+    {
+      "index": 39,
+      "pc": 39,
+      "rtl_accept": 1550,
+      "rtl_release": 1551,
+      "rtl_completed": 1662,
+      "lpn_admit": 1533.0,
+      "lpn_compute": 1572.0,
+      "lpn_completed": 1620.0
+    },
+    {
+      "index": 40,
+      "pc": 40,
+      "rtl_accept": 1616,
+      "rtl_release": 1617,
+      "rtl_completed": 1728,
+      "lpn_admit": 1575.0,
+      "lpn_compute": 1614.0,
+      "lpn_completed": 1662.0
+    }
+  ],
+  "completion_gaps_by_operation": {
+    "LD": {
+      "commands": 154,
+      "minimum": -55.0,
+      "maximum": 11172.0,
+      "mean": 5352.162337662337
+    },
+    "QACT": {
+      "commands": 512,
+      "minimum": 0.0,
+      "maximum": 11275.0,
+      "mean": 5571.041015625
+    },
+    "MM": {
+      "commands": 1102,
+      "minimum": 5.0,
+      "maximum": 13672.0,
+      "mean": 5589.604355716879
+    },
+    "copy": {
+      "commands": 99,
+      "minimum": 10.0,
+      "maximum": 10925.0,
+      "mean": 4981.242424242424
+    },
+    "rssq": {
+      "commands": 61,
+      "minimum": 5.0,
+      "maximum": 11269.0,
+      "mean": 5580.163934426229
+    },
+    "mul": {
+      "commands": 1531,
+      "minimum": -117.0,
+      "maximum": 11271.0,
+      "mean": 5579.614630960156
+    },
+    "add": {
+      "commands": 571,
+      "minimum": -48.0,
+      "maximum": 11273.0,
+      "mean": 5595.945709281961
+    },
+    "rsqrt": {
+      "commands": 61,
+      "minimum": 11.0,
+      "maximum": 11275.0,
+      "mean": 5586.163934426229
+    },
+    "sub": {
+      "commands": 120,
+      "minimum": 19.0,
+      "maximum": 10963.0,
+      "mean": 5505.275
+    },
+    "QST": {
+      "commands": 180,
+      "minimum": -154.0,
+      "maximum": 10916.0,
+      "mean": 5414.833333333333
+    },
+    "fill": {
+      "commands": 450,
+      "minimum": -19.0,
+      "maximum": 10932.0,
+      "mean": 5449.7733333333335
+    },
+    "max": {
+      "commands": 90,
+      "minimum": 37.0,
+      "maximum": 10982.0,
+      "mean": 5506.788888888889
+    },
+    "exp2sub": {
+      "commands": 180,
+      "minimum": 38.0,
+      "maximum": 10936.0,
+      "mean": 5493.133333333333
+    },
+    "rsum": {
+      "commands": 90,
+      "minimum": 22.0,
+      "maximum": 10930.0,
+      "mean": 5482.966666666666
+    },
+    "recip": {
+      "commands": 330,
+      "minimum": -65.0,
+      "maximum": 11252.0,
+      "mean": 5609.887878787878
+    },
+    "exp2": {
+      "commands": 240,
+      "minimum": 84.0,
+      "maximum": 11252.0,
+      "mean": 5676.233333333334
+    },
+    "ST": {
+      "commands": 6,
+      "minimum": 12097.0,
+      "maximum": 13721.0,
+      "mean": 12906.0
+    }
+  },
+  "simulator_sha256": "acb7e9e9f5b0ee1ef459e26411649760dca2facbee497138afd19a1c426d254b",
+  "program_json_sha256": "d0cfcb995eb454885223567974802c72acd44e03c0bf0d730424a74ec55d781a",
+  "rtl_trace_sha256": "381b04a3f2c393ac74a28ed6285e368ac8fc8ca6de565575fea245cdd5637f2c",
+  "lpn_profile_sha256": "e4f3aea8ec2e7409b56fed88ff95de1f9f6f270ab64fa78f243082f77d1c9357",
+  "script_sha256": "024666a53eeffb79ffad8f2c05f10979eec0197a1361098bbf2d43c9da861552",
+  "numerical_arithmetic_executed": false,
+  "limitations": [
+    "Completion gaps accumulate upstream delays; they are not isolated unit latencies",
+    "One kernel, not a full-inference timing validation"
+  ]
+}

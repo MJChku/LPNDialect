@@ -1,0 +1,39 @@
+{
+  "status": "complete",
+  "records": [
+    {
+      "kernel": 16,
+      "queue_depth": 0,
+      "lpn_cycles": 94640.0,
+      "rtl_cycles": 109349,
+      "error": -0.1345142616759184
+    },
+    {
+      "kernel": 16,
+      "queue_depth": 2,
+      "lpn_cycles": 95626.0,
+      "rtl_cycles": 109349,
+      "error": -0.12549726106320136
+    },
+    {
+      "kernel": 47,
+      "queue_depth": 0,
+      "lpn_cycles": 94940.0,
+      "rtl_cycles": 109618,
+      "error": -0.13390136656388552
+    },
+    {
+      "kernel": 47,
+      "queue_depth": 2,
+      "lpn_cycles": 95926.0,
+      "rtl_cycles": 109618,
+      "error": -0.12490649345910343
+    }
+  ],
+  "source_sha256": {
+    "/home/ubuntu/LPNDialect-vpu-queue/examples/opentpu/model.py": "49e88004c1c3531eb604d9a2626cbc81c8b3ace01a5d9d110be515e2c982909f",
+    "/home/ubuntu/LPNDialect-vpu-queue/examples/opentpu/components.py": "58de8c986be22b8f6baa41c9ad716fc0fa6e1adc0a5eb13fd8a86003e7fdabe3",
+    "/home/ubuntu/LPNDialect-vpu-queue/examples/opentpu/compact.py": "f7ec4d894e5a86c63a8d4e017f5159f2f1e84f9f7e47f2dc736f2d8b078057d1",
+    "/home/ubuntu/LPNDialect-vpu-queue/examples/opentpu/native_timing.py": "b48b2bded7b7c112f5d837572002472904bad80478315524fb1d13563c3a3989"
+  }
+}

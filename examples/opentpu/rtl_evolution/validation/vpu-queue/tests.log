@@ -1,0 +1,6 @@
+test_accepted_fifo_does_not_reselect_a_later_ready_older_command (__main__.VPUQueueTest.test_accepted_fifo_does_not_reselect_a_later_ready_older_command) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.758s
+
+OK

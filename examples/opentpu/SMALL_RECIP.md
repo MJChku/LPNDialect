@@ -96,8 +96,9 @@ The small-row unit saves **1.40% of cycles**, a **1.0142×** incremental ratio.
 The candidate's LPN prediction is 1,516,594 cycles: **−1.4105% total error** and
 **1.6558% worst kernel error**. All four kernels satisfy the 10% tolerance.
 Its 8.1682× ratio to original RTL applies only to these four kernels at 32
-engines; it does not replace the 128-engine full-run result. The 128-engine,
-shorter-adder pilot and full-inference validation remain pending.
+engines; it does not replace the 128-engine full-run result. The later
+128-engine shorter-adder pilot is described below; full-inference validation
+remains pending.
 
 Evidence is `inference-pilot.json` and `inference-pilot-audit.json` under the
 small-reciprocal validation directory.
@@ -109,10 +110,19 @@ DRAM/TMEM states and identical canonical inputs. Their RTL/LPN cycles are
 109,349 / 94,640 and 109,618 / 94,940 respectively. LPN underpredicts by
 13.4514% and 13.3901%, outside the accepted 10% tolerance. This configuration
 must not be promoted as timing-validated. A fresh decode-only audit preserves
-the numerical/input evidence; the other two pilot kernels remain live.
+the numerical/input evidence. Both prefill kernels subsequently completed too.
 
 A separate traced rerun of kernel 16 uses the same executable and inputs to
 diagnose the discrepancy. No constant calibration factor has been added.
+
+The complete four-kernel pilot takes **878,386 RTL cycles**, versus 12,565,079
+original cycles on the same subset (**14.3047×**). Its LPN aggregate error is
+−4.4165%, but the 13.4514% worst-kernel error still fails the accepted tolerance.
+All four full memory states are bit-exact and freshly audited. Reports are
+`128-add2-pilot.json` and `128-add2-pilot-audit.json`. A fresh all-48-kernel RTL
+run is now in progress; it reuses the compiled simulator and unchanged inputs.
+The [explicit VPU queue diagnostic](VPU_QUEUE.md) improves the decode error
+slightly, but further model work remains.
 
 ## Reproduce
 
