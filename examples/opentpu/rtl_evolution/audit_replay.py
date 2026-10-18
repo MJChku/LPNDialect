@@ -16,6 +16,8 @@ def main():
     from .parallel_inference import files_equal
     from examples.opentpu.retained_inputs import verified_program
     report=json.loads((a.case/'report.json').read_text())
+    if report.get('timing',{}).get('reciprocal_lookup_lanes',0):
+        raise ValueError('wide reciprocal proposal has no matching RTL implementation')
     full=report['indices']==list(range(48))
     if report['status']!='complete' or report['failures'] or (not full and not a.selected_kernels):
         raise ValueError('requires all 48 completed kernels, or --selected-kernels for a subset')
