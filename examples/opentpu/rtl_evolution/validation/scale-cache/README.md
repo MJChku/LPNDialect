@@ -57,12 +57,27 @@ python -m examples.opentpu.rtl_evolution.check_scale_cache_workload \
   --recip-table /path/to/recip-two-bit-table --output /tmp/scale-decode
 ```
 
-The real retained decode-kernel run is still building/running. No workload
-speedup has been established for this buffer. The current LPN equations model
-the uncached RTL; the workload tool explicitly records that it does **not**
-validate cached-RTL LPN timing. Conflicts and conservative invalidation can
-reduce the traffic benefit, so a hit-rate result alone is not a cycle-speedup
-claim. The [full uncached 48-kernel replay and corrected timing audit](../matrix-retirement/README.md#complete-inference-validation)
+The real retained **decode kernel 16** has completed and passed a fresh audit;
+see `decode.json` and `decode-audit.json`. Cached RTL takes **99,737 cycles**
+versus **109,349** for identical-input uncached RTL: **8.7902% fewer cycles**,
+or a **1.09637x** cycle speedup. All complete DRAM and scratchpad bits match.
+The audit rechecks source, table, canonical input, binary and raw-log identities,
+instruction counts, all 128 cache counters and full numerical dumps.
+
+The request count remains **2,113,002**, but only **350,712** reach backing
+memory: **83.4022%** hit rate and scale traffic falling from **67,616,064** to
+**11,222,784 bytes**. Conservative write invalidation and replacement stalls
+are real RTL behavior in this measurement. Additional prefill/decode pilot
+kernels are running; this is not a complete-inference cache speedup claim.
+
+The current LPN equations still model the uncached RTL. The workload tool and
+audit explicitly record that cached-RTL LPN timing is **not** yet validated.
+An instruction-derived cold-per-row estimate gives 337,386 distinct scale
+lines for this kernel, about 3.8% fewer than actual cache misses. It omits
+the effects of writes during prefetch and is not an exact cache-state model.
+It has not been substituted for the observed count in the timing equations.
+
+The [full uncached 48-kernel replay and corrected timing audit](../matrix-retirement/README.md#complete-inference-validation)
 have completed: 15.2522x fewer cycles, bit-exact states and 4.8019% worst LPN
 kernel error. This cache is not part of that measured result. The 100x goal
 has not been reached.
