@@ -1,0 +1,8 @@
+test_fill_copy_bypass_long_fp_command_without_duplicating_fp_engine (__main__.FastVectorTest.test_fill_copy_bypass_long_fp_command_without_duplicating_fp_engine) ... ok
+test_private_capacity_and_shared_result_port_are_charged (__main__.FastVectorTest.test_private_capacity_and_shared_result_port_are_charged) ... ok
+test_true_read_write_dependencies_are_preserved (__main__.FastVectorTest.test_true_read_write_dependencies_are_preserved) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 1.713s
+
+OK
