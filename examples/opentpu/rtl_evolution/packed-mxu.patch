@@ -1,0 +1,255 @@
+--- /dev/null
++++ b/rtl/mxu/otpu_pair_pe.sv
+@@ -0,0 +1,65 @@
++// Two exact signed-int8 product streams sharing one operand and one multiplier.
++// At most eight cascaded terms. Each field is separated by 18 bits; the sole
++// signed-low-field overflow (eight copies of -128 * -128) has an explicit flag.
++// TECH=0 is behavioral; TECH=1 instantiates exactly one UltraScale DSP48E2.
++// MXU integration requires paired activation columns; physical FPGA fit is unproven.
++module otpu_pair_pe #(
++  parameter bit FIRST=0, LAST=0,
++  parameter int TECH=0
++) (
++  input logic clk,en,
++  input logic [7:0] common,lo0,lo1,
++  input logic [47:0] pcin,
++  input logic max_in,
++  output logic [47:0] pcout,
++  output logic max_out,
++  output logic signed [23:0] p0,p1
++);
++  logic [7:0] common_r;
++  logic max_product,max_prefix;
++  logic [47:0] pf,pc;
++  wire prefix=(FIRST || max_in) && max_product;
++  always_ff @(posedge clk) if (en) begin
++    common_r<=common;
++    max_product<=common_r==8'h80 && lo0==8'h80;
++  end
++  if (LAST) assign max_prefix=prefix;
++  else always_ff @(posedge clk) if (en) max_prefix<=prefix;
++  if (TECH==0) begin : g_generic
++    wire signed [26:0] packed_input=(27'($signed(lo1))<<<18)+27'($signed(lo0));
++    logic signed [44:0] product;
++    wire signed [47:0] total=(FIRST ? 48'sd0 : $signed(pcin))+48'(product);
++    always_ff @(posedge clk) if (en) product<=45'(packed_input*$signed(common_r));
++    if (LAST) assign pf=total;
++    else always_ff @(posedge clk) if (en) pf<=total;
++    assign pc=pf;
++  end else begin : g_dsp48e2
++    initial if (TECH!=1) $fatal(1,"pair PE supports behavioral or DSP48E2 only");
++    DSP48E2 #(
++      .A_INPUT("DIRECT"),.B_INPUT("DIRECT"),.AMULTSEL("AD"),.BMULTSEL("B"),.PREADDINSEL("A"),
++      .USE_MULT("MULTIPLY"),.USE_WIDEXOR("FALSE"),.USE_SIMD("ONE48"),
++      .AREG(0),.ACASCREG(0),.DREG(0),.ADREG(0),.BREG(1),.BCASCREG(1),.MREG(1),
++      .PREG(LAST ? 0 : 1),.CREG(0),.INMODEREG(0),.OPMODEREG(0),.ALUMODEREG(0),
++      .CARRYINREG(0),.CARRYINSELREG(0),.USE_PATTERN_DETECT("NO_PATDET"),
++      .AUTORESET_PATDET("NO_RESET"),.MASK(48'h3fffffffffff),.PATTERN(48'h0),
++      .SEL_MASK("MASK"),.SEL_PATTERN("PATTERN")
++    ) u_dsp (
++      .CLK(clk),.A({{22{lo0[7]}},lo0}),.D(27'($signed(lo1))<<<18),
++      .B({{10{common[7]}},common}),.C(48'd0),.PCIN(pcin),
++      .INMODE(5'b00100),.OPMODE(FIRST ? 9'b00_000_01_01 : 9'b00_001_01_01),
++      .ALUMODE(4'b0000),.CARRYIN(1'b0),.CARRYINSEL(3'b000),
++      .CEA1(1'b0),.CEA2(1'b0),.CED(1'b0),.CEAD(1'b0),.CEB1(en),.CEB2(en),
++      .CEM(en),.CEP(LAST ? 1'b0 : en),.CEC(1'b0),.CEALUMODE(1'b0),.CECTRL(1'b0),
++      .CECARRYIN(1'b0),.CEINMODE(1'b0),
++      .RSTA(1'b0),.RSTB(1'b0),.RSTC(1'b0),.RSTD(1'b0),.RSTM(1'b0),.RSTP(1'b0),
++      .RSTALLCARRYIN(1'b0),.RSTALUMODE(1'b0),.RSTCTRL(1'b0),.RSTINMODE(1'b0),
++      .ACIN(30'd0),.BCIN(18'd0),.CARRYCASCIN(1'b0),.MULTSIGNIN(1'b0),
++      .P(pf),.PCOUT(pc),.ACOUT(),.BCOUT(),.CARRYCASCOUT(),.MULTSIGNOUT(),.CARRYOUT(),
++      .OVERFLOW(),.UNDERFLOW(),.PATTERNDETECT(),.PATTERNBDETECT(),.XOROUT());
++  end
++  wire low_overflow=max_prefix && pf[17];
++  assign p0=$signed({{6{pf[17]}},pf[17:0]})+(low_overflow ? 24'sd262144 : 24'sd0);
++  assign p1=24'($signed(pf)>>>18)+((pf[17] && !low_overflow) ? 24'sd1 : 24'sd0);
++  assign pcout=LAST ? 48'd0 : pc;
++  assign max_out=LAST ? 1'b0 : max_prefix;
++endmodule
+--- a/rtl/mxu/otpu_mxu.sv
++++ b/rtl/mxu/otpu_mxu.sv
+@@ -56,6 +56,8 @@
+   parameter int E     = 0,       // epilogue lanes (0: MCOLS / 2, at least 1; more than MCOLS: MCOLS)
+   parameter int NSTEP = 1,       // distance between streamed output rows
+   parameter bit ACT_STREAMING = 0,
++  parameter bit PAIR_DOT = 0,
++  parameter int PAIR_TECH = 0,
+   parameter int SID   = 0
+ ) (
+   input  logic                  clk,
+@@ -127,6 +129,8 @@
+   localparam int TDW = $clog2(TD);
+   // a lane: the pick, i2f48 (4), x Sw, x Sa'
+   localparam int LLAT = 1 + 4 + 2 * LM;
++  initial if (PAIR_DOT && (MCOLS < 2 || MCOLS % 2 != 0 || CLS > 8))
++    $fatal(1,"paired DSP requires even columns and chains of at most eight products");
+   initial if (IMPL != 2) $fatal(1, "otpu_mxu: IMPL 2 (systolic) is the only dot product");
+   initial if (D % 16 != 0 || (D / 8) % CLS != 0 || CPG > 2)
+     $fatal(1, "otpu_mxu: D a multiple of 16, D/8 a multiple of CLS, at most two chains a group");
+@@ -145,6 +149,7 @@
+ `ifndef SYNTHESIS
+   // a replayed row (M > MCOLS) must fit the FIFO: its chunks (4-bit: two blocks each)
+   always @(posedge clk) if (!rst && start) begin
++    if (PAIR_DOT && cmd_pair) $fatal(1,"paired DSP requires a shared weight stream; clear ISA PAIR");
+     if (int'(cmd.w6[23:16]) > ROWS) $fatal(1, "otpu_mxu: M %0d > ROWS %0d", cmd.w6[23:16], ROWS);
+     if (int'(cmd.w6[23:16]) > MCOLS && ((cmd.flags[5:4] != WF_W8) ?
+         (int'(cmd.w4[23:16]) + 1) / 2 : int'(cmd.w4[23:16])) > DEPTH)
+@@ -749,6 +754,7 @@
+                                              .q(as_k[j][i]));
+       // columns past the first register their weights in the DSP (WREG), from the previous
+       // column's hop: a copy of wc[j]
++      if (!PAIR_DOT) begin : g_unpacked
+       localparam int JW = (j == 0) ? 0 : j - 1;
+       otpu_pe #(.FIRST(i % CLS == 0), .LAST(i % CLS == CLS - 1), .WREG(j != 0)) u_pe (
+         .clk, .en(1'b1), .act(as_k[j][i]), .wlo(wc[JW][i][7:0]), .whi(wc[JW][i][15:8]),
+@@ -764,6 +770,28 @@
+           $fatal(1, "otpu_mxu: PE %0d.%0d's weights are not wc", j, i);
+       end
+ `endif
++      end
++    end
++  end
++
++  // Pair two activation columns sharing each decoded weight. Relative to
++  // the original pipeline, the even column is delayed one cycle, the odd
++  // column is unchanged; column-end skew below compensates that difference.
++  if (PAIR_DOT) begin : g_packed
++    for (genvar pair_index=0; pair_index<MCOLS/2; pair_index++) begin : g_pair
++      localparam int J=2*pair_index;
++      logic [47:0] packed_pc [D];
++      logic maximum [D];
++      for (genvar i=0; i<D; i++) begin : g_cell
++        logic [7:0] a_even,a_odd;
++        otpu_skew #(.W(8),.N(2)) u_even (.clk,.en(1'b1),.d(as_k[J][i]),.q(a_even));
++        otpu_skew #(.W(8),.N(1)) u_odd (.clk,.en(1'b1),.d(as_k[J+1][i]),.q(a_odd));
++        otpu_pair_pe #(.FIRST(i%CLS==0),.LAST(i%CLS==CLS-1),.TECH(PAIR_TECH)) u_pair (
++          .clk,.en(1'b1),.common(wc[J][i][7:0]),.lo0(a_even),.lo1(a_odd),
++          .pcin(i%CLS==0 ? 48'd0 : packed_pc[(i%CLS==0) ? i : i-1]),
++          .max_in(i%CLS==0 ? 1'b0 : maximum[(i%CLS==0) ? i : i-1]),
++          .pcout(packed_pc[i]),.max_out(maximum[i]),.p0(preg[J][i]),.p1(preg[J+1][i]));
++      end
+     end
+   end
+ 
+@@ -773,6 +801,7 @@
+   // accumulator CLS + 6 + j edges after S0, deskewed to S0 + LROW
+   logic [MCOLS-1:0][47:0] acc_al;
+   for (genvar j = 0; j < MCOLS; j++) begin : g_col_end
++    localparam int PAIR_DELAY=(PAIR_DOT && j%2==0) ? 1 : 0;
+     logic [7:0][23:0] ca, cd;
+     logic [7:0][16:0] bmd;
+     logic             fst;
+@@ -782,10 +811,10 @@
+         ca[g] = preg[j][g * CPG * CLS + CLS - 1];
+         cd[g] = (CPG == 2) ? preg[j][(g * CPG + 1) * CLS + CLS - 1] : 24'd0;
+       end
+-    otpu_skew #(.W(8 * 17), .N(CLS - 1 + j)) u_bm (.clk, .en(1'b1), .d(bm2[j]), .q(bmd));
+-    otpu_skew #(.W(1), .N(CLS + 4 + j)) u_f (.clk, .en(1'b1), .d(m0.v && m0.first), .q(fst));
++    otpu_skew #(.W(8 * 17), .N(CLS - 1 + j + PAIR_DELAY)) u_bm (.clk, .en(1'b1), .d(bm2[j]), .q(bmd));
++    otpu_skew #(.W(1), .N(CLS + 4 + j + PAIR_DELAY)) u_f (.clk, .en(1'b1), .d(m0.v && m0.first), .q(fst));
+     otpu_mxce #(.CPG(CPG)) u_ce (.clk, .a(ca), .d(cd), .bm(bmd), .first(fst), .acc);
+-    otpu_skew #(.W(48), .N(MCOLS - 1 - j)) u_dsk (.clk, .en(1'b1), .d(acc), .q(acc_al[j]));
++    otpu_skew #(.W(48), .N(MCOLS - 1 - j - PAIR_DELAY)) u_dsk (.clk, .en(1'b1), .d(acc), .q(acc_al[j]));
+   end
+   // the row's last block, PAIR and M at S0 + LROW; Sw and the Sa' from S1
+   logic             tl_v, tl_pr;
+--- a/rtl/mxu/otpu_mxu_parallel.sv
++++ b/rtl/mxu/otpu_mxu_parallel.sv
+@@ -7,7 +7,8 @@
+   import otpu_fp::*;
+ #(parameter int D=128, P=32, C=1, ROWS=16, BLOCKS=64, DEPTH=128,
+   parameter int LANES=64, CL=16, SID=0,
+-  parameter bit ACT_STREAMING=0) (
++  parameter bit ACT_STREAMING=0, PAIR_DOT=0,
++  parameter int PAIR_TECH=0) (
+   input logic clk, rst, start, go,
+   input cmd_t cmd,
+   input logic qact_start,
+@@ -162,7 +163,7 @@
+       .s_blk(asc_blk), .s_data(asc_data), .ren(bank_ren), .r_use(pop[p]), .r_blk(blk),
+       .r_blk2(blk2), .r_hi({ROWS{1'b0}}), .r_grp(8'd0), .r_data(bank_data), .r_scale(bank_scale));
+     otpu_mxu #(.D(D), .MCOLS(C), .ROWS(ROWS), .DEPTH(DEPTH), .LANES(CP),
+-        .CL(CL), .E(EL), .NSTEP(P), .SID(SID), .ACT_STREAMING(ACT_STREAMING)) u_mxu (
++        .PAIR_DOT(PAIR_DOT), .PAIR_TECH(PAIR_TECH), .CL(CL), .E(EL), .NSTEP(P), .SID(SID), .ACT_STREAMING(ACT_STREAMING)) u_mxu (
+       .clk, .rst, .start,
+       .go(core_go), .cmd(subcmd), .rdy(cr[p]),
+       .done(cd[p]), .computing(pop[p]), .pf_level(level[p]),
+--- a/rtl/top/otpu_slice.sv
++++ b/rtl/top/otpu_slice.sv
+@@ -49,6 +49,8 @@
+   parameter int QST_LANES  = 0,
+   parameter bit ACT_STREAMING = 0,
+   parameter int MXU_COLS   = 1,
++  parameter bit MXU_PAIR_DOT = 0,
++  parameter int MXU_PAIR_TECH = 0,
+   parameter int MXU_ROWS   = 1,       // independent streamed weight rows
+   parameter int VPU_LANES  = LANES,
+   parameter int MXU_IMPL   = 2,       // MXU dot product: 2 systolic, the only one (docs/mxu_systolic.md)
+@@ -261,6 +263,7 @@
+   logic        sq_halted, sq_ch, sq_err, rl_v;
+   logic        dma_err;           // a WAITW timed out: the slice stops with an error (to_err)
+   logic [31:0] sq_icount, sq_cha, sq_chn, rl_val;
++  initial if (MXU_PAIR_DOT && (MXU_ROWS<=1 || MXU_COLS<2)) $fatal(1,"paired DSP requires parallel rows and columns");
+   initial if (MXU_ROWS<=1 && MXU_COLS!=1) $fatal(1,"multiple physical columns require parallel row engines");
+   initial if (ACT_STREAMING && (MXU_ROWS<=1 || ULANES!=D || SEQ_WC))
+     $fatal(1,"ACT streaming needs parallel MXU, ULANES=D and footprint scoreboard");
+@@ -543,7 +546,7 @@
+     assign x_a_addr = '0, x_b_addr = '0;
+   end else begin : g_parallel
+     assign mxu_areq = 1'b0, mxu_breq = 1'b0, mxu_aaddr = '0, mxu_baddr = '0;
+-    otpu_mxu_parallel #(.D(D), .P(MXU_ROWS), .C(MXU_COLS), .ROWS(ACT_ROWS), .BLOCKS(ACT_BLOCKS),
++    otpu_mxu_parallel #(.D(D), .P(MXU_ROWS), .C(MXU_COLS), .PAIR_DOT(MXU_PAIR_DOT), .PAIR_TECH(MXU_PAIR_TECH), .ROWS(ACT_ROWS), .BLOCKS(ACT_BLOCKS),
+         .DEPTH(FIFO_DEPTH), .LANES(ULANES), .CL(MXU_CL), .SID(SID), .ACT_STREAMING(ACT_STREAMING)) u_mxu (
+       .clk, .rst(rst_mxu), .start(ustart[U_MXU]), .go(urel), .cmd(ucmd[U_MXU]),
+       .qact_start, .qact_cmd(ucmd[U_Q]),
+--- a/rtl/top/otpu_top.sv
++++ b/rtl/top/otpu_top.sv
+@@ -25,6 +25,8 @@
+   parameter int QST_LANES  = 0,
+   parameter bit ACT_STREAMING = 0,
+   parameter int MXU_COLS   = 1,
++  parameter bit MXU_PAIR_DOT = 0,
++  parameter int MXU_PAIR_TECH = 0,
+   parameter int MXU_ROWS   = 1,
+   parameter int MEM_BYTES  = 2816,
+   parameter int SCALE_CACHE_ENTRIES = 0,
+@@ -222,7 +224,7 @@
+     otpu_slice #(.SID(s), .S(S), .D(D), .MCOLS(MCOLS), .ACT_BLOCKS(ACT_BLOCKS), .ACT_ROWS(ACT_ROWS),
+                  .TMEM_WORDS(TMEM_WORDS), .IMEM_WORDS(IMEM_WORDS),
+                  .FIFO_DEPTH(FIFO_DEPTH), .LANES(LANES), .WIN(WIN), .RPB(RPB),
+-                 .WPB(WPB), .QST_LANES(QST_LANES), .MXU_ROWS(MXU_ROWS), .MXU_COLS(MXU_COLS), .ACT_STREAMING(ACT_STREAMING), .VPU_LANES(VPU_LANES), .MXU_IMPL(MXU_IMPL), .MXU_CL(MXU_CL), .MXU_E(MXU_E), .QUANT_XD(QUANT_XD), .QUANT_LOOKUP(QUANT_LOOKUP), .VPU_SCALAR_RECIP(VPU_SCALAR_RECIP), .VPU_RECIP_COEFF_FILE(VPU_RECIP_COEFF_FILE), .VPU_RECIP_CORRECTION_FILE(VPU_RECIP_CORRECTION_FILE), .QUANT_COEFF_FILE(QUANT_COEFF_FILE), .QUANT_CORRECTION_FILE(QUANT_CORRECTION_FILE), .VPU_CL(VPU_CL), .ULANES(ULANES),
++                 .WPB(WPB), .QST_LANES(QST_LANES), .MXU_ROWS(MXU_ROWS), .MXU_COLS(MXU_COLS), .MXU_PAIR_DOT(MXU_PAIR_DOT), .MXU_PAIR_TECH(MXU_PAIR_TECH), .ACT_STREAMING(ACT_STREAMING), .VPU_LANES(VPU_LANES), .MXU_IMPL(MXU_IMPL), .MXU_CL(MXU_CL), .MXU_E(MXU_E), .QUANT_XD(QUANT_XD), .QUANT_LOOKUP(QUANT_LOOKUP), .VPU_SCALAR_RECIP(VPU_SCALAR_RECIP), .VPU_RECIP_COEFF_FILE(VPU_RECIP_COEFF_FILE), .VPU_RECIP_CORRECTION_FILE(VPU_RECIP_CORRECTION_FILE), .QUANT_COEFF_FILE(QUANT_COEFF_FILE), .QUANT_CORRECTION_FILE(QUANT_CORRECTION_FILE), .VPU_CL(VPU_CL), .ULANES(ULANES),
+                  .TMEM_IMPL(TMEM_IMPL), .TMEM_RQ(TMEM_RQ), .TMEM_NCP(TMEM_NCP),
+                  .TMEM_NSB(TMEM_NSB), .TMEM_SBP(TMEM_SBP), .TMEM_SBH(TMEM_SBH),
+                  .TMEM_RPL(TMEM_RPL), .TMEM_TDP(TMEM_TDP), .TMEM_GST(TMEM_GST),
+--- a/sim/verilator/tb_top.sv
++++ b/sim/verilator/tb_top.sv
+@@ -23,6 +23,8 @@
+   parameter int QST_LANES  = 0;
+   parameter bit ACT_STREAMING = 0;
+   parameter int MXU_COLS   = 1;
++  parameter bit MXU_PAIR_DOT = 0;
++  parameter int MXU_PAIR_TECH = 0;
+   parameter int MXU_ROWS   = 1;
+   parameter int MEM_BYTES  = 2816;
+   parameter int SCALE_CACHE_ENTRIES = 0;
+@@ -69,7 +71,7 @@
+ 
+   otpu_top #(.S(S), .D(D), .MCOLS(MCOLS), .ACT_BLOCKS(ACT_BLOCKS), .ACT_ROWS(ACT_ROWS), .TMEM_WORDS(TMEM_WORDS),
+              .IMEM_WORDS(IMEM_WORDS), .DRAM_WORDS(DRAM_WORDS), .DRAM_LAT(DRAM_LAT),
+-             .LANES(LANES), .WIN(WIN), .RPB(RPB), .WPB(WPB), .QST_LANES(QST_LANES), .MXU_ROWS(MXU_ROWS), .MXU_COLS(MXU_COLS), .ACT_STREAMING(ACT_STREAMING), .VPU_LANES(VPU_LANES), .MXU_IMPL(MXU_IMPL), .MXU_CL(MXU_CL), .MXU_E(MXU_E), .QUANT_XD(QUANT_XD), .QUANT_LOOKUP(QUANT_LOOKUP), .VPU_SCALAR_RECIP(VPU_SCALAR_RECIP), .VPU_RECIP_COEFF_FILE(VPU_RECIP_COEFF_FILE), .VPU_RECIP_CORRECTION_FILE(VPU_RECIP_CORRECTION_FILE), .QUANT_COEFF_FILE(QUANT_COEFF_FILE), .QUANT_CORRECTION_FILE(QUANT_CORRECTION_FILE), .VPU_CL(VPU_CL), .ULANES(ULANES), .MEM_BYTES(MEM_BYTES), .SCALE_CACHE_ENTRIES(SCALE_CACHE_ENTRIES), .QST_PACKED_WORDS(QST_PACKED_WORDS), .AXI(AXI), .FIFO_DEPTH(FIFO_DEPTH),
++             .LANES(LANES), .WIN(WIN), .RPB(RPB), .WPB(WPB), .QST_LANES(QST_LANES), .MXU_ROWS(MXU_ROWS), .MXU_COLS(MXU_COLS), .MXU_PAIR_DOT(MXU_PAIR_DOT), .MXU_PAIR_TECH(MXU_PAIR_TECH), .ACT_STREAMING(ACT_STREAMING), .VPU_LANES(VPU_LANES), .MXU_IMPL(MXU_IMPL), .MXU_CL(MXU_CL), .MXU_E(MXU_E), .QUANT_XD(QUANT_XD), .QUANT_LOOKUP(QUANT_LOOKUP), .VPU_SCALAR_RECIP(VPU_SCALAR_RECIP), .VPU_RECIP_COEFF_FILE(VPU_RECIP_COEFF_FILE), .VPU_RECIP_CORRECTION_FILE(VPU_RECIP_CORRECTION_FILE), .QUANT_COEFF_FILE(QUANT_COEFF_FILE), .QUANT_CORRECTION_FILE(QUANT_CORRECTION_FILE), .VPU_CL(VPU_CL), .ULANES(ULANES), .MEM_BYTES(MEM_BYTES), .SCALE_CACHE_ENTRIES(SCALE_CACHE_ENTRIES), .QST_PACKED_WORDS(QST_PACKED_WORDS), .AXI(AXI), .FIFO_DEPTH(FIFO_DEPTH),
+              .TMEM_IMPL(TMEM_IMPL), .TMEM_RQ(TMEM_RQ), .TMEM_NCP(TMEM_NCP),
+              .TMEM_NSB(TMEM_NSB), .TMEM_SBP(TMEM_SBP), .TMEM_SBH(TMEM_SBH),
+              .TMEM_RPL(TMEM_RPL), .TMEM_TDP(TMEM_TDP), .TMEM_GST(TMEM_GST),
+--- a/opentpu/rtlsim.py
++++ b/opentpu/rtlsim.py
+@@ -23,7 +23,7 @@
+ RTL_SOURCES = [
+     "vpu/otpu_fp.sv", "vpu/otpu_fpipe.sv", "top/otpu_pkg.sv", "mem/otpu_dram.sv", "mem/otpu_tmem.sv",
+     "mem/otpu_qst_coalesce.sv", "mem/otpu_scale_cache.sv", "mem/otpu_native_dram.sv", "mem/otpu_actram.sv", "seq/otpu_seq.sv",
+-    "vpu/otpu_vtree.sv", "dma/otpu_dma.sv", "mxu/otpu_mxu.sv", "mxu/otpu_mxu_parallel.sv", "tech/generic/otpu_tech_dsp.sv",
++    "vpu/otpu_vtree.sv", "dma/otpu_dma.sv", "mxu/otpu_pair_pe.sv", "mxu/otpu_mxu.sv", "mxu/otpu_mxu_parallel.sv", "tech/generic/otpu_tech_dsp.sv",
+     "tech/generic/otpu_tech_ram.sv",
+     "vpu/otpu_recip_rom.sv", "vpu/otpu_qscale_lookup.sv", "vpu/otpu_quant.sv", "vpu/otpu_se_comp.sv", "vpu/otpu_se_tail.sv", "vpu/otpu_vpu.sv",
+     "top/otpu_coll.sv", "exp/tmem_nocopy/otpu_tmem_model.sv", "top/otpu_slice.sv",
