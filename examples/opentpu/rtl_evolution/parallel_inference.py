@@ -96,7 +96,12 @@ def check_kernel(task):
             previous=source/'rtl-result.json'
             if previous.exists():
                 reused=json.loads(previous.read_text())
-                prior_input=json.loads((source/'input.json').read_text())
+                identity=source/'input.json'
+                # Early retained-input replays omitted input.json. Their
+                # launcher can supply identity only after verifying the parent
+                # report and its original workload reference hash.
+                prior_input=(json.loads(identity.read_text()) if identity.exists()
+                             else task['reuse_input_identity'])
                 if prior_input['args']!=task['args'] or prior_input['config']!=task['config']:
                     raise RuntimeError('retained input arguments or configuration differ')
                 if (reused['input_sha256']!=hashes or not reused['all_dram_and_tmem_bit_exact'] or

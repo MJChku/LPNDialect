@@ -114,6 +114,8 @@ def main():
             raise ValueError('unverified retained kernel')
         source=case/'kernels'/f'{index:04d}';target=output/'kernels'/f'{index:04d}'
         target.mkdir(parents=True,exist_ok=False)
+        identity=dict(config=reference['config'],args=record['args'])
+        atomic_json(target/'input.json',identity)
         for sid in range(reference['config']['S']):
             if not files_equal(source/f'golden_dram_{sid}.bin',source/f'dram_out_{sid}.bin'):
                 raise ValueError('retained ISA golden DRAM no longer matches verified RTL')
@@ -126,6 +128,7 @@ def main():
             compiler=str(a.compiler.resolve()),cache=str(output/'timing-cache'),timing=asdict(timing),
             instructions=record['instructions'],args=record['args'],input_sha256=record['input_sha256'],
             rtl_timeout=a.rtl_timeout,reuse_directory=str(a.reuse_rtl.resolve()/'kernels') if a.reuse_rtl else None,
+            reuse_input_identity=identity if a.reuse_rtl else None,
             recip_table=str(a.recip_table.resolve()) if a.lookup_scale or a.scalar_recip_lookup else None)
         tasks.append(task)
     save('running')
