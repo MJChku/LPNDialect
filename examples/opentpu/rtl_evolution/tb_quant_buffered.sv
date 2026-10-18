@@ -2,6 +2,7 @@
 module tb_quant_buffered;
   import otpu_pkg::*;
   parameter int XD=32;
+  parameter bit STREAM_ACT=0;
   localparam int LANES=64, WORDS=32768, DB=1<<20, AB=64, AR=16;
   logic clk=0, rst=1, start=0, ready, done, gnt, wr_idle;
   always #5 clk=~clk;
@@ -22,9 +23,10 @@ module tb_quant_buffered;
   logic [239:0] commands[128];
   longint cycles=0;
   int stall=0,ack=0;
-  assign gnt=!stall || (cycles%11!=3 && cycles%11!=4);
+  assign gnt=(stall==0) || ((stall==1) && cycles%11!=3 && cycles%11!=4)
+      || ((stall==2) && !(cycles%71>=17 && cycles%71<34));
   assign wr_idle=ack==0;
-  otpu_quant #(.D(64),.LANES(LANES),.STORE_LANES(LANES),.XD(XD)) dut (
+  otpu_quant #(.D(64),.LANES(LANES),.STORE_LANES(LANES),.XD(XD),.STREAM_ACT(STREAM_ACT)) dut (
     .clk,.rst,.start,.cmd,.rdy(ready),.done,.gnt,
     .t_ren(re),.t_raddr(ra),.t_rdata(rd),.t_ren2(re2),.t_raddr2(ra2),.t_rdata2(rd2),
     .t_ren3(re3),.t_raddr3(ra3),.t_rdata3(rd3),
@@ -37,25 +39,45 @@ module tb_quant_buffered;
       for (int l=0;l<LANES;l++) begin
         if (re[l]) rd[l]<=tmem[ra[l]];
         if (re2[l]) rd2[l]<=tmem[ra2[l]];
-        if (awe[l] && !rst) begin
-          acts[ar][ai+l]<=av[l];
-          if (dup) acts[ar+off][ai+l]<=av[l];
-        end
         if (vr[l] && !rst) begin
           if (va[l]>=DB/4) $fatal(1,"DRAM store out of range");
           for (int b=0;b<4;b++) if (vb[l][b]) dram[va[l]][8*b+:8]<=vd[l][8*b+:8];
         end
       end
       if (re3) rd3<=tmem[ra3];
-      if (aswe && !rst) begin
-        scales[asr][asb]<=asd;
-        if (dup) scales[asr+off][asb]<=asd;
-      end
       if (areq && awe_d && !rst)
         for (int b=0;b<4;b++) if (abe[b]) dram[aa][8*b+:8]<=ad[8*b+:8];
     end
+    // ACT RAM is a separate physical port; its writes are accepted regardless
+    // of TMEM grant. The quantizer gates its own output when necessary.
+    if (!rst) begin
+      for (int l=0;l<LANES;l++) if (awe[l]) begin
+        acts[ar][ai+l]<=av[l];
+        if (dup) acts[ar+off][ai+l]<=av[l];
+      end
+      if (aswe) begin
+        scales[asr][asb]<=asd;
+        if (dup) scales[asr+off][asb]<=asd;
+      end
+    end
     if (ack>0) ack<=ack-1;
     if (gnt && ((|vr) || (areq && awe_d))) ack<=3;
+  end
+  int row_left=0;
+  logic [7:0] expect_row;
+  logic [31:0] expect_idx;
+  always @(posedge clk) begin
+    if (rst || start) row_left=0;
+    else if (STREAM_ACT && dut.bm && !dut.is_st) begin
+      if (row_left!=0 && ((&awe)!=1'b1 || ar!=expect_row || ai!=expect_idx || !aswe))
+        $fatal(1,"ACT row stream paused or reordered: remaining=%0d grant=%b",row_left,gnt);
+      if (|awe) begin
+        if (row_left==0) row_left=int'(dut.G/64);
+        row_left--;
+        expect_row=ar;
+        expect_idx=ai+64;
+      end
+    end
   end
   string dir;
   int ncmd,fd;

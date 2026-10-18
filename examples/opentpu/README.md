@@ -18,7 +18,12 @@ predicts 13.067x and has passed numerical component gates; full inference RTL
 validation is still required.
 The separate [arithmetic partition experiment](LOWLAT_FP.md) checks shorter
 FP32 pipelines bit-exactly and predicts 15.108x for a two-clock-adder candidate.
-Its operating clock and full-inference RTL timing remain unvalidated.
+Its four-kernel real-workload pilot is bit-exact and saves 1.080x cycles against
+its matching arithmetic control; operating clock and full-inference RTL timing
+remain unvalidated.
+[ACT row streaming](ACT_STREAMING.md) adds a guarded quantizer-to-matrix handoff
+using the existing buffers. It predicts 13.268x / 15.349x for the 128-engine
+original-adder / shorter-adder candidates; these remain LPN forecasts.
 
 **Inference workload correction:** earlier `e2e.py`, `replay_e2e.py` and
 weight-free FPGA sequence results used a custom token-by-token prompt loop.

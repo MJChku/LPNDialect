@@ -1,0 +1,518 @@
+{
+  "status": "complete",
+  "scope": "Check ACT streaming against independent ISA and an unchanged-scoreboard control.\n\nThe program and input image are identical for each control/candidate pair. This\nis a numerical/dependency component gate, not an end-to-end inference benchmark.\n",
+  "config": {
+    "S": 1,
+    "D": 64,
+    "MCOLS": 4,
+    "ACT_BLOCKS": 64,
+    "TMEM_WORDS": 65536,
+    "DRAM_BYTES": 1048576,
+    "IMEM_WORDS": 65536,
+    "LANES": 64,
+    "PAIR": false,
+    "DSTEP": false,
+    "STREAM": false,
+    "ACT_ROWS": 16,
+    "SEQ_WC": false
+  },
+  "source_sha256": {
+    "/home/ubuntu/FeSens-openTPU-act-streaming/rtl/vpu/otpu_fp.sv": "b476c83913d88ef5b4bcbc8cc07378ade8b2aeaaf7642b20976bd1fce33cd416",
+    "/home/ubuntu/FeSens-openTPU-act-streaming/rtl/vpu/otpu_fpipe.sv": "6f9feaf92b539bb989e90dd77d8c066c92ae01c1b9c826f335e6b45231c45bd0",
+    "/home/ubuntu/FeSens-openTPU-act-streaming/rtl/top/otpu_pkg.sv": "ca41c32141fdf224d24481842b182063ce5692a976176eca82c4c78d4d7ad3c6",
+    "/home/ubuntu/FeSens-openTPU-act-streaming/rtl/mem/otpu_dram.sv": "adccbba947e4f4940ac0dc0995c052ebadc0aa6df16364b3b7ee07e25c8321c2",
+    "/home/ubuntu/FeSens-openTPU-act-streaming/rtl/mem/otpu_tmem.sv": "2e8cb0e266d4c6f82910dc85a2240899c7d36061d31e1f09aa0ec9190b2a1df6",
+    "/home/ubuntu/FeSens-openTPU-act-streaming/rtl/mem/otpu_native_dram.sv": "8598544bfc996aece2ab65c98003629eb25979265b3a0f4e8bec72c14bbf6eb5",
+    "/home/ubuntu/FeSens-openTPU-act-streaming/rtl/mem/otpu_actram.sv": "17f9e30a1f9bfec27a205be4eda62596779c6f0b024b8a1b99b64171278c9f49",
+    "/home/ubuntu/FeSens-openTPU-act-streaming/rtl/seq/otpu_seq.sv": "dd137dab5993720454bae46c03e48669192546b6a416556685f797e30b47a409",
+    "/home/ubuntu/FeSens-openTPU-act-streaming/rtl/vpu/otpu_vtree.sv": "3a4ff0df2398fc7162043dea22ea2937d5f38f61894255fda48d6312b3b10842",
+    "/home/ubuntu/FeSens-openTPU-act-streaming/rtl/dma/otpu_dma.sv": "22283a5bbcfda393945b368122a71d22918917a1441b514b89e3d4e989180a02",
+    "/home/ubuntu/FeSens-openTPU-act-streaming/rtl/mxu/otpu_mxu.sv": "320c95001a7f7a48215bb7f9c39663a4b2e8ca9fac4f137cd0d88e722be48652",
+    "/home/ubuntu/FeSens-openTPU-act-streaming/rtl/mxu/otpu_mxu_parallel.sv": "d0464e389726cc0b042289f2be19d6c6ccfeb72e323a37806499f8741e5fadbd",
+    "/home/ubuntu/FeSens-openTPU-act-streaming/rtl/tech/generic/otpu_tech_dsp.sv": "89b0d45e303491dd8dfe6cdeb4e623e60d04a415697a567d1a70836dba9d8de7",
+    "/home/ubuntu/FeSens-openTPU-act-streaming/rtl/tech/generic/otpu_tech_ram.sv": "f2c74dc55f26ad01568271ec22469208d93af2d9248ff1f9cfef3dafe1083881",
+    "/home/ubuntu/FeSens-openTPU-act-streaming/rtl/vpu/otpu_quant.sv": "fd13efa93daaa10a48efbd3a02ef87a837c2919e00f25322fc46dc0e95b1ce14",
+    "/home/ubuntu/FeSens-openTPU-act-streaming/rtl/vpu/otpu_se_comp.sv": "71e0c047e122094076697a15bb027e1208137ec6df75ed681002a45e930faf0f",
+    "/home/ubuntu/FeSens-openTPU-act-streaming/rtl/vpu/otpu_se_tail.sv": "a76c0fa830d0a70cbbf6f0dc5ace9526061c5634e3377d156b5459e4c8d724af",
+    "/home/ubuntu/FeSens-openTPU-act-streaming/rtl/vpu/otpu_vpu.sv": "53380981e2cb5b17ff243075f739714ad432f827126b282e1f72c318d4fd27cd",
+    "/home/ubuntu/FeSens-openTPU-act-streaming/rtl/top/otpu_coll.sv": "3f6d295b021a56de25e9e6dbc90e2fa1d94224cef1bf8d03c58dbe771dcb8f07",
+    "/home/ubuntu/FeSens-openTPU-act-streaming/rtl/exp/tmem_nocopy/otpu_tmem_model.sv": "4d8f55b8774811a1d548d80b384d6ed41f71d1d1801958f6f9e3fc5c9cc3715e",
+    "/home/ubuntu/FeSens-openTPU-act-streaming/rtl/top/otpu_slice.sv": "5832f4a998e3a01d78f6cc805385dac3033e71aafc3572fd94e4a37fc066ca53",
+    "/home/ubuntu/FeSens-openTPU-act-streaming/rtl/top/otpu_top.sv": "2ca1fabc9d1e9979a51c71e39e3e14c403ccaf3a6db6abd1ecade0654e2ac057",
+    "/home/ubuntu/FeSens-openTPU-act-streaming/sim/verilator/tb_top.sv": "d2ea3de5d2a600232ede05234efaa8f5550dbc95c14f58a929183b28401c5696"
+  },
+  "records": [
+    {
+      "name": "row1_kb1",
+      "rows": 1,
+      "kb": 1,
+      "results": [
+        {
+          "streaming": false,
+          "cycles": 118,
+          "seconds": 52.39191457256675,
+          "quant_done": [
+            79
+          ],
+          "matrix_release": [
+            82
+          ],
+          "all_state_bit_exact": true,
+          "lpn_cycles": 104.0,
+          "lpn_error_percent": -11.864406779661019
+        },
+        {
+          "streaming": true,
+          "cycles": 116,
+          "seconds": 53.38189807906747,
+          "quant_done": [
+            79
+          ],
+          "matrix_release": [
+            28
+          ],
+          "all_state_bit_exact": true,
+          "lpn_cycles": 106.0,
+          "lpn_error_percent": -8.62068965517241
+        }
+      ],
+      "cycle_speedup": 1.0172413793103448
+    },
+    {
+      "name": "row1_kb9",
+      "rows": 1,
+      "kb": 9,
+      "results": [
+        {
+          "streaming": false,
+          "cycles": 190,
+          "seconds": 2.0395298823714256,
+          "quant_done": [
+            127
+          ],
+          "matrix_release": [
+            130
+          ],
+          "all_state_bit_exact": true,
+          "lpn_cycles": 176.0,
+          "lpn_error_percent": -7.36842105263158
+        },
+        {
+          "streaming": true,
+          "cycles": 180,
+          "seconds": 2.0360036455094814,
+          "quant_done": [
+            127
+          ],
+          "matrix_release": [
+            60
+          ],
+          "all_state_bit_exact": true,
+          "lpn_cycles": 170.0,
+          "lpn_error_percent": -5.555555555555558
+        }
+      ],
+      "cycle_speedup": 1.0555555555555556
+    },
+    {
+      "name": "row1_kb33",
+      "rows": 1,
+      "kb": 33,
+      "results": [
+        {
+          "streaming": false,
+          "cycles": 406,
+          "seconds": 2.0355591140687466,
+          "quant_done": [
+            271
+          ],
+          "matrix_release": [
+            274
+          ],
+          "all_state_bit_exact": true,
+          "lpn_cycles": 392.0,
+          "lpn_error_percent": -3.4482758620689613
+        },
+        {
+          "streaming": true,
+          "cycles": 372,
+          "seconds": 2.037091860547662,
+          "quant_done": [
+            271
+          ],
+          "matrix_release": [
+            156
+          ],
+          "all_state_bit_exact": true,
+          "lpn_cycles": 362.0,
+          "lpn_error_percent": -2.6881720430107503
+        }
+      ],
+      "cycle_speedup": 1.0913978494623655
+    },
+    {
+      "name": "row8_kb1",
+      "rows": 8,
+      "kb": 1,
+      "results": [
+        {
+          "streaming": false,
+          "cycles": 181,
+          "seconds": 2.0356111507862806,
+          "quant_done": [
+            121
+          ],
+          "matrix_release": [
+            124
+          ],
+          "all_state_bit_exact": true,
+          "lpn_cycles": 174.0,
+          "lpn_error_percent": -3.8674033149171283
+        },
+        {
+          "streaming": true,
+          "cycles": 172,
+          "seconds": 2.0357826352119446,
+          "quant_done": [
+            121
+          ],
+          "matrix_release": [
+            56
+          ],
+          "all_state_bit_exact": true,
+          "lpn_cycles": 169.0,
+          "lpn_error_percent": -1.744186046511631
+        }
+      ],
+      "cycle_speedup": 1.052325581395349
+    },
+    {
+      "name": "row8_kb9",
+      "rows": 8,
+      "kb": 9,
+      "results": [
+        {
+          "streaming": false,
+          "cycles": 701,
+          "seconds": 3.038454307243228,
+          "quant_done": [
+            449
+          ],
+          "matrix_release": [
+            452
+          ],
+          "all_state_bit_exact": true,
+          "lpn_cycles": 694.0,
+          "lpn_error_percent": -0.9985734664764601
+        },
+        {
+          "streaming": true,
+          "cycles": 628,
+          "seconds": 3.0373900700360537,
+          "quant_done": [
+            449
+          ],
+          "matrix_release": [
+            312
+          ],
+          "all_state_bit_exact": true,
+          "lpn_cycles": 625.0,
+          "lpn_error_percent": -0.4777070063694322
+        }
+      ],
+      "cycle_speedup": 1.1162420382165605
+    },
+    {
+      "name": "row8_kb33",
+      "rows": 8,
+      "kb": 33,
+      "results": [
+        {
+          "streaming": false,
+          "cycles": 3331,
+          "seconds": 10.05254221521318,
+          "quant_done": [
+            2503
+          ],
+          "matrix_release": [
+            2506
+          ],
+          "all_state_bit_exact": true,
+          "lpn_cycles": 3324.0,
+          "lpn_error_percent": -0.21014710297208028
+        },
+        {
+          "streaming": true,
+          "cycles": 3066,
+          "seconds": 9.066528474912047,
+          "quant_done": [
+            2503
+          ],
+          "matrix_release": [
+            2150
+          ],
+          "all_state_bit_exact": true,
+          "lpn_cycles": 3063.0,
+          "lpn_error_percent": -0.09784735812132794
+        }
+      ],
+      "cycle_speedup": 1.0864318330071754
+    },
+    {
+      "name": "output_war",
+      "rows": 8,
+      "kb": 9,
+      "results": [
+        {
+          "streaming": false,
+          "cycles": 701,
+          "seconds": 3.0382335912436247,
+          "quant_done": [
+            449
+          ],
+          "matrix_release": [
+            452
+          ],
+          "all_state_bit_exact": true,
+          "lpn_cycles": 694.0,
+          "lpn_error_percent": -0.9985734664764601
+        },
+        {
+          "streaming": true,
+          "cycles": 701,
+          "seconds": 3.0383395794779062,
+          "quant_done": [
+            449
+          ],
+          "matrix_release": [
+            452
+          ],
+          "all_state_bit_exact": true,
+          "lpn_cycles": 696.0,
+          "lpn_error_percent": -0.7132667617689048
+        }
+      ],
+      "cycle_speedup": 1.0
+    },
+    {
+      "name": "younger_overwrite",
+      "rows": 8,
+      "kb": 9,
+      "results": [
+        {
+          "streaming": false,
+          "cycles": 1091,
+          "seconds": 4.041120594367385,
+          "quant_done": [
+            449,
+            839
+          ],
+          "matrix_release": [
+            452,
+            842
+          ],
+          "all_state_bit_exact": true,
+          "lpn_cycles": 1081.0,
+          "lpn_error_percent": -0.9165902841429929
+        },
+        {
+          "streaming": true,
+          "cycles": 945,
+          "seconds": 4.0407387390732765,
+          "quant_done": [
+            449,
+            766
+          ],
+          "matrix_release": [
+            312,
+            629
+          ],
+          "all_state_bit_exact": true,
+          "lpn_cycles": 943.0,
+          "lpn_error_percent": -0.2116402116402072
+        }
+      ],
+      "cycle_speedup": 1.1544973544973545
+    },
+    {
+      "name": "partial_blocks",
+      "rows": 8,
+      "kb": 12,
+      "results": [
+        {
+          "streaming": false,
+          "cycles": 1267,
+          "seconds": 5.043678000569344,
+          "quant_done": [
+            572,
+            943
+          ],
+          "matrix_release": [
+            946
+          ],
+          "all_state_bit_exact": true,
+          "lpn_cycles": 1260.0,
+          "lpn_error_percent": -0.5524861878453025
+        },
+        {
+          "streaming": true,
+          "cycles": 1267,
+          "seconds": 5.043344726786017,
+          "quant_done": [
+            572,
+            943
+          ],
+          "matrix_release": [
+            946
+          ],
+          "all_state_bit_exact": true,
+          "lpn_cycles": 1262.0,
+          "lpn_error_percent": -0.39463299131807794
+        }
+      ],
+      "cycle_speedup": 1.0
+    },
+    {
+      "name": "producer_rewrite",
+      "rows": 8,
+      "kb": 9,
+      "results": [
+        {
+          "streaming": false,
+          "cycles": 985,
+          "seconds": 4.040963647887111,
+          "quant_done": [
+            449,
+            733
+          ],
+          "matrix_release": [
+            736
+          ],
+          "all_state_bit_exact": true,
+          "lpn_cycles": 978.0,
+          "lpn_error_percent": -0.7106598984771617
+        },
+        {
+          "streaming": true,
+          "cycles": 985,
+          "seconds": 4.039285385981202,
+          "quant_done": [
+            449,
+            733
+          ],
+          "matrix_release": [
+            736
+          ],
+          "all_state_bit_exact": true,
+          "lpn_cycles": 980.0,
+          "lpn_error_percent": -0.5076142131979711
+        }
+      ],
+      "cycle_speedup": 1.0
+    },
+    {
+      "name": "delayed_acceptance",
+      "rows": 8,
+      "kb": 9,
+      "results": [
+        {
+          "streaming": false,
+          "cycles": 761,
+          "seconds": 3.0390346236526966,
+          "quant_done": [
+            509
+          ],
+          "matrix_release": [
+            512
+          ],
+          "all_state_bit_exact": true
+        },
+        {
+          "streaming": true,
+          "cycles": 688,
+          "seconds": 3.0385916959494352,
+          "quant_done": [
+            509
+          ],
+          "matrix_release": [
+            372
+          ],
+          "all_state_bit_exact": true
+        }
+      ],
+      "cycle_speedup": 1.1061046511627908
+    },
+    {
+      "name": "duplicated_rows",
+      "rows": 4,
+      "kb": 9,
+      "results": [
+        {
+          "streaming": false,
+          "cycles": 317,
+          "seconds": 2.03682485409081,
+          "quant_done": [
+            173
+          ],
+          "matrix_release": [
+            176
+          ],
+          "all_state_bit_exact": true,
+          "lpn_cycles": 306.0,
+          "lpn_error_percent": -3.4700315457413256
+        },
+        {
+          "streaming": true,
+          "cycles": 298,
+          "seconds": 2.037101175636053,
+          "quant_done": [
+            173
+          ],
+          "matrix_release": [
+            96
+          ],
+          "all_state_bit_exact": true,
+          "lpn_cycles": 291.0,
+          "lpn_error_percent": -2.348993288590606
+        }
+      ],
+      "cycle_speedup": 1.063758389261745
+    },
+    {
+      "name": "unbuffered_fallback",
+      "rows": 8,
+      "kb": 9,
+      "results": [
+        {
+          "streaming": false,
+          "cycles": 1047,
+          "seconds": 53.586984967812896,
+          "quant_done": [
+            795
+          ],
+          "matrix_release": [
+            798
+          ],
+          "all_state_bit_exact": true,
+          "lpn_cycles": 1040.0,
+          "lpn_error_percent": -0.6685768863419317
+        },
+        {
+          "streaming": true,
+          "cycles": 1047,
+          "seconds": 52.41162822395563,
+          "quant_done": [
+            795
+          ],
+          "matrix_release": [
+            798
+          ],
+          "all_state_bit_exact": true,
+          "lpn_cycles": 1040.0,
+          "lpn_error_percent": -0.6685768863419317
+        }
+      ],
+      "cycle_speedup": 1.0
+    }
+  ]
+}

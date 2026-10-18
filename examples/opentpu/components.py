@@ -19,6 +19,9 @@ class CommandInterface:
   publish: object
   compute_offsets: list
   compute_indices: list
+  activation: object = None
+  activation_producers: object = None
+  activation_groups: object = None
 
 
 @dataclass
@@ -49,6 +52,9 @@ class ExecutionUnit:
     self.pipeline=vector
     intervals=services if vector is not None else latencies
     ports = [memory.b,memory.sw]
+    activation=interface.activation if kind==2 else None
+    start_activation=activation.start if activation is not None else None
+    activation_tail=activation.tail if activation is not None else [0]
 
     @net.transition(prefix+"_execute")
     def execute():
@@ -72,7 +78,11 @@ class ExecutionUnit:
       emit(slot_places[chosen],create())
       latency = sitofp(array(latencies)[idx])
       credit = take(resource)
-      emit(resource,credit,delay=sitofp(array(intervals)[idx]))
+      resource_interval=array(intervals)[idx]
+      if activation is not None:
+        start_activation(idx)
+        resource_interval=resource_interval-array(activation_tail)[idx]
+      emit(resource,credit,delay=sitofp(resource_interval))
       if vector is not None:
         state=take(vector.state)
         emit(vector.state,state.set('live',state.get('live')+1).set('rank',array(ranks)[idx]))
@@ -160,6 +170,10 @@ class MatrixEngine:
         # latency preserves order once both transfer paths have finished.
         emit(prefetch_credit,create(),delay=arrival)
 
+    if interface.activation is not None:
+      self._stream_compute(net,prefix,cfg,t,interface,parameters,resources,ready,publish,window,is_done)
+      return
+
     @net.transition(prefix+"_issue_rows")
     def compute():
       guard(count(ready)>0)
@@ -185,3 +199,61 @@ class MatrixEngine:
         publish(idx,latency)
         emit(resources.commands,create(),delay=latency)
         emit(window,token,delay=latency)
+
+
+  def _stream_compute(self,net,prefix,cfg,t,interface,parameters,resources,ready,publish,window,is_done):
+    offsets,indices=interface.compute_offsets,interface.compute_indices
+    groups,producers=interface.activation_groups,interface.activation_producers
+    can_read=interface.activation.can_read
+    batches,rows,chunks=parameters.batches,parameters.rows,parameters.chunks
+    kbs,tails=parameters.kb,parameters.tails
+    write_full,write_tail=parameters.write_full,parameters.write_tail
+    self.active_rows=active=net.place(prefix+'_active_rows')
+    self.returned_chunks=returned=net.place(prefix+'_returned_chunks')
+
+    @net.transition(prefix+'_accept_rows')
+    def accept_rows():
+      guard(count(ready)>0)
+      guard(count(resources.compute)>0)
+      idx=peek(ready).get('id')
+      enabled=const_i64(0)==0
+      ci=array(indices)
+      for d in range(array(offsets)[idx],array(offsets)[idx+1]):
+        enabled=select(enabled,is_done(ci[d]),False,typ='i1')
+      guard(enabled)
+      token=take(ready)
+      take(resources.compute)
+      emit(active,token.set('group',0))
+
+    @net.transition(prefix+'_advance_activation_row')
+    def advance_activation_row():
+      guard(count(active)>0)
+      idx=peek(active).get('id')
+      group=peek(active).get('group')
+      guard(can_read(array(producers)[idx],group))
+      token=take(active)
+      waves=divi(token.get('width')+t.matrix_row_lanes-1,t.matrix_row_lanes)
+      clocks=muli(waves,array(kbs)[idx])
+      ng=array(groups)[idx]
+      final=group+1>=ng
+      writes=select(token.get('width')==array(batches)[idx],array(write_full)[idx],array(write_tail)[idx])
+      compute=muli(clocks,ng)
+      padding=select(writes>compute,writes-compute,0)
+      service=sitofp(clocks+select(final,padding,0))
+      if final:
+        emit(resources.compute,create(),delay=service)
+        emit(returned,create().set('chunks',muli(token.get('width'),array(chunks)[idx])),delay=service)
+        if token.get('row')+array(batches)[idx]>=array(rows)[idx]:
+          latency=service+sitofp(array(tails)[idx])
+          publish(idx,latency)
+          emit(resources.commands,create(),delay=latency)
+          emit(window,token,delay=latency)
+      else:
+        emit(active,token.set('group',group+1),delay=service)
+
+    @net.transition(prefix+'_return_chunks')
+    def return_chunks():
+      guard(count(returned)>0)
+      token=take(returned)
+      capacity=take(resources.buffers)
+      emit(resources.buffers,capacity.set('free',capacity.get('free')+token.get('chunks')))

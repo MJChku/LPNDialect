@@ -10,12 +10,18 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--case',type=Path,required=True)
     p.add_argument('--output',type=Path,required=True)
+    p.add_argument('--selected-kernels',action='store_true',help='Audit an explicitly labeled subset without claiming complete inference')
     a=p.parse_args()
     from examples.opentpu.e2e import atomic_json,digest
     from .parallel_inference import files_equal
     report=json.loads((a.case/'report.json').read_text())
-    if report['status']!='complete' or report['indices']!=list(range(48)) or report['failures']:
-        raise ValueError('requires all 48 completed inference kernels without failures')
+    full=report['indices']==list(range(48))
+    if report['status']!='complete' or report['failures'] or (not full and not a.selected_kernels):
+        raise ValueError('requires all 48 completed kernels, or --selected-kernels for a subset')
+    if not report['indices'] or sorted(set(report['indices']))!=report['indices'] or not set(report['indices'])<=set(range(48)):
+        raise ValueError('invalid kernel indices')
+    if [r['step'] for r in report['records']]!=report['indices']:
+        raise ValueError('records do not match the requested kernel indices')
     reference=Path(report['case'])
     if digest(reference/'report.json')!=report['reference_report_sha256']:
         raise RuntimeError('reference report changed')
@@ -25,12 +31,15 @@ def main():
     for name,expected in report['rtl_and_model_source_sha256'].items():
         if digest(Path(name))!=expected:raise RuntimeError(f'source changed: {name}')
     records=[];binary_hashes={}
-    for index,record in enumerate(report['records']):
+    for record in report['records']:
+        index=record['step']
         source=original['kernels'][index]
         if record['step']!=index or not record['all_dram_and_tmem_bit_exact'] or not record['identical_input_files']:
             raise RuntimeError('invalid kernel evidence')
         if record['timing']!=report['timing']:
             raise RuntimeError('worker timing parameters differ from the requested architecture')
+        if 'rtl_top_parameters' in record and bool(record['rtl_top_parameters'].get('ACT_STREAMING',0))!=bool(record['timing'].get('activation_streaming',False)):
+            raise RuntimeError('RTL streaming parameter differs from model timing')
         if 'rtl_compile_flags' in record:
             flags=record['rtl_compile_flags']
             for field,define,default in (('fp_mul_latency','OTPU_FP_MUL_LAT',2),
@@ -68,18 +77,22 @@ def main():
             relative_cycle_error=record['evolved_lpn_relative_cycle_error']))
     rtl=sum(r['rtl_cycles'] for r in records);native=sum(r['lpn_cycles'] for r in records)
     before=sum(r['original_rtl_cycles'] for r in records)
-    if rtl!=report['full_inference_rtl_cycles'] or native!=report['full_inference_lpn_cycles'] or before!=original['baseline_rtl_cycles']:
+    expected_rtl=report['full_inference_rtl_cycles'] if full else report['selected_rtl_cycles']
+    expected_native=report['full_inference_lpn_cycles'] if full else report['selected_lpn_cycles']
+    expected_before=sum(original['kernels'][i]['baseline_rtl_cycles'] for i in report['indices']) if not full else original['baseline_rtl_cycles']
+    if rtl!=expected_rtl or native!=expected_native or before!=expected_before:
         raise RuntimeError('aggregate cycles disagree')
     result=dict(status='complete',report_sha256=digest(a.case/'report.json'),script_sha256=digest(Path(__file__)),
-        full_rtl_cycles=rtl,original_rtl_cycles=before,lpn_cycles=native,cycle_speedup=before/rtl,
+        full_inference=full,kernel_indices=report['indices'],selected_rtl_cycles=rtl,original_rtl_cycles=before,lpn_cycles=native,cycle_speedup=before/rtl,
         relative_cycle_error=native/rtl-1,worst_kernel_error=max(abs(r['relative_cycle_error']) for r in records),
         all_inputs_and_simulator_hashes_verified=True,all_full_dram_and_tmem_bit_exact=True,
         all_raw_rtl_logs_and_instruction_counts_verified=True,all_model_and_rtl_source_hashes_verified=True,
         schedule='Retained unmodified upstream Engine.generate, 128 input and 32 output tokens',
-        generated_ids_preserved_by_full_output_equivalence=True,simulator_sha256=binary_hashes,
+        generated_ids_preserved_by_full_output_equivalence=full,simulator_sha256=binary_hashes,
         phases={phase:dict(rtl_cycles=sum(r['rtl_cycles'] for r in records if r['phase']==phase),
                           original_rtl_cycles=sum(r['original_rtl_cycles'] for r in records if r['phase']==phase))
                 for phase in ('prefill','decode')},records=records)
+    if full:result['full_rtl_cycles']=rtl
     atomic_json(a.output,result);print(json.dumps({k:v for k,v in result.items() if k!='records'}),flush=True)
 
 

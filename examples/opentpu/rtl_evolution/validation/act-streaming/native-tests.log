@@ -1,0 +1,8 @@
+test_only_fully_covered_act_raw_becomes_partial_dependency (__main__.ActivationTest.test_only_fully_covered_act_raw_becomes_partial_dependency) ... ok
+test_python_and_native_progress_and_fallback (__main__.ActivationTest.test_python_and_native_progress_and_fallback) ... ok
+test_row_schedule_finite_banks_and_fifo (__main__.ActivationTest.test_row_schedule_finite_banks_and_fifo) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.867s
+
+OK

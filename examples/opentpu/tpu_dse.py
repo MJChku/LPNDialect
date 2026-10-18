@@ -26,6 +26,7 @@ class Architecture:
     ceiling_only: bool = False
     buffered_quant: bool = False
     vector_row_contexts: int = 1
+    activation_streaming: bool = False
     fp_mul_latency: int = 2
     fp_add_latency: int = 4
 
@@ -36,6 +37,12 @@ def architectures():
         Architecture('fpga_quant_32x1', 32, 1, 2816, buffered_quant=True),
         Architecture('fpga_quant_128x1', 128, 1, 2816, buffered_quant=True),
         Architecture('fpga_quant_reductions_128x1', 128, 1, 2816, buffered_quant=True,vector_row_contexts=4),
+        Architecture('experimental_fpga_stream_32x1', 32, 1, 2816, buffered_quant=True,
+                     vector_row_contexts=4,activation_streaming=True),
+        Architecture('experimental_fpga_stream_128x1', 128, 1, 2816, buffered_quant=True,
+                     vector_row_contexts=4,activation_streaming=True),
+        Architecture('experimental_fpga_stream_128x1_add2', 128, 1, 2816, buffered_quant=True,
+                     vector_row_contexts=4,activation_streaming=True,fp_add_latency=2),
         Architecture('experimental_fpga_128x1_add2', 128, 1, 2816, buffered_quant=True,
                      vector_row_contexts=4,fp_add_latency=2),
         Architecture('experimental_128x1_add1_mul1', 128, 1, 2816, buffered_quant=True,
@@ -122,7 +129,7 @@ def run_kernel(task):
         unified_dram=True, scalar_store_bytes=256, epilogue_lanes=max(1, point.columns // 2),
         quant_row_banks=8 if point.buffered_quant else 0,quant_store_buffered=point.buffered_quant,
         vector_row_contexts=point.vector_row_contexts,
-        fp_mul_latency=point.fp_mul_latency,fp_add_latency=point.fp_add_latency)
+        fp_mul_latency=point.fp_mul_latency,fp_add_latency=point.fp_add_latency,activation_streaming=point.activation_streaming)
     prepared = ReusableTiming(Path(task['compiler']), Path(task['cache']), capacity=65536).prepare(
         workload, timing, directory / 'timing.tables')
     cycles, core, _, log = prepared.run()
@@ -174,7 +181,7 @@ def main():
     output.mkdir(parents=True, exist_ok=False)
     project = Path(__file__).resolve().parent
     files = [project / name for name in ('tpu_dse.py', 'model.py', 'compact.py', 'components.py',
-                                       'workload.py', 'shape_workload.py', 'native_timing.py', 'benchmark.py')]
+                                       'workload.py', 'shape_workload.py', 'native_timing.py', 'benchmark.py','activation_stream.py')]
     sources = {str(p): digest(p) for p in files}
     observations = {p.name: [] for p in points}
     failures = []

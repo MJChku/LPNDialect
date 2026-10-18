@@ -134,3 +134,24 @@ and `initial-tests.log` preserve the stage before the two-pass quantizer
 correction, at Git revision `9cd6b68`; `pilot.json`, `full-predictions.json`
 and `tests.log` use the corrected model. The prescribed length and actual
 upstream schedule are unchanged; no numerical tensor work enters predictions.
+
+
+## Completed real-workload arithmetic pilot
+
+The paired 32-engine RTL runs for original kernels 0, 15, 16 and 47 completed
+with identical canonical inputs and bit-exact full DRAM/TMEM output states:
+
+| FP multiply/add stages | Selected RTL cycles | LPN total error | Worst kernel error |
+| --- | ---: | ---: | ---: |
+| 2/4 control | 1,600,365 | −0.243% | 3.18% |
+| 2/2 candidate | 1,481,988 | −0.134% | 5.63% |
+
+The candidate uses **1.07988× fewer cycles** on these four kernels. Fresh audits
+reread every selected input, executable and source hash, raw cycle/instruction
+log, full DRAM image and scratchpad dump. These are selected-kernel results;
+they do not establish a full inference result or an FPGA wall-time improvement.
+The shorter adder still needs synthesis and a clock-frequency comparison.
+
+Reports are `validation/lowlat-fp/inference-{control,add2}.json`; independent
+audits have the `-audit.json` suffix. To audit a subset, pass
+`audit_replay --selected-kernels`; the default still requires all 48 kernels.

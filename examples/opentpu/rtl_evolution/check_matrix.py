@@ -11,6 +11,7 @@ def main():
     ap=argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--opentpu-root',type=Path,required=True)
     ap.add_argument('--output',type=Path,required=True)
+    ap.add_argument('--stream-act',action='store_true')
     ap.add_argument('--rows',type=int,default=32)
     ap.add_argument('--vector-lanes',type=int,default=64)
     ap.add_argument('--stores',type=int,default=64)
@@ -29,6 +30,7 @@ def main():
         rtlsim.RTL_SOURCES=[str(a.tree_source.resolve()) if s=='vpu/otpu_vtree.sv' else s for s in rtlsim.RTL_SOURCES]
     cfg=Config(D=a.depth,MCOLS=4,ACT_ROWS=16,LANES=a.lanes)
     ua=dict(MXU_ROWS=a.rows,VPU_LANES=a.vector_lanes,QST_LANES=a.stores)
+    if a.stream_act: ua["ACT_STREAMING"]=1
     a.output.mkdir(parents=True,exist_ok=True)
     rtlsim.VFLAGS[rtlsim.VFLAGS.index('-j')+1]='12'
     rtlsim.VFLAGS+=['-CFLAGS','-O'+a.host_opt]

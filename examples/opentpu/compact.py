@@ -12,7 +12,7 @@ from .model import OpenTPU, DRAM, bank_write_cycles, matrix_batch_rows, vector_r
 from .components import CommandInterface, CommandTiming, ExecutionUnit, MatrixEngine
 
 
-def dependencies(commands,I,W,matrix_engines=1):
+def dependencies(commands,I,W,matrix_engines=1,streaming_producers=None):
   """Exact footprint conflicts, indexed by intervals; remove transitive edges.
 
   Completion ancestry only contains completion dependencies. Matrix prefetch/
@@ -67,6 +67,8 @@ def dependencies(commands,I,W,matrix_engines=1):
       conflicts = {j for j in conflicts if unit!=W.U_MXU
                    or W.UNIT.get(commands[j].instruction.op,-2)!=W.U_MXU
                    or matrix_engines>1}
+    if streaming_producers is not None and streaming_producers[idx]>=0:
+      conflicts.discard(streaming_producers[idx])
     compute.append(reduce_edges(conflicts))
     dram.append(reduce_edges(dc))
     complete_deps = conflicts | (dc if unit==W.U_MXU else set())
@@ -146,7 +148,14 @@ class CompactOpenTPU(OpenTPU):
     pipeline = net.place(prefix+"_pipeline")
     pending = [net.place(prefix+f"_pending_{u}") for u in range(6)]
     ports = [memory.b,memory.sw]
-    deps,dram_deps = dependencies(commands,I,W,t.matrix_engines)
+    activation=None
+    if t.activation_streaming:
+      from .activation_stream import ActivationStream,stream_producers
+      producers=stream_producers(commands,I,W,t)
+      activation=ActivationStream(net,prefix+'_act',commands,I,t,self._table,is_done)
+      producer_table=self._table(prefix+'_act_producers',producers)
+    deps,dram_deps = dependencies(commands,I,W,t.matrix_engines,
+                                producers if activation is not None else None)
     kinds,latencies,services,port_ids,ranks = [],[],[],[],[]
     batches,chunkses,scale_flags,kbs,ns,row_services,tails = [],[],[],[],[],[],[]
     scale_bytes = []
@@ -163,6 +172,8 @@ class CompactOpenTPU(OpenTPU):
       if ins.op==I.RLD:
         last_register = idx
       latency,port,service = (0,None,0) if u in (W.U_MXU,5) else self._simple_timing(ins,memory,I)
+      if activation is not None and ins.op==I.QACT and 0<(w[1]>>16)<=t.quant_buffer_chunks and (w[1]&255)>0:
+        latency+=2 # completion includes the final ACT RAM landing
       latencies.append(latency)
       rank=vector_rank(ins,I) if ins.op==I.VOP else 0
       ranks.append(rank)
@@ -174,6 +185,7 @@ class CompactOpenTPU(OpenTPU):
       if ins.op==I.MM:
         n,kb,m = w[3]&65535,(w[3]>>16)&255,(w[5]>>16)&255
         wf,pair = (ins.flags>>I.WF_SHIFT)&3,bool(ins.flags&I.F_PAIR)
+        if activation is not None: pair=False # parallel RTL consumes packed halves serially
         chunks = kb if wf==I.W8 else ceil(kb/2)
         if chunks>t.fifo_chunks:
           raise ValueError("one matrix row must fit the prefetch FIFO")
@@ -276,6 +288,11 @@ class CompactOpenTPU(OpenTPU):
 
     interface = CommandInterface(slots,pending,window,select_ready,is_done,publish,
         compute_offsets,compute_indices)
+    if activation is not None:
+      interface.activation=activation
+      interface.activation_producers=producer_table
+      interface.activation_groups=self._table(prefix+'_act_groups',[
+          (c.instruction.w[5]>>16)&255 if c.instruction.op==I.MM else 0 for c in commands])
     vector_ranks=self._table(prefix+'_vector_ranks',ranks)
     units = [ExecutionUnit(net,prefix+f"_unit_{u}",u,interface,parameters,memory,
                  vector_ranks if u==W.U_VPU else None)

@@ -113,6 +113,7 @@ class Timing:
   quant_row_banks: int = 0
   quant_store_buffered: bool = False
   vector_row_contexts: int = 1
+  activation_streaming: bool = False
   fp_mul_latency: int = 2
   fp_add_latency: int = 4
 
@@ -128,6 +129,8 @@ class Timing:
         (self.quant_row_banks and (self.quant_row_banks<2 or self.quant_row_banks>256 or
                                   self.quant_row_banks&(self.quant_row_banks-1)))):
       raise ValueError('quant_row_banks must be zero or a power of two from 2 to 256')
+    if self.activation_streaming and (not self.quant_row_banks or self.batch_rows>self.matrix_row_lanes):
+      raise ValueError('ACT streaming requires row banks and at most one parallel matrix wave per batch')
     if self.quant_store_buffered and not self.quant_row_banks:
       raise ValueError('buffered QST requires explicit row banks')
     if self.vector_row_contexts not in (1,4):
@@ -201,10 +204,14 @@ class OpenTPU:
     self.workload,self.timing = workload,timing or Timing()
     if self.timing.matrix_engines!=1 and not self.supports_multiple_matrix_engines:
       raise ValueError("multiple matrix engines require CompactOpenTPU")
+    if self.timing.activation_streaming and not self.supports_multiple_matrix_engines:
+      raise ValueError('ACT streaming requires CompactOpenTPU')
     self.matrix_batch_sizes = []
     cfg,t = workload.config,self.timing
     if (t.fp_mul_latency,t.fp_add_latency)!=(2,4) and cfg.LANES!=64:
       raise ValueError('experimental FP partition timing requires the 64-lane architecture')
+    if t.activation_streaming and (cfg.MCOLS!=1 or cfg.LANES!=cfg.D):
+      raise ValueError('ACT streaming requires single-column engines and one full block per quantizer write')
     if cfg.SEQ_WC:
       raise ValueError("the timing model currently requires the range-scoreboard sequencer")
     if t.dram_bytes_per_cycle>(t.dram_port_bytes or cfg.D):

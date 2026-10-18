@@ -1,0 +1,547 @@
+--- a/rtl/vpu/otpu_quant.sv
++++ b/rtl/vpu/otpu_quant.sv
+@@ -136,6 +136,7 @@
+   parameter int GR    = 1024,               // group maxes of a row (QACT 4*KB, QST KB; not ROW)
+   parameter int XD    = 1024,               // row buffer chunks; buffered rows <= XD*LANES; 0: none
+   parameter int NB    = 8,                  // finite rows in flight; power of two
++  parameter bit STREAM_ACT = 0,             // buffered ACT writer runs independently of TMEM
+   parameter int SID   = 0
+ ) (
+   input  logic                    clk,
+@@ -209,6 +210,10 @@
+   // ------------------------------------------------------------------ command
+   logic        busy, is_st, rowm, csf, rsf, ackw, dup;
+   logic        bm;                           // QACT or parallel QST through the row buffer
++  // A complete row is buffered before its scale becomes valid. Once its writer
++  // starts, it can emit one chunk per clock without any further TMEM grant.
++  // Keep QST and the unbuffered path on the original shared enable.
++  wire writer_en = (STREAM_ACT && bm && !is_st) || en;
+   logic [31:0] csb, rsb, srs, drs, es;
+   logic [15:0] rows, KB;
+   logic [7:0]  ab;
+@@ -432,7 +437,7 @@
+                      : bm ? {r1[RB-1:0], GA'(e1c >> DL)} : {r[RB-1:0], GA'(e >> DL)};
+   for (genvar s = 0; s < 4; s++) begin : g_gr
+     otpu_ram_1r1w #(.W(31), .N(NB * GWN), .STYLE("block")) u_g (
+-      .clk, .we(en && gw_we[s]), .wa(gw_a), .wd(gw_d[s]), .re(en), .ra(gr_a), .rd(grd[s]));
++      .clk, .we(en && gw_we[s]), .wa(gw_a), .wd(gw_d[s]), .re(writer_en), .ra(gr_a), .rd(grd[s]));
+   end
+ 
+   // scale unit (its amax is don't-care while sq_iv is low: sc/inv are read only under sq_ov)
+@@ -469,14 +474,14 @@
+   logic [3:0][4:0] dq;
+   logic [31:0]     e1;
+   logic [RB-1:0] b1;                       // the chunk's row bank
+-  always_ff @(posedge clk) if (en) begin
++  always_ff @(posedge clk) if (writer_en) begin
+     for (int s = 0; s < 4; s++) dq[s] <= dval(bm ? grd[s] : grd_d[s], amx_q[m1s.row[RB-1:0]], rowm);
+     e1 <= m1s.e;
+     b1 <= m1s.row[RB-1:0];
+   end
+   f32_t        invl [LANES], invp [LANES];
+   logic [31:0] dal, dap;
+-  always_ff @(posedge clk) if (en) begin
++  always_ff @(posedge clk) if (writer_en) begin
+     for (int l = 0; l < LANES; l++) begin
+       logic [31:0] el;
+       el = e1 + 32'(l);
+@@ -485,12 +490,12 @@
+     dal <= {3'b0, dq[3], 3'b0, dq[2], 3'b0, dq[1], 3'b0, dq[0]};
+   end
+   for (genvar l = 0; l < LANES; l++) begin : g_inv
+-    otpu_delay #(.W(32), .N(QL - 2)) u_i (.clk, .en, .d(invl[l]), .q(invp[l]));
+-  end
+-  otpu_delay #(.W(32), .N(QL - 2)) u_da (.clk, .en, .d(dal), .q(dap));
++    otpu_delay #(.W(32), .N(QL - 2)) u_i (.clk, .en(writer_en), .d(invl[l]), .q(invp[l]));
++  end
++  otpu_delay #(.W(32), .N(QL - 2)) u_da (.clk, .en(writer_en), .d(dal), .q(dap));
+ `ifndef SYNTHESIS
+   // p2mul is fp_mul(inv, 2^d) for every inv the scale unit gives
+-  always @(posedge clk) if (!rst && en)
++  always @(posedge clk) if (!rst && writer_en)
+     for (int l = 0; l < LANES; l++) begin
+       logic [31:0] el;
+       el = e1 + 32'(l);
+@@ -518,7 +523,7 @@
+   f32_t  wx [LANES], winv [LANES];
+   // buffered pass 1: the popped chunk's data, delayed to the offsets' output (mb2)
+   f32_t  xd [LANES], xb1 [LANES], xb2 [LANES];
+-  always_ff @(posedge clk) if (en) begin
++  always_ff @(posedge clk) if (writer_en) begin
+     xb1 <= xd;
+     xb2 <= xb1;
+   end
+@@ -526,7 +531,7 @@
+     if (rst) begin
+       mb1 <= '0;
+       mb2 <= '0;
+-    end else if (en) begin
++    end else if (writer_en) begin
+       mb1 <= mb0;
+       mb2 <= mb1;
+     end
+@@ -537,7 +542,7 @@
+     logic [LANES*32-1:0] xwd, xrd;
+     always_comb for (int l = 0; l < LANES; l++) xwd[32*l +: 32] = xp[l];
+     otpu_ram_1r1w #(.W(LANES * 32), .N(XD), .STYLE("block")) u_xb (
+-      .clk, .we(en && xpush), .wa(xw), .wd(xwd), .re(en), .ra(xr), .rd(xrd));
++      .clk, .we(en && xpush), .wa(xw), .wd(xwd), .re(writer_en), .ra(xr), .rd(xrd));
+     always_comb for (int l = 0; l < LANES; l++) xd[l] = xrd[32*l +: 32];
+   end else begin : g_nxb
+     always_comb for (int l = 0; l < LANES; l++) xd[l] = F_ZERO;
+@@ -547,9 +552,9 @@
+   int unsigned xs_n;
+   always @(posedge clk)
+     if (rst || start) xs_n = 0;
+-    else if (busy && en) begin
+-      if (p1a && xs_n == 0) $fatal(1, "otpu_quant: row buffer popped empty");
+-      xs_n = xs_n + (xpush ? 1 : 0) - (p1a ? 1 : 0);
++    else if (busy && (en || writer_en)) begin
++      if (writer_en && p1a && xs_n == 0) $fatal(1, "otpu_quant: row buffer popped empty");
++      xs_n = xs_n + ((en && xpush) ? 1 : 0) - ((writer_en && p1a) ? 1 : 0);
+       if (xs_n > XD) $fatal(1, "otpu_quant: row buffer overrun");
+     end
+ `endif
+@@ -582,7 +587,7 @@
+   // the writer's selection registered in front of the multipliers
+   wm_t   wq_r;
+   f32_t  wx_r [LANES], winv_r [LANES];
+-  always_ff @(posedge clk) if (en) begin
++  always_ff @(posedge clk) if (writer_en) begin
+     wq_r <= wq;
+     wx_r <= wx;
+     winv_r <= winv;
+@@ -616,13 +621,13 @@
+   for (genvar l = 0; l < LANES; l++) begin : g_q
+     f32_t p;
+     q8_mid_t qm;
+-    otpu_fmul #(.LAT(LM)) u_q (.clk, .en, .a(wx_r[l]), .b(winv_r[l]), .y(p));
+-    always_ff @(posedge clk) if (en) begin
++    otpu_fmul #(.LAT(LM)) u_q (.clk, .en(writer_en), .a(wx_r[l]), .b(winv_r[l]), .y(p));
++    always_ff @(posedge clk) if (writer_en) begin
+       qm <= qq8_s1(p);
+       qb[l] <= q8_s2(qm);
+     end
+   end
+-  otpu_qdly #(.W($bits(wm_t)), .N(LM + 2)) u_wq (.clk, .rst, .en, .d(wq_r), .q(wqd));  // ends in a flip-flop
++  otpu_qdly #(.W($bits(wm_t)), .N(LM + 2)) u_wq (.clk, .rst, .en(writer_en), .d(wq_r), .q(wqd));  // ends in a flip-flop
+ 
+   // QST's scale row: S, then (not ROW) the d words: word j holds groups 4j .. 4j+3, the group
+   // RAMs' word j (read the cycle before), the bytes of groups past KB 0
+@@ -688,7 +693,8 @@
+       a_be = 4'hF;
+     end
+     if (!gnt) begin
+-      act_we = '0; asc_we = 1'b0; a_req = 1'b0; a_we = 1'b0;
++      if (!writer_en) begin act_we = '0; asc_we = 1'b0; end
++      a_req = 1'b0; a_we = 1'b0;
+     end
+   end
+ `ifndef SYNTHESIS
+@@ -782,10 +788,11 @@
+         rd_done <= 1'b0;
+         busy <= 1'b1;
+       end
+-    end else if (busy && en) begin
++    end else if (busy && (en || writer_en)) begin
+       logic fin;
+       fin = 1'b0;
+       // ---- reader
++      if (en) begin
+       m0a <= '0;
+       if (riss) begin
+         m0a.v <= 1'b1;
+@@ -818,8 +825,10 @@
+           if (!bm) sbase <= sbase + sstep;
+         end
+       end
++      end
+       // ---- buffered pass 1: once row r1's scale is out, pop its chunks (one a cycle, the
+       // group word read with each); a row's start takes a cycle
++      if (writer_en) begin
+       mb0 <= '0;
+       if (p1a) begin
+         mb0.v <= 1'b1;
+@@ -847,12 +856,14 @@
+         end else p1a <= 1'b1;
+         e1c <= '0;
+       end
++      end
+       // the FIFO's entries taken (a buffered read) and given back (a pop); rows between the
+       // passes (r - r1)
+-      xocc <= xocc + ((bm && riss) ? 1'b1 : 1'b0) - (p1a ? 1'b1 : 1'b0);
+-      if (xpush) xw <= xw + 1'b1;
+-      dr <= dr + ((bm && riss && rlast) ? (RB+1)'(1) : (RB+1)'(0)) - ((p1a && e1c + LANES >= G) ? (RB+1)'(1) : (RB+1)'(0));
++      xocc <= xocc + ((en && bm && riss) ? 1'b1 : 1'b0) - ((writer_en && p1a) ? 1'b1 : 1'b0);
++      if (en && xpush) xw <= xw + 1'b1;
++      dr <= dr + ((en && bm && riss && rlast) ? (RB+1)'(1) : (RB+1)'(0)) - ((writer_en && p1a && e1c + LANES >= G) ? (RB+1)'(1) : (RB+1)'(0));
+       // ---- the maxes
++      if (en) begin
+       if (mc.v && !mc.pass) begin
+         amx_r <= nmax;
+         gacc <= gnew;
+@@ -874,8 +885,9 @@
+           rd_wait <= 1'b0;
+         end
+       end
+-      if (!p1a && !sw_ph && bm && 32'(r1) < 32'(rows) && sv[r1[RB-1:0]]) sv[r1[RB-1:0]] <= 1'b0;
+-      if (sw_ph) begin
++      end
++      if (writer_en && !p1a && !sw_ph && bm && 32'(r1) < 32'(rows) && sv[r1[RB-1:0]]) sv[r1[RB-1:0]] <= 1'b0;
++      if (en && sw_ph) begin
+         if (sw_i + 16'd1 == swn) begin
+           sw_ph <= 1'b0;
+           if (bm) p1a <= 1'b1;
+@@ -887,7 +899,7 @@
+         end else sw_i <= sw_i + 16'd1;
+       end
+       // ---- the last write
+-      if (wqd.v && wqd.fin) fin = 1'b1;
++      if (writer_en && wqd.v && wqd.fin) fin = 1'b1;
+       if (fin && is_st) begin
+         ackw <= 1'b1;                              // the last write is taken this cycle
+       end else if (fin) begin
+--- a/rtl/mxu/otpu_mxu.sv
++++ b/rtl/mxu/otpu_mxu.sv
+@@ -55,6 +55,7 @@
+   parameter int CL    = 16,      // products per cascade chain (at most D/8)
+   parameter int E     = 0,       // epilogue lanes (0: MCOLS / 2, at least 1; more than MCOLS: MCOLS)
+   parameter int NSTEP = 1,       // distance between streamed output rows
++  parameter bit ACT_STREAMING = 0,
+   parameter int SID   = 0
+ ) (
+   input  logic                  clk,
+@@ -73,6 +74,7 @@
+   output logic                  pf_u,
+   output logic [3:0][31:0]      pf_uv,
+   // ACT RAM read
++  input  logic                  act_ready,   // first block has landed; full row then streams without gaps
+   output logic [15:0]           act_blk,
+   output logic [15:0]           act_blk2,    // PAIR: the odd block, read by the rows in act_hi
+   output logic [MCOLS-1:0]      act_hi,
+@@ -268,7 +270,7 @@
+   wire [MCOLS-1:0] c_hi = pop_e.hi;
+   wire [7:0]  c_M = h.M, c_ab = pop_e.ab;
+   wire [7:0]  p_M = pop_e.M, p_G = pop_e.G;
+-  wire        p_act = (q_n != 0) && pop_e.go;
++  wire        p_act = (q_n != 0) && pop_e.go && (!ACT_STREAMING || ck != 0 || act_ready);
+   wire [MW-1:0] c_run = h.run;
+   wire        c_unit = pop_e.unit, c_rsc = pop_e.rsc, c_acc = h.acc, c_rmax = h.rmax;
+   wire        c_asc = h.asc;
+--- a/rtl/mxu/otpu_mxu_parallel.sv
++++ b/rtl/mxu/otpu_mxu_parallel.sv
+@@ -6,9 +6,12 @@
+   import otpu_pkg::*;
+   import otpu_fp::*;
+ #(parameter int D=128, P=32, ROWS=16, BLOCKS=64, DEPTH=128,
+-  parameter int LANES=64, CL=16, SID=0) (
++  parameter int LANES=64, CL=16, SID=0,
++  parameter bit ACT_STREAMING=0) (
+   input logic clk, rst, start, go,
+   input cmd_t cmd,
++  input logic qact_start,
++  input cmd_t qact_cmd,
+   output logic rdy, done, computing,
+   output logic [$clog2(DEPTH):0] pf_level,
+   output logic pf_starve, pf_block, pf_u,
+@@ -35,6 +38,45 @@
+   localparam int CP=2;  // one result, or two contiguous ASCALE/RMAX words
+   initial if (LANES < CP || (LANES & (LANES-1)) != 0 || P<1)
+     $fatal(1, "parallel MXU needs a power-of-two bank count >=2 and >=1 engine");
++  initial if (ACT_STREAMING && LANES!=D)
++    $fatal(1,"ACT streaming requires one whole block per quantizer write");
++  // One central bit per physical ACT row/block, independent of engine count.
++  // RAM has three stages before the write edge. Publish validity at that edge;
++  // the earliest gated synchronous read is the following clock.
++  logic [BLOCKS-1:0] act_valid [ROWS];
++  logic [2:0] land_v, land_dup;
++  logic [7:0] land_row [3], land_off [3];
++  logic [15:0] land_blk [3];
++  if (ACT_STREAMING) begin : g_act_ready
++    always_ff @(posedge clk) begin
++      if (rst) begin
++        land_v <= '0; land_dup <= '0;
++        for (int r=0;r<ROWS;r++) act_valid[r]<='1; // reset ACT RAM is zero
++      end else begin
++        land_v <= {land_v[1:0],asc_we};
++        land_dup <= {land_dup[1:0],act_dup};
++        land_row[0]<=asc_row; land_off[0]<=act_off; land_blk[0]<=asc_blk;
++        for (int t=1;t<3;t++) begin
++          land_row[t]<=land_row[t-1]; land_off[t]<=land_off[t-1]; land_blk[t]<=land_blk[t-1];
++        end
++        if (land_v[2]) begin
++          act_valid[land_row[2]][land_blk[2]]<=1'b1;
++          if (land_dup[2]) act_valid[32'(land_row[2])+32'(land_off[2])][land_blk[2]]<=1'b1;
++        end
++        // Clear on actual acceptance, after older ACT readers have completed.
++        // Clearing at dispatch would deadlock an older MM on a younger QACT.
++        if (qact_start)
++          for (int r=0;r<ROWS;r++)
++            for (int b=0;b<BLOCKS;b++)
++              if (r < 32'(qact_cmd.w2[7:0]) * (qact_cmd.flags[3] ? 2 : 1)
++                  && b>=32'(qact_cmd.w2[15:8])
++                  && b<32'(qact_cmd.w2[15:8])+32'(qact_cmd.w2[31:16]))
++                act_valid[r][b]<=1'b0;
++      end
++    end
++  end else begin : g_act_always_ready
++    for (genvar r=0;r<ROWS;r++) assign act_valid[r]='1;
++  end
+   logic reducing;
+   logic [1:0] queue_count, head_epoch, tail_epoch, releases;
+   cmd_t entries [2];
+@@ -79,6 +121,7 @@
+     logic [ROWS*D*8-1:0] bank_data;
+     logic [ROWS*64-1:0] bank_scale;
+     logic [7:0] group_q;
++    wire act_ready = !ACT_STREAMING || (32'(grp)<ROWS && 32'(blk)<BLOCKS && act_valid[grp][blk]);
+     always_comb begin
+       bank_ren='0;
+       if (ren[0] && 32'(grp) < ROWS) bank_ren[grp]=1'b1;
+@@ -105,13 +148,13 @@
+       .s_blk(asc_blk), .s_data(asc_data), .ren(bank_ren), .r_use(pop[p]), .r_blk(blk),
+       .r_blk2(blk2), .r_hi({ROWS{1'b0}}), .r_grp(8'd0), .r_data(bank_data), .r_scale(bank_scale));
+     otpu_mxu #(.D(D), .MCOLS(1), .ROWS(ROWS), .DEPTH(DEPTH), .LANES(CP),
+-        .CL(CL), .E(1), .NSTEP(P), .SID(SID)) u_mxu (
++        .CL(CL), .E(1), .NSTEP(P), .SID(SID), .ACT_STREAMING(ACT_STREAMING)) u_mxu (
+       .clk, .rst, .start,
+       .go(core_go), .cmd(subcmd), .rdy(cr[p]),
+       .done(cd[p]), .computing(pop[p]), .pf_level(level[p]),
+       .pf_starve(starve[p]), .pf_block(block_[p]), .pf_u(), .pf_uv(),
+       .act_blk(blk), .act_blk2(blk2), .act_hi(hi), .act_grp(grp), .act_ren(ren),
+-      .act_data(data), .act_scale(scale),
++      .act_data(data), .act_scale(scale), .act_ready,
+       .a_req(a_req[p]), .b_req(b_req[p]), .a_want(a_want[p]), .b_want(b_want[p]),
+       .a_addr(a_addr[p]), .b_addr(b_addr[p]), .a_gnt(mem_gnt[p]), .b_gnt(mem_gnt[p]),
+       .a_rvalid(a_rvalid[p]), .b_rvalid(b_rvalid[p]), .a_rdata(a_rdata[p]), .b_rdata(b_rdata[p]),
+--- a/rtl/seq/otpu_seq.sv
++++ b/rtl/seq/otpu_seq.sv
+@@ -46,6 +46,8 @@
+   // start's k for the DMA and the quantizer), and for the VPU, which starts its oldest ready
+   // instruction, a mask of the VPU instructions 1..31 back it waits for. No footprints, no range
+   // compares. 0: today's scoreboard.
++  parameter bit ACT_STREAMING = 0,
++  parameter int QUANT_XD = 1024,
+   parameter bit WAITC      = 1'b0
+ ) (
+   input  logic                clk,
+@@ -55,6 +57,7 @@
+   output logic                urel,        // MXU: release the oldest started, unreleased MM
+   input  logic [NUNITS-1:0]   urdy,
+   input  logic [NUNITS-1:0]   udone,
++  input  logic                qact_start, // actual quantizer acceptance, after optional handshake delay
+   output logic                halted,
+   output logic                error,
+   output logic [31:0]         icount,
+@@ -365,6 +368,9 @@
+     return o;
+   endfunction
+ 
++  initial if (ACT_STREAMING && WAITC)
++    $fatal(1,"ACT streaming requires the footprint scoreboard");
++
+   // window
+   logic [WIN-1:0]  sv;                       // slot valid (dispatched, not completed)
+   logic [WIN-1:0]  older [WIN];              // older[i][j]: slot j was dispatched before slot i
+@@ -372,6 +378,12 @@
+   logic [WIN-1:0]  sstarted, sready;
+   logic [WIN-1:0]  sdep [WIN];               // sdep[i][j]: slot i waits for slot j
+   logic [WIN-1:0]  sdepd [WIN];              // the DRAM part of sdep (MXU stream start)
++  // ACT-only RAW dependencies wait for producer acceptance; a small valid
++  // map at the MXU gates each row's first block until its bytes have landed.
++  logic [WIN-1:0] sdep_act [WIN];
++  logic [WIN-1:0] sact_started, sact_streamable;
++  logic [8:0] sact_rows [WIN];
++  logic [WIN-1:0] act_started;
+   logic [WIN-1:0]  srel;                     // MXU: released
+   logic [SW:0]     uq_r;                     // MXU: next started slot to release
+   fps_t            sfp  [WIN];
+@@ -530,7 +542,7 @@
+ 
+   // ---- free slot and the new instruction's dependencies
+   logic [SW-1:0]   free_slot;
+-  logic [WIN-1:0]  ndep, ndepd;
++  logic [WIN-1:0]  ndep, ndepd, ndep_act;
+   always_comb q_fp = fp_ranges(q_cmd, q_pr, D, S);
+   always_comb begin
+     have_free = 1'b0; free_slot = '0;
+@@ -538,9 +550,21 @@
+       if (!sv[i]) begin have_free = 1'b1; free_slot = SW'(i); end
+     for (int i = 0; i < WIN; i++) begin
+       logic [1:0] cf;
++      fps_t no_act;
++      logic stream_raw;
++      no_act = sfp[i]; no_act.ahi = '0; no_act.aw = 1'b0;
+       cf = conf_s(c_fp, sfp[i]);
+-      ndep[i] = sv[i] && !fin[i] && cf[1];
++      // Removing ACT must remove the whole conflict. In particular, keep
++      // MM output vs QACT input WAR and every DRAM/TMEM ordering edge.
++      stream_raw = ACT_STREAMING && c_cmd.op == OP_MM && sact_streamable[i]
++          && !c_fp.all && !sfp[i].all && cf[1] && conf_s(c_fp,no_act)==0
++          // The MM's first block must belong to this producer. Otherwise an
++          // untouched old block could be valid while later blocks are stale.
++          && c_fp.alo>=sfp[i].alo && c_fp.ahi<=sfp[i].ahi
++          && {1'b0,c_cmd.w6[23:16]}<=sact_rows[i];
++      ndep[i] = sv[i] && !fin[i] && cf[1] && !stream_raw;
+       ndepd[i] = sv[i] && !fin[i] && cf[0];
++      ndep_act[i] = sv[i] && !fin[i] && stream_raw && !act_started[i];
+     end
+ `ifndef SYNTHESIS
+     // the emulations: window / per-unit caps, the reorder buffer's held slots, wait counts
+@@ -799,10 +823,16 @@
+   end
+ 
+ 
++  always_comb begin
++    act_started = sact_started;
++    if (qact_start) act_started[ucs[U_Q]] = 1'b1;
++  end
++
+   // MXU release: the oldest started, unreleased MM once all its dependencies are clear
+   wire [SW-1:0] rel_slot = uq[U_MXU][uq_r[SW-1:0]];
+   wire          can_rel  = (uq_r != uq_t[U_MXU]) &&
+-                           (WAITC ? w_all_q[rel_slot] : (sdep[rel_slot] & ~same_started[U_MXU]) == '0);
++                           (WAITC ? w_all_q[rel_slot] : (sdep[rel_slot] & ~same_started[U_MXU]) == '0
++                              && sdep_act[rel_slot] == '0);
+ 
+   // Each unit's command is read from the window as the unit starts, at the slot it starts, into a
+   // register (ucmd): a slot's command is written only at dispatch and stays until the slot
+@@ -875,7 +905,8 @@
+       for (int u = 0; u < NUNITS; u++) begin uq_h[u] <= '0; uq_t[u] <= '0; end
+       for (int u = 0; u < NUNITS; u++) begin wd_n[u] <= '0; wc_n[u] <= '0; end
+       vout <= '0;
+-      for (int i = 0; i < WIN; i++) sdep[i] <= '0;
++      sact_started <= '0; sact_streamable <= '0;
++      for (int i = 0; i < WIN; i++) begin sdep[i] <= '0; sdep_act[i] <= '0; end
+ `ifndef SYNTHESIS
+       sdone <= '0;
+ `endif
+@@ -963,6 +994,7 @@
+ `endif
+       icount <= icount + 32'(r_ret) + 32'(c_go);
+       // completions
++      sact_started <= act_started;
+       if (can_rel) begin
+         urel <= 1'b1;
+         uq_r <= uq_r + 1;
+@@ -970,6 +1002,7 @@
+       for (int i = 0; i < WIN; i++) begin
+         sdep[i] <= sdep[i] & ~fin;
+         sdepd[i] <= sdepd[i] & ~fin;
++        sdep_act[i] <= sdep_act[i] & ~(fin | act_started);
+         if (fin[i]) begin
+           sv[i] <= 1'b0;
+         end
+@@ -996,7 +1029,7 @@
+       end
+       // readiness (for the profiler: when did the dependencies clear)
+       for (int i = 0; i < WIN; i++)
+-        if (sv[i] && !sready[i] && (WAITC ? w_all_q[i] : sdep[i] == '0)) begin
++        if (sv[i] && !sready[i] && (WAITC ? w_all_q[i] : sdep[i] == '0 && sdep_act[i] == '0)) begin
+           sready[i] <= 1'b1;
+           srdy_c[i] <= cyc;
+         end
+@@ -1026,6 +1059,11 @@
+         sready[free_slot] <= 1'b0;
+         sdep[free_slot] <= ndep;
+         sdepd[free_slot] <= ndepd;
++        sdep_act[free_slot] <= ndep_act;
++        sact_started[free_slot] <= 1'b0;
++        sact_rows[free_slot] <= {1'b0,c_cmd.w2[7:0]} << c_cmd.flags[3];
++        sact_streamable[free_slot] <= c_cmd.op == OP_QACT && c_cmd.w2[7:0]!=0
++            && c_cmd.w2[31:16]!=0 && 32'(c_cmd.w2[31:16]) <= QUANT_XD;
+         sfp[free_slot] <= c_fp;
+         if (WAITC) begin
+           logic [VN-1:0] m;
+--- a/rtl/top/otpu_slice.sv
++++ b/rtl/top/otpu_slice.sv
+@@ -47,6 +47,7 @@
+   parameter int RPB        = 4,       // TMEM reads per bank per cycle
+   parameter int WPB        = 2,       // TMEM writes per bank per cycle
+   parameter int QST_LANES  = 0,
++  parameter bit ACT_STREAMING = 0,
+   parameter int MXU_ROWS   = 1,       // independent streamed weight rows
+   parameter int VPU_LANES  = LANES,
+   parameter int MXU_IMPL   = 2,       // MXU dot product: 2 systolic, the only one (docs/mxu_systolic.md)
+@@ -253,9 +254,12 @@
+   logic        sq_halted, sq_ch, sq_err, rl_v;
+   logic        dma_err;           // a WAITW timed out: the slice stops with an error (to_err)
+   logic [31:0] sq_icount, sq_cha, sq_chn, rl_val;
++  initial if (ACT_STREAMING && (MXU_ROWS<=1 || ULANES!=D || SEQ_WC))
++    $fatal(1,"ACT streaming needs parallel MXU, ULANES=D and footprint scoreboard");
++  wire qact_start = ustart[U_Q] && ucmd[U_Q].op == OP_QACT;
+   otpu_seq #(.IMEM_WORDS(IMEM_WORDS), .TMEM_WORDS(TMEM_WORDS), .SID(SID), .S(S), .D(D),
+-             .WIN(WIN), .STREAMS(HAS_SS), .WAITC(SEQ_WC)) u_seq (
+-    .clk, .rst(srst), .ucmd(ucmd_s), .ustart(ustart_s), .urel, .urdy(urdy_s), .udone(udone_s),
++             .WIN(WIN), .STREAMS(HAS_SS), .WAITC(SEQ_WC), .ACT_STREAMING(ACT_STREAMING), .QUANT_XD(QUANT_XD)) u_seq (
++    .clk, .rst(srst), .ucmd(ucmd_s), .ustart(ustart_s), .urel, .urdy(urdy_s), .udone(udone_s), .qact_start,
+     .halted(sq_halted), .error(sq_err),
+     .icount(sq_icount), .ev(sq_ev), .rinit, .rl_v, .rl_val, .ch_req(sq_ch), .ch_addr(sq_cha),
+     .ch_n(sq_chn), .im_we, .im_row, .im_data(b_rdata_i),
+@@ -521,7 +525,7 @@
+     .clk, .rst(rst_mxu), .start(ustart[U_MXU]), .go(urel), .cmd(ucmd[U_MXU]), .rdy(r_mxu), .done(d_mxu),
+     .computing(mxu_pop), .pf_level(mxu_level), .pf_starve(mxu_starve), .pf_block(mxu_block),
+     .pf_u(mxu_u), .pf_uv(mxu_uv),
+-    .act_blk(act_rblk), .act_blk2(act_rblk2), .act_hi(act_rhi), .act_grp(act_rgrp), .act_ren, .act_data(act_rdata), .act_scale(act_rscale),
++    .act_blk(act_rblk), .act_blk2(act_rblk2), .act_hi(act_rhi), .act_grp(act_rgrp), .act_ren, .act_data(act_rdata), .act_scale(act_rscale), .act_ready(1'b1),
+     .a_req(mxu_areq), .a_addr(mxu_aaddr), .a_gnt(mxu_agnt), .a_rvalid, .a_rdata,
+     .b_req(mxu_breq), .b_addr(mxu_baddr), .b_gnt(mxu_bgnt), .b_rvalid(b_rvalid_i && !b_rtag_i),
+     .b_rdata(b_rdata_i),
+@@ -532,8 +536,9 @@
+   end else begin : g_parallel
+     assign mxu_areq = 1'b0, mxu_breq = 1'b0, mxu_aaddr = '0, mxu_baddr = '0;
+     otpu_mxu_parallel #(.D(D), .P(MXU_ROWS), .ROWS(ACT_ROWS), .BLOCKS(ACT_BLOCKS),
+-        .DEPTH(FIFO_DEPTH), .LANES(ULANES), .CL(MXU_CL), .SID(SID)) u_mxu (
++        .DEPTH(FIFO_DEPTH), .LANES(ULANES), .CL(MXU_CL), .SID(SID), .ACT_STREAMING(ACT_STREAMING)) u_mxu (
+       .clk, .rst(rst_mxu), .start(ustart[U_MXU]), .go(urel), .cmd(ucmd[U_MXU]),
++      .qact_start, .qact_cmd(ucmd[U_Q]),
+       .rdy(r_mxu), .done(d_mxu), .computing(mxu_pop),
+       .pf_level(mxu_level), .pf_starve(mxu_starve), .pf_block(mxu_block),
+       .pf_u(mxu_u), .pf_uv(mxu_uv),
+@@ -558,7 +563,7 @@
+   assign x_sw_want=qv_req;
+   assign x_sw_req=qv_req & {ULANES{gnt[G_Q]}};
+   assign x_sw_addr=qv_addr, x_sw_data=qv_data, x_sw_be=qv_be;
+-  otpu_quant #(.STORE_LANES(QST_LANES), .D(D), .LANES(ULANES), .GR(Q_GR), .XD(QUANT_XD), .SID(SID)) u_quant (
++  otpu_quant #(.STORE_LANES(QST_LANES), .D(D), .LANES(ULANES), .GR(Q_GR), .XD(QUANT_XD), .SID(SID), .STREAM_ACT(ACT_STREAMING)) u_quant (
+     .clk, .rst(rst_q), .start(ustart[U_Q]), .cmd(ucmd[U_Q]), .rdy(r_q), .done(d_q), .gnt(gnt[G_Q]),
+     .t_ren(q_ren), .t_raddr(q_raddr), .t_rdata(r_data[P_Q][ULANES-1:0]),
+     .t_ren2(q_ren2), .t_raddr2(q_raddr2), .t_rdata2(r_data[P_Q2][ULANES-1:0]),
+--- a/rtl/top/otpu_top.sv
++++ b/rtl/top/otpu_top.sv
+@@ -23,6 +23,7 @@
+   parameter int RPB        = 4,
+   parameter int WPB        = 2,
+   parameter int QST_LANES  = 0,
++  parameter bit ACT_STREAMING = 0,
+   parameter int MXU_ROWS   = 1,
+   parameter int MEM_BYTES  = 2816,
+   parameter int VPU_LANES  = LANES,
+@@ -169,7 +170,7 @@
+     otpu_slice #(.SID(s), .S(S), .D(D), .MCOLS(MCOLS), .ACT_BLOCKS(ACT_BLOCKS), .ACT_ROWS(ACT_ROWS),
+                  .TMEM_WORDS(TMEM_WORDS), .IMEM_WORDS(IMEM_WORDS),
+                  .FIFO_DEPTH(FIFO_DEPTH), .LANES(LANES), .WIN(WIN), .RPB(RPB),
+-                 .WPB(WPB), .QST_LANES(QST_LANES), .MXU_ROWS(MXU_ROWS), .VPU_LANES(VPU_LANES), .MXU_IMPL(MXU_IMPL), .MXU_CL(MXU_CL), .MXU_E(MXU_E), .QUANT_XD(QUANT_XD), .VPU_CL(VPU_CL), .ULANES(ULANES),
++                 .WPB(WPB), .QST_LANES(QST_LANES), .MXU_ROWS(MXU_ROWS), .ACT_STREAMING(ACT_STREAMING), .VPU_LANES(VPU_LANES), .MXU_IMPL(MXU_IMPL), .MXU_CL(MXU_CL), .MXU_E(MXU_E), .QUANT_XD(QUANT_XD), .VPU_CL(VPU_CL), .ULANES(ULANES),
+                  .TMEM_IMPL(TMEM_IMPL), .TMEM_RQ(TMEM_RQ), .TMEM_NCP(TMEM_NCP),
+                  .TMEM_NSB(TMEM_NSB), .TMEM_SBP(TMEM_SBP), .TMEM_SBH(TMEM_SBH),
+                  .TMEM_RPL(TMEM_RPL), .TMEM_TDP(TMEM_TDP), .TMEM_GST(TMEM_GST),
+--- a/sim/verilator/tb_top.sv
++++ b/sim/verilator/tb_top.sv
+@@ -21,6 +21,7 @@
+   parameter int RPB        = 4;
+   parameter int WPB        = 2;
+   parameter int QST_LANES  = 0;
++  parameter bit ACT_STREAMING = 0;
+   parameter int MXU_ROWS   = 1;
+   parameter int MEM_BYTES  = 2816;
+   parameter int VPU_LANES  = LANES;
+@@ -59,7 +60,7 @@
+ 
+   otpu_top #(.S(S), .D(D), .MCOLS(MCOLS), .ACT_BLOCKS(ACT_BLOCKS), .ACT_ROWS(ACT_ROWS), .TMEM_WORDS(TMEM_WORDS),
+              .IMEM_WORDS(IMEM_WORDS), .DRAM_WORDS(DRAM_WORDS), .DRAM_LAT(DRAM_LAT),
+-             .LANES(LANES), .WIN(WIN), .RPB(RPB), .WPB(WPB), .QST_LANES(QST_LANES), .MXU_ROWS(MXU_ROWS), .VPU_LANES(VPU_LANES), .MXU_IMPL(MXU_IMPL), .MXU_CL(MXU_CL), .MXU_E(MXU_E), .QUANT_XD(QUANT_XD), .VPU_CL(VPU_CL), .ULANES(ULANES), .MEM_BYTES(MEM_BYTES), .AXI(AXI), .FIFO_DEPTH(FIFO_DEPTH),
++             .LANES(LANES), .WIN(WIN), .RPB(RPB), .WPB(WPB), .QST_LANES(QST_LANES), .MXU_ROWS(MXU_ROWS), .ACT_STREAMING(ACT_STREAMING), .VPU_LANES(VPU_LANES), .MXU_IMPL(MXU_IMPL), .MXU_CL(MXU_CL), .MXU_E(MXU_E), .QUANT_XD(QUANT_XD), .VPU_CL(VPU_CL), .ULANES(ULANES), .MEM_BYTES(MEM_BYTES), .AXI(AXI), .FIFO_DEPTH(FIFO_DEPTH),
+              .TMEM_IMPL(TMEM_IMPL), .TMEM_RQ(TMEM_RQ), .TMEM_NCP(TMEM_NCP),
+              .TMEM_NSB(TMEM_NSB), .TMEM_SBP(TMEM_SBP), .TMEM_SBH(TMEM_SBH),
+              .TMEM_RPL(TMEM_RPL), .TMEM_TDP(TMEM_TDP), .TMEM_GST(TMEM_GST),

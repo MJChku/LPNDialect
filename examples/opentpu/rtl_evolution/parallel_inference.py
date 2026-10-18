@@ -66,6 +66,8 @@ def check_kernel(task):
         if task['args']!=original['args']:
             raise RuntimeError(f'kernel {index}: argument registers differ from original RTL')
         requested=task.get('timing') or {}
+        if bool(task['uarch'].get('ACT_STREAMING',0))!=bool(requested.get('activation_streaming',False)):
+            raise ValueError('RTL ACT streaming setting differs from LPN timing')
         configure_rtlsim(rtlsim,requested.get('fp_mul_latency',2),requested.get('fp_add_latency',4))
         atomic_json(directory/'worker.json',dict(status='building',pid=os.getpid()))
         reused=None
