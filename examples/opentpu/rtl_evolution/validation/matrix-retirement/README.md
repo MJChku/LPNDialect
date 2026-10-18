@@ -35,9 +35,9 @@ See `scale-line-counts.json` and `check_scale_lines.py`.
 | 16 | 109,349 | 108,415 | -0.8541% |
 | 47 | 109,618 | 108,715 | -0.8238% |
 
-This is a four-kernel diagnostic, not a completed 48-kernel validation.
+This pilot table covers four kernels.
 The selected RTL total is 878,386 cycles, or 14.3047x fewer than the same
-selected original kernels. A full changed-RTL replay is still running.
+selected original kernels. The completed full replay is recorded below.
 No empirical timing multiplier was added.
 
 The supported replay driver independently rechecked these four retained RTL
@@ -46,8 +46,8 @@ outputs with the new timing details. `physical-pilot-replay.json` and
 raw logs, instruction counts, sources, simulator and complete numerical
 outputs passed. The corrected prediction over **all 48 original programs**
 is **8,476,740 cycles**, or **15.6697x** fewer than original RTL; see
-`physical-full-prediction.json`. This full prediction has not yet passed
-the complete changed-RTL validation. Its 8,192 matrix MAC lanes and roughly
+`physical-full-prediction.json`. It now passes the complete changed-RTL
+validation below. Its 8,192 matrix MAC lanes and roughly
 14.3 MiB of accounted storage pass the provisional V80 capacity screen,
 which is only a capacity estimate, not an implementation or FPGA-fit claim.
 
@@ -66,7 +66,42 @@ source/parameter/flags cache key, binary hash, inputs and ROM tables, then
 freshly checks the complete retained numerical outputs. Keep source and
 output roots separate from earlier evidence.
 
-A small scale-line reuse buffer is a possible FPGA optimization. It has
-not been implemented or measured, and these corrected predictions assume
-no such cache. FPGA fit, clock frequency and vendor HBM integration remain
-unproven. The 100x architecture goal has not been reached.
+A [small scale-line reuse buffer](../scale-cache/README.md) is now a separate
+RTL prototype with numerical gates; its real-workload measurement is pending.
+These corrected predictions assume no such cache. FPGA fit, clock frequency
+and vendor HBM integration remain unproven. The 100x goal has not been reached.
+
+## Complete inference validation
+
+The unchanged upstream SmolLM2-135M **128-input/32-output** inference completed
+all 48 kernels on the actual 128-engine RTL with two-cycle FP adders, streamed
+ACT, lookup quantizer scale and the exact small-column reciprocal unit.
+
+| Phase | Original RTL | Changed RTL | Cycle speedup | Corrected LPN |
+| --- | ---: | ---: | ---: | ---: |
+| Prefill | 62,013,323 | 5,207,344 | 11.9088x | 5,002,660 |
+| Decode | 70,814,940 | 3,501,478 | 20.2243x | 3,474,080 |
+| Full inference | 132,828,263 | **8,708,822** | **15.2522x** | **8,476,740** |
+
+Total LPN error is **-2.6649%**, and worst absolute kernel error is
+**4.8019%**. Every kernel passes the 10% target. There are zero rollbacks.
+The fresh audit checks all canonical input and decoded-program hashes,
+arguments/instruction counts, complete DRAM and scratchpad dumps, raw logs,
+source files, initialization tables and simulator hash. Full boundary-state
+equivalence preserves all generated token IDs. No tensor prepass was repeated
+and no inference schedule changed.
+
+`128-add2-full-rtl.json` preserves the original hardware run, which completed
+in 3,987 host seconds using 16 validation workers. Its frozen launcher recorded
+the old timing equations, so that report's old LPN error still fails. Do not
+use it as the corrected-model result. `128-add2-full-corrected.json` rechecks
+the exact same RTL output files and binary with the new timing details;
+`128-add2-full-audit.json` independently audits that complete result.
+Validation workers execute separate HALT-drained kernels; hardware latency
+is the sum of their cycle counts, not their parallel host wall time.
+
+The scale cache, packed QST stores, compact ACT/FIFO capacities and pinned
+weight-cache proposals are **not included** in this measured architecture.
+Their gates and forecasts are separate. FPGA mapping, Fmax, a physical HBM
+controller and the 100x target remain unproven.
+

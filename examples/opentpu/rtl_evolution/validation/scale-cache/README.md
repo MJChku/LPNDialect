@@ -62,5 +62,7 @@ speedup has been established for this buffer. The current LPN equations model
 the uncached RTL; the workload tool explicitly records that it does **not**
 validate cached-RTL LPN timing. Conflicts and conservative invalidation can
 reduce the traffic benefit, so a hit-rate result alone is not a cycle-speedup
-claim. The full uncached 48-kernel changed-RTL run and corrected timing audit
-also remain in progress. The 100x goal has not been reached.
+claim. The [full uncached 48-kernel replay and corrected timing audit](../matrix-retirement/README.md#complete-inference-validation)
+have completed: 15.2522x fewer cycles, bit-exact states and 4.8019% worst LPN
+kernel error. This cache is not part of that measured result. The 100x goal
+has not been reached.

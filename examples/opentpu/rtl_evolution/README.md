@@ -1,5 +1,14 @@
 # RTL architecture validation
 
+**Latest complete validated result:** the 128-engine, two-cycle-adder RTL runs
+the unchanged SmolLM2-135M 128-input/32-output inference in **8,708,822 cycles**,
+versus **132,828,263** originally: **15.2522x fewer hardware cycles**. All 48
+complete numerical states and generated IDs are preserved. Corrected LPN is
+2.6649% low overall, with 4.8019% worst kernel error. See the
+[full replay and fresh audit](validation/matrix-retirement/README.md#complete-inference-validation).
+This is a cycle result; FPGA fit, board integration and clock remain unverified.
+The older measurements below retain their original reproduction details.
+
 Recent FPGA work: [physical scale traffic and ordered matrix retirement](validation/matrix-retirement/README.md)
 correct the newest timing forecast, and the [scale-line buffer prototype](validation/scale-cache/README.md)
 reduces repeated memory reads with bounded on-chip data storage. Their reports
