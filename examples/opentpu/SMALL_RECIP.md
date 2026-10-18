@@ -71,6 +71,15 @@ diagnostic reaches only 25.245× and is not an FPGA candidate. The 100× target
 remains open. The latest audited full RTL result is the earlier
 [128-engine architecture at 12.7717×](FPGA_REDUCTIONS.md).
 
+The updated dependency-only diagnostic, using the lookup latencies and the
+shorter adder, gives 105,306–113,246 cycles for the two selected prefill kernels
+and 35,133–35,253 for decode, before unit contention, finite windows and memory
+service. Unlimited unbudgeted renaming reduces the corresponding prefill paths
+to 81,636–83,936 and barely changes decode. This is neither an LPN prediction
+nor a physical limit; it still charges complete QACT-to-MM command dependencies
+and excludes row streaming. It identifies matrix, quantizer and vector latency
+as continuing structural costs. See `critical-add2.json`.
+
 ## Reproduce
 
 Apply `small-recip.patch` after all eight patches in [LOOKUP_SCALE.md](LOOKUP_SCALE.md)

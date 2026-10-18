@@ -44,12 +44,15 @@ def main():
     p.add_argument('--matrix-rows',type=int,default=128)
     p.add_argument('--fp-mul-latency',type=int,choices=(1,2),default=2)
     p.add_argument('--fp-add-latency',type=int,choices=(1,2,3,4),default=4)
+    p.add_argument('--lookup-scale',action='store_true')
+    p.add_argument('--scalar-recip-lookup',action='store_true')
     a=p.parse_args()
     from examples.opentpu.workload import use_checkout
     from examples.opentpu.shape_workload import resolve_static
     from examples.opentpu.compact import dependencies
     from examples.opentpu.model import Timing,OpenTPU,bank_write_cycles
     from examples.opentpu.e2e import digest,atomic_json
+    from examples.opentpu.retained_inputs import verified_program
     use_checkout(a.opentpu_root.resolve())
     from opentpu import Config,isa as I,waits as W
     reference=json.loads((a.case/'report.json').read_text())
@@ -59,14 +62,15 @@ def main():
     t=Timing(batch_rows=a.matrix_rows,matrix_row_lanes=a.matrix_rows,dram_bytes_per_cycle=2816,dram_port_bytes=2816,
         fifo_chunks=128*a.matrix_rows,scale_lanes=a.matrix_rows,epilogue_lanes=1,unified_dram=True,scalar_store_bytes=256,
         quant_row_banks=8,quant_store_buffered=True,vector_row_contexts=4,
-        fp_mul_latency=a.fp_mul_latency,fp_add_latency=a.fp_add_latency)
+        fp_mul_latency=a.fp_mul_latency,fp_add_latency=a.fp_add_latency,
+        quant_scale_lookup=a.lookup_scale,scalar_recip_lookup=a.scalar_recip_lookup)
     results=[]
     for index in map(int,a.indices.split(',')):
         record=reference['kernels'][index];source=a.case/'kernels'/f'{index:04d}'
         for sid in range(cfg.S):
             if digest(source/f'prog_{sid}.hex')!=record['input_sha256'][f'prog_{sid}.hex']:
                 raise ValueError('program changed')
-        programs=[[I.Instr.decode(w) for w in json.loads((source/f'program_{sid}.json').read_text())]
+        programs=[[I.Instr.decode(words) for words in verified_program(source,sid)[0]]
                   for sid in range(cfg.S)]
         workload=replace(resolve_static(original,programs,record['args']),config=cfg)
         model=object.__new__(OpenTPU);model.workload=workload;model.timing=t
@@ -109,7 +113,7 @@ def main():
     atomic_json(a.output,dict(scope=__doc__,records=results,
         reference_sha256=digest(a.case/'report.json'),script_sha256=digest(Path(__file__)),
         timing=asdict(t),source_sha256={name:digest(Path(__file__).with_name(name))
-            for name in ('model.py','compact.py','workload.py','shape_workload.py')},
+            for name in ('model.py','compact.py','workload.py','shape_workload.py','retained_inputs.py')},
         exclusions=['No unit contention or window capacity','MM weights assumed ready',
                     'Renaming mode has unlimited versions and unbudgeted ports/storage'],
         hardware_implemented=False))
