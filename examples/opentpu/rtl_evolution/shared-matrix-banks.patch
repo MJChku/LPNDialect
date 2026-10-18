@@ -1,0 +1,72 @@
+--- a/rtl/mxu/otpu_mxu_parallel.sv
++++ b/rtl/mxu/otpu_mxu_parallel.sv
+@@ -33,7 +33,8 @@
+ );
+   localparam int BW=$clog2(LANES);
+   localparam int CP=2;  // one result, or two contiguous ASCALE/RMAX words
+-  initial if (LANES < CP*P) $fatal(1, "parallel MXU needs >=2 TMEM lanes per engine");
++  initial if (LANES < CP || (LANES & (LANES-1)) != 0 || P<1)
++    $fatal(1, "parallel MXU needs a power-of-two bank count >=2 and >=1 engine");
+   logic reducing;
+   logic [1:0] queue_count, head_epoch, tail_epoch, releases;
+   cmd_t entries [2];
+@@ -47,6 +48,9 @@
+   wire all_done=busy && !(|at_head);
+   logic [P-1:0][CP-1:0] re, we;
+   logic [P-1:0][CP-1:0][31:0] ra, wa, wd;
++  logic [P-1:0][CP-1:0][31:0] core_rdata,held_rdata;
++  logic [P-1:0][CP-1:0][BW-1:0] response_bank;
++  logic [P-1:0][CP-1:0] response_live;
+   logic [P-1:0][$clog2(DEPTH):0] level;
+   logic [P-1:0] starve, block_;
+   logic [31:0] maxima [2][P][ROWS];
+@@ -111,10 +115,29 @@
+       .a_req(a_req[p]), .b_req(b_req[p]), .a_want(a_want[p]), .b_want(b_want[p]),
+       .a_addr(a_addr[p]), .b_addr(b_addr[p]), .a_gnt(mem_gnt[p]), .b_gnt(mem_gnt[p]),
+       .a_rvalid(a_rvalid[p]), .b_rvalid(b_rvalid[p]), .a_rdata(a_rdata[p]), .b_rdata(b_rdata[p]),
+-      .t_ren(re[p]), .t_raddr(ra[p]), .t_rdata(t_rdata[CP*p+:CP]),
++      .t_ren(re[p]), .t_raddr(ra[p]), .t_rdata(core_rdata[p]),
+       .t_wen(we[p]), .t_waddr(wa[p]), .t_wdata(wd[p]), .t_gnt(cg[p]), .rmax_write(rm[p]), .head_epoch(epochs[p]));
+   end
+ 
++  // Requests use physical bank-indexed lanes, rather than reserving two lanes
++  // permanently for every engine. A RAM response belongs to the requesting
++  // engine even if another engine uses that bank while the requester stalls.
++  // Route a fresh response directly and retain it at the next edge; its input
++  // then holds until that engine advances, as with the old private lane.
++  for (genvar p=0;p<P;p++) begin : g_response
++    for (genvar l=0;l<CP;l++) begin : g_lane
++      always_ff @(posedge clk)
++        if (rst) response_live[p][l]<=1'b0;
++        else begin
++          response_live[p][l]<=cg[p] && re[p][l];
++          if (cg[p] && re[p][l]) response_bank[p][l]<=ra[p][l][BW-1:0];
++          if (response_live[p][l]) held_rdata[p][l]<=t_rdata[response_bank[p][l]];
++        end
++      assign core_rdata[p][l]=response_live[p][l] ?
++          t_rdata[response_bank[p][l]] : held_rdata[p][l];
++    end
++  end
++
+   // Within the single MXU scratchpad port each bank has one address. Select
+   // independently advancing engines. Even identical reads use separate lane
+   // requests in the slice's counters, so emit at most one read per bank.
+@@ -140,13 +163,14 @@
+         if (okay) begin
+           selected[p]=1'b1;
+           for (int l=0;l<CP;l++) begin
+-            t_ren[CP*p+l]=re[p][l]; t_raddr[CP*p+l]=ra[p][l];
+             if (re[p][l]) begin
+               bank=int'(ra[p][l][BW-1:0]); read_used[bank]=1'b1; read_addr[bank]=ra[p][l];
++              t_ren[bank]=1'b1;t_raddr[bank]=ra[p][l];
++            end
++            if (we[p][l] && !rm[p]) begin
++              bank=int'(wa[p][l][BW-1:0]);write_used[bank]=1'b1;
++              t_wen[bank]=1'b1;t_waddr[bank]=wa[p][l];t_wdata[bank]=wd[p][l];
+             end
+-            t_wen[CP*p+l]=we[p][l] && !rm[p];
+-            t_waddr[CP*p+l]=wa[p][l]; t_wdata[CP*p+l]=wd[p][l];
+-            if (we[p][l] && !rm[p]) write_used[wa[p][l][BW-1:0]]=1'b1;
+           end
+         end
+       end

@@ -1,0 +1,156 @@
+--- a/rtl/vpu/otpu_vpu.sv
++++ b/rtl/vpu/otpu_vpu.sv
+@@ -73,6 +73,7 @@
+   parameter int LANES = 8,
+   parameter int CL    = (LANES >= 8) ? LANES / 4 : 1,   // lanes with the composite functions
+   parameter int SID   = 0,
++  parameter int RED_ROWS = 4, // 1: original row order; 4: interleave disjoint wide sums
+   // WBUF: the TMEM grant only takes writes from a two-entry write buffer, and the pipeline
+   // advances on a registered enable (buffer room) -- for arbiters whose grant depends only on
+   // the VPU's writes (the board's: every read port has its own TMEM copy). 0: everything
+@@ -141,6 +142,8 @@
+   localparam int CBW = $clog2(CBD);
+   initial if (LANES < 4 || LANES > 64 || NP % LANES != 0)
+     $fatal(1, "otpu_vpu: LANES must be a power of two from 4 to 64");
++  initial if (RED_ROWS != 1 && RED_ROWS != 4)
++    $fatal(1, "otpu_vpu: RED_ROWS must be 1 or 4");
+   localparam int TA = 1 + LM + LA;           // stream: the tail's X registers -> slot 0's pacc
+ 
+   localparam f32_t F_NZ = 32'h8000_0000;     // -0: (a*b) + -0 == a*b exactly
+@@ -154,6 +157,21 @@
+   logic [1:0]  bmode;
+   logic [15:0] ir, ic, nch, ch;               // issue: row, column, chunks per row, chunk
+   logic [AW-1:0] a_row, b_row, d_row;         // row base addresses (no multipliers)
++  logic red_parallel;
++  logic [15:0] red_base;
++  logic [2:0] red_width;
++  logic [1:0] red_slot;
++  logic [AW-1:0] red_a,red_b,red_d;
++
++  function automatic logic [AW-1:0] red_step(input logic [AW-1:0] stride,
++                                             input logic [2:0] count);
++    case (count)
++      3'd4: return stride<<2;
++      3'd3: return stride+(stride<<1);
++      3'd2: return stride<<1;
++      default: return stride;
++    endcase
++  endfunction
+   // OUTER: the fill phase (ch counts its chunks up to nfill), the C and D addresses, the flags
+   logic        filling;
+   logic [15:0] nfill;
+@@ -276,7 +294,11 @@
+   always_ff @(posedge clk)
+     if (rst) red_gap <= '0;
+     else if (en) begin
+-      if (issuing && iss_ok && is_sum) red_gap <= 3'(RED_II - 1);
++      if (issuing && iss_ok && is_sum) begin
++        if (red_parallel)
++          red_gap <= (3'(red_slot)+1==red_width && red_width<LA) ? 3'(LA)-red_width : 3'd0;
++        else red_gap <= 3'(RED_II - 1);
++      end
+       else if (red_gap != 0) red_gap <= red_gap - 1'b1;
+     end
+   wire              iss_ok = !(C8 && comp_f(func) && c_hold) && iss_thr &&
+@@ -421,6 +443,7 @@
+     logic             first;     // reductions: chunk index < RL (partials start at +0)
+     logic             final_;    // reductions: chunk index >= nch - RL (partials become final)
+     logic [7:0]       sub;       // chunk index mod RL
++    logic [1:0]       red_ctx;   // independent row partials in the wide sum datapath
+     logic             sq;        // func == V_RSSQ (the squarer's operand select, from a flip-flop)
+     logic             dot;       // func == V_RDOT (the product's B operand, from a flip-flop)
+     logic             fill;      // an OUTER fill chunk (not written): into the column buffers
+@@ -511,10 +534,12 @@
+     logic             first;
+     logic             final_;
+     logic [7:0]       sub;
++    logic [1:0]       red_ctx;
+   } rm_t;
+   rm_t m0r;
+   assign m0r = '{v: m0.v, tag: m0.tag, waddr: m0.waddr, row_last: m0.row_last,
+-                 all_last: m0.all_last, first: m0.first, final_: m0.final_, sub: m0.sub};
++                 all_last: m0.all_last, first: m0.first, final_: m0.final_, sub: m0.sub,
++                 red_ctx: m0.red_ctx};
+ 
+   function automatic logic live(input rm_t m, input logic [7:0] t);
+     return m.v && m.tag == t;
+@@ -1079,7 +1104,16 @@
+       f32_t tq, prev;
+       assign rfb[l] = F_ZERO;
+       otpu_fmul #(.LAT(LM)) u_sq (.clk, .en, .a(sa), .b(sb), .y(tq));
+-      if (RL - LA >= 1) begin : g_fbq
++      if (LANES == 64 && RED_ROWS == 4) begin : g_rows
++        // Four row contexts share these exact multipliers/adders. A same-edge
++        // result bypass supports the four-cycle recurrence without an extra
++        // write/read clock. First chunks start from +0, as in isum_64.
++        f32_t partials[4];
++        always_ff @(posedge clk)
++          if (en && red_act && is_sum && live(mt,tag)) partials[mt.red_ctx]<=pacc[l];
++        assign prev = mtq.first ? F_ZERO :
++            (mt.v && mt.red_ctx==mtq.red_ctx) ? pacc[l] : partials[mtq.red_ctx];
++      end else if (RL - LA >= 1) begin : g_fbq
+         // the loop's last stage is a flip-flop with a sync clear (the first chunks' +0): no
+         // shift-register LUT and no mux in front of the adder
+         f32_t fbq, fbd;
+@@ -1453,6 +1487,24 @@
+         if (h_empty) begin
+           done_i <= 1'b1;
+         end else begin
++          logic [63:0] out_lo,out_hi,a_lo,a_hi,b_lo,b_hi;
++          logic safe_rows;
++          // Preserve ISA behavior for internally overlapping reductions. The
++          // old row-major schedule may expose earlier stores to later reads.
++          // RDOT's broad B hull is conservative for broadcast operand modes.
++          out_lo=64'(hc.w1);
++          out_hi=out_lo+64'(hc.w4[15:0]-16'd1)*64'(hc.w5[15:0])+1;
++          a_lo=64'(hc.w2);
++          a_hi=a_lo+64'(hc.w4[15:0]-16'd1)*64'(hc.w5[31:16])+64'(hc.w4[31:16]);
++          b_lo=64'(hc.w3);
++          b_hi=b_lo+64'(hc.w4[15:0]-16'd1)*64'(hc.w6[15:0])+64'(hc.w4[31:16]);
++          safe_rows=(out_hi<=a_lo || a_hi<=out_lo) &&
++              (hf!=V_RDOT || out_hi<=b_lo || b_hi<=out_lo);
++          red_parallel<=LANES==64 && RED_ROWS==4 && safe_rows &&
++              (hf==V_RSUM || hf==V_RSSQ || hf==V_RDOT);
++          red_base<='0;red_slot<='0;
++          red_width<=hc.w4[15:0]<4 ? 3'(hc.w4[15:0]) : 3'd4;
++          red_a<=AW'(hc.w2);red_b<=AW'(hc.w3);red_d<=AW'(hc.w1);
+           dst <= AW'(hc.w1); a <= AW'(hc.w2); b <= AW'(hc.w3);
+           rows <= hc.w4[15:0]; cols <= hc.w4[31:16];
+           drs <= hc.w5[15:0]; ars <= hc.w5[31:16];
+@@ -1519,11 +1571,35 @@
+           mi.first <= (ch < 16'(RL));
+           mi.final_ <= (ch + 16'(RL) >= nch);
+           mi.sub <= 8'(ch % 16'(RL));
++          mi.red_ctx <= red_parallel ? red_slot : 2'd0;
+           mi.sq <= (func == V_RSSQ);
+           mi.dot <= (func == V_RDOT);
+           mi.cb <= CBW'(ch);
+           mi.col <= ic;
+-          if (irow_last) begin
++          if (red_parallel) begin
++            if (3'(red_slot)+1<red_width) begin
++              red_slot<=red_slot+1'b1;
++              ir<=ir+1'b1;
++              a_row<=a_row+AW'(ars);b_row<=b_row+AW'(brs);d_row<=d_row+AW'(drs);
++            end else if (!irow_last) begin
++              red_slot<='0;ir<=red_base;
++              a_row<=red_a;b_row<=red_b;d_row<=red_d;
++              ic<=ic+iwid;ch<=ch+1'b1;
++            end else begin
++              logic [15:0] next_base;
++              next_base=red_base+16'(red_width);
++              red_base<=next_base;red_slot<='0;ir<=next_base;
++              ic<='0;ch<='0;
++              red_a<=red_a+red_step(AW'(ars),red_width);
++              red_b<=red_b+red_step(AW'(brs),red_width);
++              red_d<=red_d+red_step(AW'(drs),red_width);
++              a_row<=red_a+red_step(AW'(ars),red_width);
++              b_row<=red_b+red_step(AW'(brs),red_width);
++              d_row<=red_d+red_step(AW'(drs),red_width);
++              red_width<=rows-next_base<4 ? 3'(rows-next_base) : 3'd4;
++              if (next_base>=rows) issuing<=1'b0;
++            end
++          end else if (irow_last) begin
+             ic <= '0; ch <= '0;
+             a_row <= a_row + AW'(ars);
+             b_row <= b_row + AW'(brs);

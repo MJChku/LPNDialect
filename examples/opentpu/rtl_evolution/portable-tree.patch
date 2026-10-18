@@ -1,0 +1,79 @@
+--- a/rtl/vpu/otpu_vtree.sv
++++ b/rtl/vpu/otpu_vtree.sv
+@@ -22,6 +22,35 @@
+   output f32_t       root_o,     // root, from a copy of its register (LN2): for a far load
+   output logic       root_v
+ );
++  localparam int NP = 64;                    // isum_64 partials
++  localparam int RL = NP / LANES;            // partial loop length in chunks
++  localparam int LW = $clog2(LANES);
++  localparam int LR = $clog2(RL);             // row levels
++
++  function automatic int tree_h(input int j);   // pairs of row level j
++    return RL >> (j + 1);
++  endfunction
++  function automatic int tree_i(input int j);   // issue offset I_j of row level j
++    int t;
++    t = tree_h(0);
++    for (int i = 1; i <= j; i++)
++      t = t - tree_h(i) + RL * ((LA + 2 * tree_h(i) + RL - 1) / RL);
++    return t;
++  endfunction
++  // level j >= 1 reads row r from tr_y delayed tree_da(j), row r + H delayed tree_db(j)
++  function automatic int tree_da(input int j);
++    return tree_i(j) - tree_i(j - 1) - LA;
++  endfunction
++  function automatic int tree_db(input int j);
++    return tree_da(j) - tree_h(j);
++  endfunction
++  function automatic int tree_dmax();
++    int m;
++    m = 1;
++    for (int j = 1; j < LR; j++) if (tree_da(j) > m) m = tree_da(j);
++    return m;
++  endfunction
++
+   if (LANES >= 32) begin : g_wide
+     // Capture the 64 ISA partials in their original index order. With 32 lanes
+     // sub 0 precedes sub 1; with 64 lanes the whole row arrives at once.
+@@ -48,9 +77,6 @@
+       else if (en) valid <= {valid[6*LA-2:0],cap && row_last};
+     assign root=tree[6][0], root_o=tree[6][0], root_v=valid[6*LA-1];
+   end else begin : g_fold
+-  localparam int NP = 64;                    // isum_64 partials
+-  localparam int RL = NP / LANES;            // partial loop length in chunks
+-  localparam int LW = $clog2(LANES);
+ 
+   // Folding tree (level n = 32, 16, .., 1: x[i] += x[i+n], i < n), streamed. Partial p sits in
+   // row p / LANES, lane p % LANES, and a row's final partials arrive on `pacc` one row per
+@@ -62,30 +88,6 @@
+   // alone), so the adders are never double-booked and nothing stalls (TP: the last row level
+   // issues one cycle early, in residue 0, which no level uses). Lane levels (n < LANES)
+   // run on a dedicated pipeline of adders (see xl).
+-  localparam int LR = $clog2(RL);             // row levels
+-  function automatic int tree_h(input int j);   // pairs of row level j
+-    return RL >> (j + 1);
+-  endfunction
+-  function automatic int tree_i(input int j);   // issue offset I_j of row level j
+-    int t;
+-    t = tree_h(0);
+-    for (int i = 1; i <= j; i++)
+-      t = t - tree_h(i) + RL * ((LA + 2 * tree_h(i) + RL - 1) / RL);
+-    return t;
+-  endfunction
+-  // level j >= 1 reads row r from tr_y delayed tree_da(j), row r + H delayed tree_db(j)
+-  function automatic int tree_da(input int j);
+-    return tree_i(j) - tree_i(j - 1) - LA;
+-  endfunction
+-  function automatic int tree_db(input int j);
+-    return tree_da(j) - tree_h(j);
+-  endfunction
+-  function automatic int tree_dmax();
+-    int m;
+-    m = 1;
+-    for (int j = 1; j < LR; j++) if (tree_da(j) > m) m = tree_da(j);
+-    return m;
+-  endfunction
+   // LN2: the three lane levels of LANES = 8 fold onto two adders (see u_ln), root 2 cycles later
+   localparam bit LN2 = (LANES == 8) && (RL == 8) && (LA == 4);
+   // TP (LN2's tree): the last row level issues one cycle early, in the free residue 0, so every

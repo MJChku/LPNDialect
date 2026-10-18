@@ -1,0 +1,42 @@
+{
+  "phases": {
+    "prefill": {
+      "matrix_macs": 13977575424,
+      "modeled_stream_bytes": 1912798464,
+      "rtl_cycles": 10862492,
+      "kernels": 16,
+      "memory_cycle_lower_bound_at_2816": 679260.8181818182,
+      "compute_cycle_lower_bound_at_2048_mac_lanes": 6824988.0
+    },
+    "decode": {
+      "matrix_macs": 4490606592,
+      "modeled_stream_bytes": 4512599296,
+      "rtl_cycles": 4573504,
+      "kernels": 32,
+      "memory_cycle_lower_bound_at_2816": 1602485.5454545454,
+      "compute_cycle_lower_bound_at_2048_mac_lanes": 2192679.0
+    }
+  },
+  "total": {
+    "matrix_macs": 18468182016,
+    "modeled_stream_bytes": 6425397760,
+    "rtl_cycles": 15435996,
+    "kernels": 48,
+    "memory_cycle_lower_bound_at_2816": 2281746.3636363638,
+    "compute_cycle_lower_bound_at_2048_mac_lanes": 9017667.0
+  },
+  "reference_cycles": 132828263,
+  "target_cycles": {
+    "100": 1328282.63,
+    "1000": 132828.263
+  },
+  "stream_scope": "Matrix data/scales, LD/ST and QST data; excludes scale writes/padding/controller overhead. Existing instruction stream, no persistent weight cache.",
+  "minimum_stream_bytes_per_cycle_for_target": {
+    "100": 4837.3724197537695,
+    "1000": 48373.72419753769
+  },
+  "minimum_macs_per_cycle_for_target": {
+    "100": 13903.804505822682,
+    "1000": 139038.0450582268
+  }
+}

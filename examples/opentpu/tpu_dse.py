@@ -25,6 +25,7 @@ class Architecture:
     latency: int = 8
     ceiling_only: bool = False
     buffered_quant: bool = False
+    vector_row_contexts: int = 1
 
 
 def architectures():
@@ -32,6 +33,7 @@ def architectures():
         Architecture('validated_32x1', 32, 1, 2816),
         Architecture('fpga_quant_32x1', 32, 1, 2816, buffered_quant=True),
         Architecture('fpga_quant_128x1', 128, 1, 2816, buffered_quant=True),
+        Architecture('fpga_quant_reductions_128x1', 128, 1, 2816, buffered_quant=True,vector_row_contexts=4),
         Architecture('fpga_quant_256x1', 256, 1, 2816, buffered_quant=True),
         Architecture('fpga_quant_64x4', 64, 4, 2816, buffered_quant=True),
         Architecture('rows128_memory2816', 128, 1, 2816),
@@ -106,7 +108,8 @@ def run_kernel(task):
         dram_bytes_per_cycle=point.bandwidth, dram_port_bytes=point.bandwidth,
         dram_latency=point.latency, fifo_chunks=128 * point.rows, scale_lanes=point.rows,
         unified_dram=True, scalar_store_bytes=256, epilogue_lanes=max(1, point.columns // 2),
-        quant_row_banks=8 if point.buffered_quant else 0,quant_store_buffered=point.buffered_quant)
+        quant_row_banks=8 if point.buffered_quant else 0,quant_store_buffered=point.buffered_quant,
+        vector_row_contexts=point.vector_row_contexts)
     prepared = ReusableTiming(Path(task['compiler']), Path(task['cache']), capacity=65536).prepare(
         workload, timing, directory / 'timing.tables')
     cycles, core, _, log = prepared.run()

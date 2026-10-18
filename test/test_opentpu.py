@@ -16,6 +16,42 @@ from examples.opentpu.workload import load, use_checkout
 class OpenTPUTest(unittest.TestCase):
   tool = None
 
+  def test_interleaved_sum_credit_spacing_and_alias_fallback(self):
+    from examples.opentpu.model import interleaved_sum_span,disjoint_sum_rows
+    from opentpu import isa as I
+    self.assertEqual(interleaved_sum_span(1,4),12)
+    self.assertEqual(interleaved_sum_span(3,4),14)
+    self.assertEqual(interleaved_sum_span(4,4),15)
+    self.assertEqual(interleaved_sum_span(5,4),28)
+    self.assertEqual(interleaved_sum_span(8,9),71)
+    self.assertTrue(disjoint_sum_rows(I.vop(I.V_RSSQ,4096,0,0,8,193,1,200,0),I))
+    self.assertFalse(disjoint_sum_rows(I.vop(I.V_RSSQ,0,0,0,8,193,200,200,0),I))
+    self.assertFalse(disjoint_sum_rows(I.vop(I.V_RDOT,8192,0,8192,8,193,202,200,202),I))
+    with self.assertRaises(ValueError):Timing(vector_row_contexts=2)
+
+  def test_interleaved_sum_native_matches_expanded(self):
+    from examples.opentpu.shape_workload import resolve_static
+    from opentpu import Config,isa as I
+    cfg=Config(D=64,MCOLS=1,LANES=64,DRAM_BYTES=1<<20)
+    program=[I.vop(I.V_RSSQ,4096,0,8192,8,576,1,576,576),
+             I.vop(I.V_RDOT,4104,0,8192,5,193,1,200,202),I.halt()]
+    workload=resolve_static(cfg,[program])
+    normal=CompactOpenTPU(workload,Timing(dram_bytes_per_cycle=64)).net.python_simulator().run(max_time=10000)
+    timing=Timing(vector_row_contexts=4,dram_bytes_per_cycle=64)
+    times=[]
+    with tempfile.TemporaryDirectory() as directory:
+      for cls in (OpenTPU,CompactOpenTPU):
+        model=cls(workload,timing);sim=model.net.python_simulator()
+        times.append(sim.run(max_time=10000))
+        self.assertEqual(sim.place_dicts('program_completed'),[{}])
+        if self.tool:
+          ir=Path(directory)/f'{cls.__name__}.mlir';binary=ir.with_suffix('.native')
+          ir.write_text(model.build())
+          subprocess.run([self.tool,str(ir),'-o',str(binary)],check=True,capture_output=True,text=True)
+          self.assertEqual(native_observation(binary)[0],times[-1])
+    self.assertEqual(*times)
+    self.assertLess(times[0],normal)
+
   def test_buffered_quantizer_credits_and_rtl_pipeline(self):
     from examples.opentpu.model import buffered_quant_cycles
     # Independent actual-RTL measurements: row-bank wrap and FIFO pressure.

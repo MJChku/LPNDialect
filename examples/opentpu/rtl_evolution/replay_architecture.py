@@ -22,6 +22,7 @@ def main():
     p.add_argument('--indices',default='0,15,16,47',help='Kernel indices or all')
     p.add_argument('--workers',type=int,default=8)
     p.add_argument('--rtl-timeout',type=float,default=7200)
+    p.add_argument('--matrix-rows',type=int,choices=(32,128),default=128)
     a=p.parse_args()
     from examples.opentpu.e2e import atomic_json,digest
     from examples.opentpu.model import Timing
@@ -44,15 +45,16 @@ def main():
     sources += [project/name for name in ('model.py','components.py','compact.py','native_timing.py','shape_workload.py')]
     sources += [Path(__file__).resolve(),Path(__file__).with_name('parallel_inference.py')]
     hashes={str(s):digest(s) for s in sources}
-    timing=Timing(batch_rows=32,matrix_row_lanes=32,dram_bytes_per_cycle=2816,dram_port_bytes=2816,
-        dram_latency=8,fifo_chunks=4096,scale_lanes=32,unified_dram=True,scalar_store_bytes=256,
-        epilogue_lanes=1,quant_row_banks=8,quant_store_buffered=True)
+    uarch=dict(reference['uarch'],MXU_ROWS=a.matrix_rows)
+    timing=Timing(batch_rows=a.matrix_rows,matrix_row_lanes=a.matrix_rows,dram_bytes_per_cycle=2816,dram_port_bytes=2816,
+        dram_latency=8,fifo_chunks=128*a.matrix_rows,scale_lanes=a.matrix_rows,unified_dram=True,scalar_store_bytes=256,
+        epilogue_lanes=1,quant_row_banks=8,quant_store_buffered=True,vector_row_contexts=4)
     records=[];failures=[];started=time.perf_counter()
     def save(status):
         result=dict(status=status,pid=os.getpid(),scope=__doc__,case=str(case),
             reference_report_sha256=digest(case/'report.json'),rtl_and_model_source_sha256=hashes,
             project_revision=subprocess.check_output(['git','rev-parse','HEAD'],cwd=project,text=True).strip(),
-            timing=asdict(timing),uarch=reference['uarch'],indices=indices,workers=a.workers,
+            timing=asdict(timing),uarch=uarch,indices=indices,workers=a.workers,
             seconds=time.perf_counter()-started,records=sorted(records,key=lambda r:r['step']),failures=failures,
             upstream_schedule_unchanged=True,all_dram_and_tmem_bit_exact=bool(records) and
                 all(r['all_dram_and_tmem_bit_exact'] for r in records),
@@ -84,7 +86,7 @@ def main():
             for name in (f'prog_{sid}.hex',f'dram_{sid}.bin',f'program_{sid}.json',
                          f'golden_dram_{sid}.bin',f'golden_tmem_{sid}.bin'):
                 os.link(source/name,target/name)
-        task=dict(index=index,directory=str(target),config=reference['config'],uarch=reference['uarch'],
+        task=dict(index=index,directory=str(target),config=reference['config'],uarch=uarch,
             opentpu_root=str(a.opentpu_root.resolve()),baseline=str(a.baseline.resolve()),baseline_job=None,
             compiler=str(a.compiler.resolve()),cache=str(output/'timing-cache'),timing=asdict(timing),
             instructions=record['instructions'],args=record['args'],input_sha256=record['input_sha256'],

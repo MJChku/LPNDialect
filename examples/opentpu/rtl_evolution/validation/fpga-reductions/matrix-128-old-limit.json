@@ -1,0 +1,10 @@
+{
+  "case": {
+    "name": "unit_259x8",
+    "n": 259,
+    "m": 8,
+    "kb": 3,
+    "unit": true
+  },
+  "error": "RTL simulation failed:\n[0] %Fatal: otpu_mxu_parallel.sv:36: Assertion failed in tb_top.dut.g_slice[0].u_slice.g_parallel.u_mxu: parallel MXU needs >=2 TMEM lanes per engine\n%Error: /home/ubuntu/FeSens-openTPU-fpga-reductions/rtl/mxu/otpu_mxu_parallel.sv:36: Verilog $stop\nAborting...\n"
+}

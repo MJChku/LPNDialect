@@ -54,6 +54,29 @@ def buffered_quant_cycles(rows,chunks,capacity,banks,scale_words=0):
   return popped[-1]+10+(4 if scale_words else 0)
 
 
+def disjoint_sum_rows(ins,I):
+  """Conservative RTL address-hull check before changing a sum's row order."""
+  w=ins.w
+  rows,cols=w[3]&65535,w[3]>>16
+  drs,ars,brs=w[4]&65535,w[4]>>16,w[5]&65535
+  dst_hi=w[0]+(rows-1)*drs+1
+  a_hi=w[1]+(rows-1)*ars+cols
+  b_hi=w[2]+(rows-1)*brs+cols
+  return (dst_hi<=w[1] or a_hi<=w[0]) and ((w[5]>>16)&255!=I.V_RDOT or
+      dst_hi<=w[2] or b_hi<=w[0])
+
+
+def interleaved_sum_span(rows,chunks,contexts=4,adder_latency=4):
+  """Last issue clock relative to the first, with bounded row contexts."""
+  cycles=0
+  for base in range(0,rows,contexts):
+    width=min(contexts,rows-base)
+    cycles+=chunks*width+(chunks-1)*max(0,adder_latency-width)
+    if base+width<rows:
+      cycles+=max(0,adder_latency-width)
+  return max(0,cycles-1)
+
+
 @dataclass(frozen=True)
 class Timing:
   dram_latency: int = 8
@@ -75,6 +98,7 @@ class Timing:
   # Zero retains the original validated quantizer approximation.
   quant_row_banks: int = 0
   quant_store_buffered: bool = False
+  vector_row_contexts: int = 1
 
   def __post_init__(self):
     if min(self.dram_latency,self.dram_bytes_per_cycle,self.window,self.fifo_chunks,
@@ -90,6 +114,8 @@ class Timing:
       raise ValueError('quant_row_banks must be zero or a power of two from 2 to 256')
     if self.quant_store_buffered and not self.quant_row_banks:
       raise ValueError('buffered QST requires explicit row banks')
+    if self.vector_row_contexts not in (1,4):
+      raise ValueError('vector_row_contexts must be 1 or 4')
     for name in ('matrix_row_lanes','scale_lanes','dram_port_bytes','scalar_store_bytes'):
       value=getattr(self,name)
       if not isinstance(value,int) or value<(0 if name in ('dram_port_bytes','scalar_store_bytes') else 1):
@@ -301,6 +327,8 @@ class OpenTPU:
             # once, after the last issued partial (read/product/add/tree/retire).
             interval=4//partial_chunks
             latency=(chunks-1)*interval+36
+            if t.vector_row_contexts==4 and cfg.LANES==64 and disjoint_sum_rows(ins,I):
+              latency=interleaved_sum_span(rows,ceil(cols/64))+36
             if function==I.V_RDOT and rows<=256 and w[4]&65535==1:
               latency+=ceil(rows/cfg.LANES)
           else:

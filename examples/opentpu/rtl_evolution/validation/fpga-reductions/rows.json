@@ -1,0 +1,289 @@
+{
+  "status": "complete",
+  "records": [
+    {
+      "name": "rsum_1x193",
+      "rtl_cycles": 49,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rssq_1x193",
+      "rtl_cycles": 49,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rdot_1x193",
+      "rtl_cycles": 49,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rsum_2x193",
+      "rtl_cycles": 50,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rssq_2x193",
+      "rtl_cycles": 50,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rdot_2x193",
+      "rtl_cycles": 50,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rsum_3x193",
+      "rtl_cycles": 51,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rssq_3x193",
+      "rtl_cycles": 51,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rdot_3x193",
+      "rtl_cycles": 51,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rsum_4x193",
+      "rtl_cycles": 52,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rssq_4x193",
+      "rtl_cycles": 52,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rdot_4x193",
+      "rtl_cycles": 52,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rsum_5x193",
+      "rtl_cycles": 65,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rssq_5x193",
+      "rtl_cycles": 65,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rdot_5x193",
+      "rtl_cycles": 65,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rsum_8x193",
+      "rtl_cycles": 68,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rssq_8x193",
+      "rtl_cycles": 68,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rdot_8x193",
+      "rtl_cycles": 68,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rsum_9x193",
+      "rtl_cycles": 81,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rssq_9x193",
+      "rtl_cycles": 81,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rdot_9x193",
+      "rtl_cycles": 81,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rsum_8x1",
+      "rtl_cycles": 44,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rssq_8x1",
+      "rtl_cycles": 44,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rdot_8x1",
+      "rtl_cycles": 44,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rsum_8x63",
+      "rtl_cycles": 44,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rssq_8x63",
+      "rtl_cycles": 44,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rdot_8x63",
+      "rtl_cycles": 44,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rsum_8x64",
+      "rtl_cycles": 44,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rssq_8x64",
+      "rtl_cycles": 44,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rdot_8x64",
+      "rtl_cycles": 44,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rsum_8x65",
+      "rtl_cycles": 52,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rssq_8x65",
+      "rtl_cycles": 52,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rdot_8x65",
+      "rtl_cycles": 52,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rsum_8x576",
+      "rtl_cycles": 108,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rssq_8x576",
+      "rtl_cycles": 108,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rdot_8x576",
+      "rtl_cycles": 108,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rsum_9x641",
+      "rtl_cycles": 165,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rssq_9x641",
+      "rtl_cycles": 165,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rdot_9x641",
+      "rtl_cycles": 165,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rdot_mode1_r3",
+      "rtl_cycles": 52,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rdot_mode2_r3",
+      "rtl_cycles": 52,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rdot_mode3_r3",
+      "rtl_cycles": 52,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rdot_mode1_r4",
+      "rtl_cycles": 53,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rdot_mode2_r4",
+      "rtl_cycles": 53,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rdot_mode3_r4",
+      "rtl_cycles": 53,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rdot_mode1_r5",
+      "rtl_cycles": 66,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rdot_mode2_r5",
+      "rtl_cycles": 66,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rdot_mode3_r5",
+      "rtl_cycles": 66,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rdot_mode1_r8",
+      "rtl_cycles": 69,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rdot_mode2_r8",
+      "rtl_cycles": 69,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "rdot_mode3_r8",
+      "rtl_cycles": 69,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "alias_a",
+      "rtl_cycles": 161,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "alias_b",
+      "rtl_cycles": 161,
+      "all_tmem_bit_exact": true
+    },
+    {
+      "name": "mul_after_sums",
+      "rtl_cycles": 45,
+      "all_tmem_bit_exact": true
+    }
+  ],
+  "row_contexts": 4,
+  "stall": 0,
+  "write_buffer": 0,
+  "simulator": "/home/ubuntu/FeSens-openTPU-fpga-reductions/build/verilator/tb_vpu_rows_6d844d785519/Vtb_vpu_rows",
+  "source_sha256": {
+    "/home/ubuntu/FeSens-openTPU-fpga-reductions/rtl/vpu/otpu_fp.sv": "16fc71077a7c7f9c7ef98ee8791c27eee340d6704cbdb0f1852104c64b2bbd48",
+    "/home/ubuntu/FeSens-openTPU-fpga-reductions/rtl/vpu/otpu_fpipe.sv": "50d13a22ce78a2e02f9e92a301e6626696dd8adbb88362960dd1385e34634cee",
+    "/home/ubuntu/FeSens-openTPU-fpga-reductions/rtl/top/otpu_pkg.sv": "ca41c32141fdf224d24481842b182063ce5692a976176eca82c4c78d4d7ad3c6",
+    "/home/ubuntu/FeSens-openTPU-fpga-reductions/rtl/vpu/otpu_vtree.sv": "9b32ae3a18d7fb4fa60003f9d71bb01c10946e5fdfbc241b24a86759cb7afd30",
+    "/home/ubuntu/FeSens-openTPU-fpga-reductions/rtl/vpu/otpu_se_comp.sv": "6928f8dfcbcedf4870769c7c2732a965672def10a0442dcf486b83d04a2e1bd7",
+    "/home/ubuntu/FeSens-openTPU-fpga-reductions/rtl/vpu/otpu_se_tail.sv": "e5ba0921b440a500afe20902d7a1cfd47f254750a31a1e374b2cee9b1e4ed094",
+    "/home/ubuntu/FeSens-openTPU-fpga-reductions/rtl/vpu/otpu_vpu.sv": "5bd9a3a8e7967e3d68dba56f7b4f1fdbe41dd3d98a538ba6307db18435c19194",
+    "/home/ubuntu/LPNDialect-fpga-reductions/examples/opentpu/rtl_evolution/tb_vpu_rows.sv": "b02ca53dba79aef13bacc88514806f861ed4180424365d2b40b833f540bc2f96"
+  }
+}

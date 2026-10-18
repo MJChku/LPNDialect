@@ -15,24 +15,30 @@ def main():
     ap.add_argument('--vector-lanes',type=int,default=64)
     ap.add_argument('--stores',type=int,default=64)
     ap.add_argument('--depth',type=int,default=64)
+    ap.add_argument('--lanes',type=int,default=64)
+    ap.add_argument('--host-opt',choices=('0','3'),default='0')
+    ap.add_argument('--tree-source',type=Path,help='Explicit alternate reduction-tree source for portability gates')
     a=ap.parse_args()
     sys.path.insert(0,str(a.opentpu_root.resolve()))
     import numpy as np
     from opentpu import Config,isa as I,quant as Q,rtlsim
     from opentpu.isasim import Machine
-    cfg=Config(D=a.depth,MCOLS=4,ACT_ROWS=16,LANES=64)
+    if a.tree_source:
+        rtlsim.RTL_SOURCES=[str(a.tree_source.resolve()) if s=='vpu/otpu_vtree.sv' else s for s in rtlsim.RTL_SOURCES]
+    cfg=Config(D=a.depth,MCOLS=4,ACT_ROWS=16,LANES=a.lanes)
     ua=dict(MXU_ROWS=a.rows,VPU_LANES=a.vector_lanes,QST_LANES=a.stores)
     a.output.mkdir(parents=True,exist_ok=True)
     rtlsim.VFLAGS[rtlsim.VFLAGS.index('-j')+1]='12'
+    rtlsim.VFLAGS+=['-CFLAGS','-O'+a.host_opt]
     results=[]
     # Partial engine groups, bank-wrapping output strides, activation replay,
     # scale dependencies, fused accumulation, matrix max, and packed weights.
-    cases=[dict(name='unit_67x8',n=67,m=8,kb=3,unit=True),
+    cases=[dict(name=f'unit_{2*a.rows+3}x8',n=2*a.rows+3,m=8,kb=3,unit=True),
            dict(name='unit_5x3',n=5,m=3,kb=1,unit=True),
-           dict(name='scaled_65x8',n=65,m=8,kb=5),
-           dict(name='acc_ascale_rmax',n=67,m=3,kb=3,unit=True,acc=True,ascale=True,rmax=True),
-           dict(name='fp4_pair',n=35,m=2,kb=3,wf=I.W4F,pair=True),
-           dict(name='unit_64x1',n=64,m=1,kb=7,unit=True),
+           dict(name=f'scaled_{2*a.rows+1}x8',n=2*a.rows+1,m=8,kb=5),
+           dict(name='acc_ascale_rmax',n=2*a.rows+3,m=3,kb=3,unit=True,acc=True,ascale=True,rmax=True),
+           dict(name='fp4_pair',n=a.rows+3,m=2,kb=3,wf=I.W4F,pair=True),
+           dict(name=f'unit_{2*a.rows}x1',n=2*a.rows,m=1,kb=7,unit=True),
            *[dict(name=f'qst_stride_{es}',n=35,m=3,kb=3,unit=True,qst_stride=es)
              for es in (1,4,17)]]
     for c in cases:

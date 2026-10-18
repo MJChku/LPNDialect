@@ -1,0 +1,139 @@
+{
+  "status": "complete",
+  "config": {
+    "S": 1,
+    "D": 64,
+    "MCOLS": 4,
+    "ACT_BLOCKS": 64,
+    "TMEM_WORDS": 65536,
+    "DRAM_BYTES": 1048576,
+    "IMEM_WORDS": 65536,
+    "LANES": 64,
+    "PAIR": false,
+    "DSTEP": false,
+    "STREAM": false,
+    "ACT_ROWS": 16,
+    "SEQ_WC": false
+  },
+  "uarch": {
+    "MXU_ROWS": 128,
+    "VPU_LANES": 64,
+    "QST_LANES": 64
+  },
+  "records": [
+    {
+      "case": {
+        "name": "unit_259x8",
+        "n": 259,
+        "m": 8,
+        "kb": 3,
+        "unit": true
+      },
+      "rtl_cycles": 311,
+      "seconds": 453.00362243689597,
+      "all_dram_and_tmem_bit_exact": true
+    },
+    {
+      "case": {
+        "name": "unit_5x3",
+        "n": 5,
+        "m": 3,
+        "kb": 1,
+        "unit": true
+      },
+      "rtl_cycles": 130,
+      "seconds": 10.077542843297124,
+      "all_dram_and_tmem_bit_exact": true
+    },
+    {
+      "case": {
+        "name": "scaled_257x8",
+        "n": 257,
+        "m": 8,
+        "kb": 5
+      },
+      "rtl_cycles": 441,
+      "seconds": 17.093584518879652,
+      "all_dram_and_tmem_bit_exact": true
+    },
+    {
+      "case": {
+        "name": "acc_ascale_rmax",
+        "n": 259,
+        "m": 3,
+        "kb": 3,
+        "unit": true,
+        "acc": true,
+        "ascale": true,
+        "rmax": true
+      },
+      "rtl_cycles": 316,
+      "seconds": 14.09171125665307,
+      "all_dram_and_tmem_bit_exact": true
+    },
+    {
+      "case": {
+        "name": "fp4_pair",
+        "n": 131,
+        "m": 2,
+        "kb": 3,
+        "wf": 2,
+        "pair": true
+      },
+      "rtl_cycles": 156,
+      "seconds": 10.084228733554482,
+      "all_dram_and_tmem_bit_exact": true
+    },
+    {
+      "case": {
+        "name": "unit_256x1",
+        "n": 256,
+        "m": 1,
+        "kb": 7,
+        "unit": true
+      },
+      "rtl_cycles": 166,
+      "seconds": 11.077379319816828,
+      "all_dram_and_tmem_bit_exact": true
+    },
+    {
+      "case": {
+        "name": "qst_stride_1",
+        "n": 35,
+        "m": 3,
+        "kb": 3,
+        "unit": true,
+        "qst_stride": 1
+      },
+      "rtl_cycles": 200,
+      "seconds": 11.083382235839963,
+      "all_dram_and_tmem_bit_exact": true
+    },
+    {
+      "case": {
+        "name": "qst_stride_4",
+        "n": 35,
+        "m": 3,
+        "kb": 3,
+        "unit": true,
+        "qst_stride": 4
+      },
+      "rtl_cycles": 200,
+      "seconds": 11.08040864020586,
+      "all_dram_and_tmem_bit_exact": true
+    },
+    {
+      "case": {
+        "name": "qst_stride_17",
+        "n": 35,
+        "m": 3,
+        "kb": 3,
+        "unit": true,
+        "qst_stride": 17
+      },
+      "rtl_cycles": 200,
+      "seconds": 11.08075581304729,
+      "all_dram_and_tmem_bit_exact": true
+    }
+  ]
+}

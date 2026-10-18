@@ -13,6 +13,9 @@ The buffered-quantizer follow-up completes the same full inference in
 The current [FPGA-first architecture exploration](TPU_EXPLORATION.md) retains
 this verified baseline and reports new predictions separately from fresh RTL
 validation. Its 100x cycle-reduction target has not yet been achieved.
+The next [shared-bank and interleaved-reduction candidate](FPGA_REDUCTIONS.md)
+predicts 13.067x and has passed numerical component gates; full inference RTL
+validation is still required.
 
 **Inference workload correction:** earlier `e2e.py`, `replay_e2e.py` and
 weight-free FPGA sequence results used a custom token-by-token prompt loop.
