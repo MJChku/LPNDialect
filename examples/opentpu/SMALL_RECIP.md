@@ -66,7 +66,7 @@ All 48 retained kernels were timed in LPN with ACT streaming and quantizer looku
 | 128 engines, original FP stages | 9,348,242 | 14.209× |
 | 128 engines, two-stage adder | 8,156,090 | 16.286× |
 
-These are forecasts, pending real-inference RTL replay. An oversized ASIC
+These are forecasts, pending full-inference RTL replay. An oversized ASIC
 diagnostic reaches only 25.245× and is not an FPGA candidate. The 100× target
 remains open. The latest audited full RTL result is the earlier
 [128-engine architecture at 12.7717×](FPGA_REDUCTIONS.md).
@@ -79,6 +79,28 @@ to 81,636–83,936 and barely changes decode. This is neither an LPN prediction
 nor a physical limit; it still charges complete QACT-to-MM command dependencies
 and excludes row streaming. It identifies matrix, quantizer and vector latency
 as continuing structural costs. See `critical-add2.json`.
+
+## Completed four-kernel RTL pilot
+
+The 32-engine candidate with original 2/4 FP stages, ACT streaming and quantizer
+lookup has completed original kernels 0, 15, 16 and 47. All canonical inputs and
+full DRAM/TMEM outputs are bit-exact. A fresh audit rereads sources, executable,
+ROM tables, raw RTL/native logs, instruction counts and memory dumps.
+
+| Matching 32-engine variant | Selected RTL cycles |
+| --- | ---: |
+| Quantizer lookup, original VPU reciprocal | 1,560,162 |
+| Quantizer lookup + small-row reciprocal | 1,538,292 |
+
+The small-row unit saves **1.40% of cycles**, a **1.0142×** incremental ratio.
+The candidate's LPN prediction is 1,516,594 cycles: **−1.4105% total error** and
+**1.6558% worst kernel error**. All four kernels satisfy the 10% tolerance.
+Its 8.1682× ratio to original RTL applies only to these four kernels at 32
+engines; it does not replace the 128-engine full-run result. The 128-engine,
+shorter-adder pilot and full-inference validation remain pending.
+
+Evidence is `inference-pilot.json` and `inference-pilot-audit.json` under the
+small-reciprocal validation directory.
 
 ## Reproduce
 
