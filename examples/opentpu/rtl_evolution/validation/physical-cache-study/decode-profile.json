@@ -1,0 +1,174 @@
+{
+  "status": "complete",
+  "scope": "Observe existing Python LPN transactions without changing model or scheduler.\n\nProfiling is deliberately separate from simulation speed measurements. Command\nwaits overlap across units and must not be added into an end-to-end runtime.\n",
+  "kernel": 16,
+  "architecture": "physical_128x1_add2",
+  "cycles": 108415.0,
+  "native_cycles": 108415.0,
+  "native_python_cycles_agree": true,
+  "observer_seconds": 146.19873521849513,
+  "program_json_sha256": {
+    "0": "d0cfcb995eb454885223567974802c72acd44e03c0bf0d730424a74ec55d781a"
+  },
+  "source_sha256": {
+    "/home/ubuntu/LPNDialect-physical-calibration/examples/opentpu/timeline.py": "3090f1f890a7d8c53c988cf57c87ceb81fea6015af1983e71399b563179c0130",
+    "/home/ubuntu/LPNDialect-physical-calibration/examples/opentpu/model.py": "12962304bfd2d04a93f0d5bfd58bf9fc5ddfeaa9c5c9063ef084574cfef6ed7f",
+    "/home/ubuntu/LPNDialect-physical-calibration/examples/opentpu/compact.py": "9435d6e770c5e049739824190f718d8a7a1f5c943b06b8126098eb4f29b37e0d",
+    "/home/ubuntu/LPNDialect-physical-calibration/examples/opentpu/components.py": "2a2c684193855cf947d7a21f2aff71cc631c6ae648be0e4a29bc14180e65996b",
+    "/home/ubuntu/LPNDialect-physical-calibration/examples/opentpu/activation_stream.py": "83446e2b0a14629f734d3496b8f9e6b34afa6eeecd1d28f1a3996a01d9127aaa",
+    "/home/ubuntu/LPNDialect-physical-calibration/examples/opentpu/shape_workload.py": "d0f1db9e2bba7f3b1b1b119e9483b7ebc7ce17823d343ac135b26e5e51b91169",
+    "/home/ubuntu/LPNDialect-physical-calibration/examples/opentpu/retained_inputs.py": "50111fb14a2678b615b34f8b726fd6d4b804b3ef76a116a4d139a00086d18b59"
+  },
+  "reference_report_sha256": "f037e875e73760f7c3d70b6851d0ce4f01bbdd9f0c62ef27ccd75ba5659f07fe",
+  "prediction_report_sha256": "f69f124a2ea707bcbfc4f34a08079b9d9dba46c3c8d22cfc7928be33b93b24c4",
+  "resources": {
+    "s0_unit_0_resource": {
+      "busy_cycles": 8524.0,
+      "utilization": 0.0786238066688189,
+      "holds": 160
+    },
+    "s0_dram_port_b": {
+      "busy_cycles": 81204.0,
+      "utilization": 0.749010745745515,
+      "holds": 3620
+    },
+    "s0_dram_port_a": {
+      "busy_cycles": 17062.0,
+      "utilization": 0.15737674676013466,
+      "holds": 3190
+    },
+    "s0_unit_2_resource": {
+      "busy_cycles": 24213.0,
+      "utilization": 0.223336254208366,
+      "holds": 692
+    },
+    "s0_mxu_0_compute": {
+      "busy_cycles": 53314.0,
+      "utilization": 0.4917585204999308,
+      "holds": 3280
+    },
+    "s0_mxu_0_retirement_resource": {
+      "busy_cycles": 15732.0,
+      "utilization": 0.1451090716229304,
+      "holds": 1102
+    },
+    "s0_unit_3_resource": {
+      "busy_cycles": 30041.0,
+      "utilization": 0.27709265323064153,
+      "holds": 3823
+    }
+  },
+  "operations": {
+    "LI": {
+      "resource_or_selection_wait": 0.0,
+      "commands": 1.0,
+      "start_to_completion": 0.0
+    },
+    "LD": {
+      "resource_or_selection_wait": 1221.0,
+      "commands": 154.0,
+      "start_to_completion": 5422.0
+    },
+    "QACT": {
+      "resource_or_selection_wait": 6810.0,
+      "commands": 512.0,
+      "start_to_completion": 19297.0
+    },
+    "MM": {
+      "commands": 1102.0,
+      "start_to_completion": 183132.0
+    },
+    "copy": {
+      "resource_or_selection_wait": 4845.0,
+      "commands": 99.0,
+      "start_to_completion": 1854.0
+    },
+    "LOOP": {
+      "resource_or_selection_wait": 0.0,
+      "commands": 1.0,
+      "start_to_completion": 0.0
+    },
+    "rssq": {
+      "resource_or_selection_wait": 74.0,
+      "commands": 61.0,
+      "start_to_completion": 2318.0
+    },
+    "mul": {
+      "resource_or_selection_wait": 13409.0,
+      "commands": 1531.0,
+      "start_to_completion": 20141.0
+    },
+    "add": {
+      "resource_or_selection_wait": 6271.0,
+      "commands": 571.0,
+      "start_to_completion": 7481.0
+    },
+    "rsqrt": {
+      "resource_or_selection_wait": 61.0,
+      "commands": 61.0,
+      "start_to_completion": 3599.0
+    },
+    "sub": {
+      "resource_or_selection_wait": 240.0,
+      "commands": 120.0,
+      "start_to_completion": 1560.0
+    },
+    "QST": {
+      "resource_or_selection_wait": 27630.0,
+      "commands": 180.0,
+      "start_to_completion": 5940.0
+    },
+    "fill": {
+      "resource_or_selection_wait": 3552.0,
+      "commands": 450.0,
+      "start_to_completion": 6750.0
+    },
+    "max": {
+      "resource_or_selection_wait": 2400.0,
+      "commands": 90.0,
+      "start_to_completion": 1170.0
+    },
+    "exp2sub": {
+      "resource_or_selection_wait": 9030.0,
+      "commands": 180.0,
+      "start_to_completion": 12060.0
+    },
+    "rsum": {
+      "resource_or_selection_wait": 3990.0,
+      "commands": 90.0,
+      "start_to_completion": 2700.0
+    },
+    "recip": {
+      "resource_or_selection_wait": 6840.0,
+      "commands": 330.0,
+      "start_to_completion": 13170.0
+    },
+    "exp2": {
+      "resource_or_selection_wait": 240.0,
+      "commands": 240.0,
+      "start_to_completion": 15600.0
+    },
+    "ADDI": {
+      "resource_or_selection_wait": 0.0,
+      "commands": 31.0,
+      "start_to_completion": 0.0
+    },
+    "ST": {
+      "resource_or_selection_wait": 165.0,
+      "commands": 6.0,
+      "start_to_completion": 3102.0
+    },
+    "HALT": {
+      "resource_or_selection_wait": 0.0,
+      "commands": 1.0,
+      "start_to_completion": 0.0
+    }
+  },
+  "command_trace_sha256": "f1fc4ff91c2a3ff2b94c44976984591b6fbded9d77866bccf24627117ec0ca73",
+  "resource_trace_sha256": "c0bf765904f10342f8e87ff1faacbfb05d71b0479ef320f7e1a55885ce7d14bb",
+  "limitations": [
+    "Wait totals overlap across commands; do not sum as elapsed time",
+    "Matrix streaming dependency waits are not attributed",
+    "Profiling wall time is not a simulator performance measurement"
+  ]
+}
