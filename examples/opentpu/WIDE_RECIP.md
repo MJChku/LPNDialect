@@ -51,3 +51,24 @@ PYTHONPATH=. python -m examples.opentpu.tpu_dse \
 These proposals retain 128 matrix engines, ACT streaming, quantizer lookup and
 the two-stage adder. The latest audited full RTL result remains
 [12.7717×](FPGA_REDUCTIONS.md), and the 100× objective remains open.
+
+## Complete-workload forecasts
+
+All 48 original kernels completed with canonical instruction identity verified:
+
+| Lookup lanes | Predicted cycles | Reduction vs original RTL | Total raw on-chip bytes |
+| --- | ---: | ---: | ---: |
+| 2 | 8,145,020 | 16.308× | 14,994,432 |
+| 4 | 8,133,950 | 16.330× | 17,117,696 |
+| 8 | 8,034,334 | 16.533× | 21,364,224 |
+| 16 | 7,968,798 | 16.669× | 29,857,280 |
+
+All pass the provisional capacity screen, which still excludes physical mapping
+and clock proof. The single-lane small-row candidate forecasts 8,156,090 cycles
+(16.286×). Thus 16 lanes improve predicted cycles by only 2.35% while adding
+14,862,848 table bytes. Extensive reciprocal replication is not selected for
+the next FPGA implementation. The matching RTL pilots for the smaller unit
+remain separate measurements. All 30 existing integration tests pass, as do
+the three new proposal tests and two original small-row timing tests.
+
+Evidence is in [validation/wide-recip](rtl_evolution/validation/wide-recip).

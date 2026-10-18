@@ -40,6 +40,9 @@ class Architecture:
 
 def architectures():
     return [
+        *[Architecture(f'proposal_geometry_{rows}x{cols}_add2',rows,cols,2816,buffered_quant=True,
+                       vector_row_contexts=4,quant_scale_lookup=True,scalar_recip_lookup=True,
+                       fp_add_latency=2) for rows,cols in ((128,1),(64,2),(32,4),(16,8))],
         *[Architecture(f'proposal_recip{lanes}_128x1_add2',128,1,2816,buffered_quant=True,
                        vector_row_contexts=4,activation_streaming=True,quant_scale_lookup=True,
                        reciprocal_lookup_lanes=lanes,fp_add_latency=2) for lanes in (2,4,8,16)],
