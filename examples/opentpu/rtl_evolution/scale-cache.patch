@@ -1,0 +1,190 @@
+--- a/opentpu/rtlsim.py
++++ b/opentpu/rtlsim.py
+@@ -22,7 +22,7 @@
+ 
+ RTL_SOURCES = [
+     "vpu/otpu_fp.sv", "vpu/otpu_fpipe.sv", "top/otpu_pkg.sv", "mem/otpu_dram.sv", "mem/otpu_tmem.sv",
+-    "mem/otpu_native_dram.sv", "mem/otpu_actram.sv", "seq/otpu_seq.sv",
++    "mem/otpu_scale_cache.sv", "mem/otpu_native_dram.sv", "mem/otpu_actram.sv", "seq/otpu_seq.sv",
+     "vpu/otpu_vtree.sv", "dma/otpu_dma.sv", "mxu/otpu_mxu.sv", "mxu/otpu_mxu_parallel.sv", "tech/generic/otpu_tech_dsp.sv",
+     "tech/generic/otpu_tech_ram.sv",
+     "vpu/otpu_recip_rom.sv", "vpu/otpu_qscale_lookup.sv", "vpu/otpu_quant.sv", "vpu/otpu_se_comp.sv", "vpu/otpu_se_tail.sv", "vpu/otpu_vpu.sv",
+diff --git a/rtl/mem/otpu_scale_cache.sv b/rtl/mem/otpu_scale_cache.sv
+new file mode 100644
+--- /dev/null
++++ b/rtl/mem/otpu_scale_cache.sv
+@@ -0,0 +1,75 @@
++// Per-MXU 32-byte read-through cache. Repeated requests coalesce even before
++// the first response. Entries cannot be replaced until all accepted readers
++// retire, so a write invalidation cannot change an older request's snapshot.
++// Hits retain the backing port's fixed latency and response order.
++module otpu_scale_cache #(
++  parameter int LAT=8, ENTRIES=16
++) (
++  input logic clk, rst, flush,
++  input logic accept,
++  input logic [31:0] addr, // word address, independent of grant
++  output logic ready, miss, idle,
++  output logic mem_req,
++  output logic [31:0] mem_addr,
++  input logic mem_valid,
++  input logic [255:0] mem_data,
++  output logic rvalid,
++  output logic [255:0] rdata
++);
++  localparam int IW=$clog2(ENTRIES), RW=$clog2(LAT+1);
++  initial if (LAT<2 || ENTRIES<2 || (ENTRIES&(ENTRIES-1))!=0)
++    $fatal(1,"scale cache requires LAT>=2 and power-of-two ENTRIES>=2");
++  logic [ENTRIES-1:0] valid;
++  logic [28:0] tags [ENTRIES];
++  logic [RW-1:0] refs [ENTRIES];
++  // One fill write and one registered read, with explicit fill forwarding.
++  logic [255:0] data [ENTRIES];
++  logic [255:0] cached_read;
++  logic [LAT-1:0] live, is_miss;
++  logic [IW-1:0] slots [LAT];
++  wire [IW-1:0] index=addr[3+:IW];
++  wire hit=valid[index] && tags[index]==addr[31:3];
++  wire fill=mem_valid && live[LAT-1] && is_miss[LAT-1];
++  assign ready=!rst && !flush && (hit || refs[index]==0);
++  assign miss=!hit;
++  assign mem_req=accept && ready && miss;
++  assign mem_addr=addr;
++  assign rvalid=live[LAT-1];
++  assign rdata=is_miss[LAT-1] ? mem_data : cached_read;
++  always_comb begin
++    idle=1'b1;
++    for (int i=0;i<ENTRIES;i++) if (refs[i]!=0) idle=1'b0;
++  end
++  always_ff @(posedge clk) begin
++    if (rst) begin
++      valid<='0; live<='0; is_miss<='0;
++      for (int i=0;i<ENTRIES;i++) refs[i]<='0;
++    end else begin
++      live[0]<=accept && ready;
++      is_miss[0]<=miss;
++      slots[0]<=index;
++      for (int i=1;i<LAT;i++) begin
++        live[i]<=live[i-1]; is_miss[i]<=is_miss[i-1]; slots[i]<=slots[i-1];
++      end
++      if (flush) valid<='0;
++      if (mem_req) begin valid[index]<=1'b1; tags[index]<=addr[31:3]; end
++      if (fill) data[slots[LAT-1]]<=mem_data;
++      if (fill && slots[LAT-1]==slots[LAT-2]) cached_read<=mem_data;
++      else cached_read<=data[slots[LAT-2]];
++      for (int i=0;i<ENTRIES;i++) begin
++        case ({accept && ready && index==IW'(i),live[LAT-1] && slots[LAT-1]==IW'(i)})
++          2'b10: refs[i]<=refs[i]+1'b1;
++          2'b01: refs[i]<=refs[i]-1'b1;
++          default: ;
++        endcase
++      end
++    end
++  end
++`ifndef SYNTHESIS
++  always @(posedge clk) if (!rst) begin
++    if (accept && !ready) $fatal(1,"scale cache accepted while blocked");
++    if (live[LAT-1] && is_miss[LAT-1] && !mem_valid)
++      $fatal(1,"scale cache backing latency differs");
++  end
++`endif
++endmodule
+--- a/rtl/mxu/otpu_mxu.sv
++++ b/rtl/mxu/otpu_mxu.sv
+@@ -408,7 +408,8 @@
+   // not gated with b_req: the address (and the slice's parity of it) does not wait for b_gnt
+   assign b_addr = chunk_addr >> 2;
+   assign a_req  = go_iss && need_a;
+-  assign a_addr = !a_req ? '0 : (i_sws || i_rsc) ? (srow_addr >> 2) : (scale_addr >> 2);
++  // Cache lookup precedes arbitration, so the address must not depend on grant.
++  assign a_addr = (i_sws || i_rsc) ? (srow_addr >> 2) : (scale_addr >> 2);
+   assign act_blk = 16'(c_ab) + (c_pair ? {ck[14:0], 1'b0} : ck);
+   // past an odd KB the high block is not the MM's (block ab + KB, outside its ACT range: a later
+   // QACT may be writing it, and the scoreboard does not hold that one back): the high rows read
+--- a/rtl/top/otpu_top.sv
++++ b/rtl/top/otpu_top.sv
+@@ -26,6 +26,7 @@
+   parameter bit ACT_STREAMING = 0,
+   parameter int MXU_ROWS   = 1,
+   parameter int MEM_BYTES  = 2816,
++  parameter int SCALE_CACHE_ENTRIES = 0,
+   parameter int VPU_LANES  = LANES,
+   parameter int MXU_IMPL   = 2,
+   parameter int MXU_CL     = 16,
+@@ -111,6 +112,36 @@
+       // One shared byte budget, including the original DMA/scalar links. A lane's
+       // data and scale requests are admitted atomically; rotate priority each cycle.
+       int unsigned rr;
++      logic [MXU_ROWS-1:0] scale_ready, scale_miss, scale_idle;
++      logic [MXU_ROWS-1:0] mem_a_req, mem_a_valid;
++      logic [MXU_ROWS-1:0][31:0] mem_a_addr;
++      logic [MXU_ROWS-1:0][255:0] mem_a_data;
++      logic dram_idle;
++      wire scale_flush=a_inval || (a_req && a_we) || (b_req && b_we) || sw_req || (|x_sw_req);
++      if (SCALE_CACHE_ENTRIES>0) begin : g_scale_cache
++        for (genvar p=0;p<MXU_ROWS;p++) begin : g_lane
++          otpu_scale_cache #(.LAT(DRAM_LAT),.ENTRIES(SCALE_CACHE_ENTRIES)) u_cache (
++            .clk, .rst(sys_rst || rst || ld_start), .flush(scale_flush),
++            .accept(x_a_req[p]), .addr(x_a_addr[p]), .ready(scale_ready[p]),
++            .miss(scale_miss[p]), .idle(scale_idle[p]),
++            .mem_req(mem_a_req[p]), .mem_addr(mem_a_addr[p]),
++            .mem_valid(mem_a_valid[p]), .mem_data(mem_a_data[p]),
++            .rvalid(x_a_valid[p]), .rdata(x_a_data[p]));
++`ifndef SYNTHESIS
++          longint unsigned requests, misses;
++          always_ff @(posedge clk) begin
++            if (sys_rst || rst) begin requests<=0; misses<=0; end
++            else if (x_a_req[p]) begin requests<=requests+1; if (scale_miss[p]) misses<=misses+1; end
++            if (dump) $display("SCACHE s=%0d p=%0d req=%0d miss=%0d",s,p,requests,misses);
++          end
++`endif
++        end
++      end else begin : g_scale_direct
++        assign scale_ready='1, scale_miss='1, scale_idle='1;
++        assign mem_a_req=x_a_req, mem_a_addr=x_a_addr;
++        assign x_a_valid=mem_a_valid, x_a_data=mem_a_data;
++      end
++      assign rd_idle=dram_idle && (&scale_idle);
+       always_ff @(posedge clk) if (sys_rst) rr <= 0;
+         else rr <= (rr + 1 == MXU_ROWS) ? 0 : rr + 1;
+       always_comb begin
+@@ -122,15 +153,16 @@
+         x_gnt = '0;
+         for (int q = 0; q < MXU_ROWS; q++) begin
+           p = (rr + q) % MXU_ROWS;
+-          cost = (x_a_want[p] ? 32 : 0) + (x_b_want[p] ? D : 0);
+-          if (cost > 0 && cost <= left) begin x_gnt[p] = 1'b1; left -= cost; end
++          cost = ((x_a_want[p] && scale_miss[p]) ? 32 : 0) + (x_b_want[p] ? D : 0);
++          if ((x_a_want[p] || x_b_want[p]) && (!x_a_want[p] || scale_ready[p]) && cost <= left) begin x_gnt[p] = 1'b1; left -= cost; end
+         end
+       end
+       otpu_dram #(.WORDS(DRAM_WORDS), .D(D), .LAT(DRAM_LAT), .SID(s), .P(MXU_ROWS), .VL(LANES)) u_dram (
+         .clk, .a_req, .a_we, .a_addr, .a_wdata, .a_be, .a_rvalid, .a_rdata,
+         .sw_req, .sw_addr, .sw_wdata, .sw_be,
+-        .b_req, .b_tag, .b_we, .b_wmask, .b_wdata, .b_addr, .b_rvalid, .b_rtag, .b_rdata, .rd_idle,
+-        .x_a_req, .x_b_req, .x_a_addr, .x_b_addr, .x_a_valid, .x_b_valid, .x_a_data, .x_b_data,
++        .b_req, .b_tag, .b_we, .b_wmask, .b_wdata, .b_addr, .b_rvalid, .b_rtag, .b_rdata, .rd_idle(dram_idle),
++        .x_a_req(mem_a_req), .x_b_req, .x_a_addr(mem_a_addr), .x_b_addr,
++        .x_a_valid(mem_a_valid), .x_b_valid, .x_a_data(mem_a_data), .x_b_data,
+         .x_sw_req, .x_sw_addr, .x_sw_data, .x_sw_be,
+         .dump);
+     end else begin : g_native
+--- a/sim/verilator/tb_top.sv
++++ b/sim/verilator/tb_top.sv
+@@ -24,6 +24,7 @@
+   parameter bit ACT_STREAMING = 0;
+   parameter int MXU_ROWS   = 1;
+   parameter int MEM_BYTES  = 2816;
++  parameter int SCALE_CACHE_ENTRIES = 0;
+   parameter int VPU_LANES  = LANES;
+   parameter int MXU_IMPL   = 2;
+   parameter int MXU_CL     = 16;
+@@ -66,7 +67,7 @@
+ 
+   otpu_top #(.S(S), .D(D), .MCOLS(MCOLS), .ACT_BLOCKS(ACT_BLOCKS), .ACT_ROWS(ACT_ROWS), .TMEM_WORDS(TMEM_WORDS),
+              .IMEM_WORDS(IMEM_WORDS), .DRAM_WORDS(DRAM_WORDS), .DRAM_LAT(DRAM_LAT),
+-             .LANES(LANES), .WIN(WIN), .RPB(RPB), .WPB(WPB), .QST_LANES(QST_LANES), .MXU_ROWS(MXU_ROWS), .ACT_STREAMING(ACT_STREAMING), .VPU_LANES(VPU_LANES), .MXU_IMPL(MXU_IMPL), .MXU_CL(MXU_CL), .MXU_E(MXU_E), .QUANT_XD(QUANT_XD), .QUANT_LOOKUP(QUANT_LOOKUP), .VPU_SCALAR_RECIP(VPU_SCALAR_RECIP), .VPU_RECIP_COEFF_FILE(VPU_RECIP_COEFF_FILE), .VPU_RECIP_CORRECTION_FILE(VPU_RECIP_CORRECTION_FILE), .QUANT_COEFF_FILE(QUANT_COEFF_FILE), .QUANT_CORRECTION_FILE(QUANT_CORRECTION_FILE), .VPU_CL(VPU_CL), .ULANES(ULANES), .MEM_BYTES(MEM_BYTES), .AXI(AXI), .FIFO_DEPTH(FIFO_DEPTH),
++             .LANES(LANES), .WIN(WIN), .RPB(RPB), .WPB(WPB), .QST_LANES(QST_LANES), .MXU_ROWS(MXU_ROWS), .ACT_STREAMING(ACT_STREAMING), .VPU_LANES(VPU_LANES), .MXU_IMPL(MXU_IMPL), .MXU_CL(MXU_CL), .MXU_E(MXU_E), .QUANT_XD(QUANT_XD), .QUANT_LOOKUP(QUANT_LOOKUP), .VPU_SCALAR_RECIP(VPU_SCALAR_RECIP), .VPU_RECIP_COEFF_FILE(VPU_RECIP_COEFF_FILE), .VPU_RECIP_CORRECTION_FILE(VPU_RECIP_CORRECTION_FILE), .QUANT_COEFF_FILE(QUANT_COEFF_FILE), .QUANT_CORRECTION_FILE(QUANT_CORRECTION_FILE), .VPU_CL(VPU_CL), .ULANES(ULANES), .MEM_BYTES(MEM_BYTES), .SCALE_CACHE_ENTRIES(SCALE_CACHE_ENTRIES), .AXI(AXI), .FIFO_DEPTH(FIFO_DEPTH),
+              .TMEM_IMPL(TMEM_IMPL), .TMEM_RQ(TMEM_RQ), .TMEM_NCP(TMEM_NCP),
+              .TMEM_NSB(TMEM_NSB), .TMEM_SBP(TMEM_SBP), .TMEM_SBH(TMEM_SBH),
+              .TMEM_RPL(TMEM_RPL), .TMEM_TDP(TMEM_TDP), .TMEM_GST(TMEM_GST),

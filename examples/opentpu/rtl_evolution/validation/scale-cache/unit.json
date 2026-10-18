@@ -1,0 +1,60 @@
+{
+  "status": "complete",
+  "scope": "Check scale-cache data, fixed latency, pending hits, conflicts and invalidation.",
+  "records": [
+    {
+      "latency": 2,
+      "entries": 4,
+      "requests": 797,
+      "responses": 796,
+      "misses": 132,
+      "hits": 665,
+      "conflict_stalls": 67,
+      "writes": 4,
+      "cancelled_by_reset": 1,
+      "all_response_bits_and_latencies_match": true,
+      "simulator": "/home/ubuntu/FeSens-openTPU-scale-cache/build/verilator/tb_scale_cache_ea962be947bb/Vtb_scale_cache",
+      "simulator_sha256": "e4602569621a862aad7860576ad874789d79394ea0b549a4a43ba89f6e534766",
+      "build_seconds": 6.227101055905223
+    },
+    {
+      "latency": 8,
+      "entries": 16,
+      "requests": 816,
+      "responses": 810,
+      "misses": 112,
+      "hits": 704,
+      "conflict_stalls": 45,
+      "writes": 4,
+      "cancelled_by_reset": 6,
+      "all_response_bits_and_latencies_match": true,
+      "simulator": "/home/ubuntu/FeSens-openTPU-scale-cache/build/verilator/tb_scale_cache_415e2c3665a0/Vtb_scale_cache",
+      "simulator_sha256": "eeb0426162c720d60b25744c2edc008a51fe1318b7337cc77aec7bc8ed5eabcf",
+      "build_seconds": 5.830769559368491
+    },
+    {
+      "latency": 16,
+      "entries": 16,
+      "requests": 811,
+      "responses": 798,
+      "misses": 107,
+      "hits": 704,
+      "conflict_stalls": 54,
+      "writes": 4,
+      "cancelled_by_reset": 13,
+      "all_response_bits_and_latencies_match": true,
+      "simulator": "/home/ubuntu/FeSens-openTPU-scale-cache/build/verilator/tb_scale_cache_2bf47a496692/Vtb_scale_cache",
+      "simulator_sha256": "4076fd9858cfd6784b59e3c8ac0f24b8821e01d2d943bb039a08f23103d54b9b",
+      "build_seconds": 5.716480465605855
+    }
+  ],
+  "source_sha256": {
+    "/home/ubuntu/FeSens-openTPU-scale-cache/rtl/mem/otpu_scale_cache.sv": "d0e14d182894eb6a80a430782dcc6c6653392895cf0e93c28ba2ed1e624834e0",
+    "/home/ubuntu/LPNDialect-scale-line-cache/examples/opentpu/rtl_evolution/tb_scale_cache.sv": "58eb9ddd6c9440134dd9e49e091e3bc71b7eababd36e32cb8b3eac482be919da",
+    "/home/ubuntu/LPNDialect-scale-line-cache/examples/opentpu/rtl_evolution/check_scale_cache.py": "ebc7de0fb392f96e98a1cb2342c1e6e3d44a064cf345ced432a19f94255f200e"
+  },
+  "limitations": [
+    "Component gate; full-accelerator numerical validation is separate",
+    "FPGA mapping and clock not measured"
+  ]
+}

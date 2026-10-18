@@ -1,5 +1,10 @@
 # RTL architecture validation
 
+Recent FPGA work: [physical scale traffic and ordered matrix retirement](validation/matrix-retirement/README.md)
+correct the newest timing forecast, and the [scale-line buffer prototype](validation/scale-cache/README.md)
+reduces repeated memory reads with bounded on-chip data storage. Their reports
+distinguish completed numerical gates from pending full-workload measurements.
+
 The implemented RTL runs the complete **SmolLM2-135M, 128-input/32-output**
 workload in **15,435,996 cycles**, versus **132,828,263 cycles** for the original
 RTL: **8.6051x fewer hardware cycles at a common clock**. Both execute the same
