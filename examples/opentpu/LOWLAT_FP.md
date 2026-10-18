@@ -122,8 +122,10 @@ python -m examples.opentpu.rtl_evolution.replay_architecture \
   --indices 0,15,16,47 --workers 4 --output /tmp/fp-add2-inference-pilot
 ```
 
-This smaller matrix configuration isolates the arithmetic change. A four-kernel
-pilot cannot establish a complete inference cycle reduction.
+This pilot uses 32 engines to check the arithmetic configuration on real
+programs. Run the same command with `--fp-add-latency 4` and another output
+directory for its matching control. A four-kernel pilot cannot establish a
+complete inference cycle reduction.
 The event-driven runtime, guards and heartbeat caching are unchanged.
 
 Reports and source fingerprints are in
