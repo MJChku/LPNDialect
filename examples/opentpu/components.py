@@ -19,6 +19,7 @@ class CommandInterface:
   publish: object
   compute_offsets: list
   compute_indices: list
+  vector_selector_factory: object = None
   activation: object = None
   activation_producers: object = None
   activation_groups: object = None
@@ -50,6 +51,8 @@ class ExecutionUnit:
     latencies,port_ids,services = parameters.latencies,parameters.port_ids,parameters.services
     vector=VectorPipeline(net,prefix+'_pipeline') if ranks is not None else None
     self.pipeline=vector
+    if vector is not None and interface.vector_selector_factory is not None:
+      select_ready=interface.vector_selector_factory(prefix,vector.state,None,None)
     intervals=services if vector is not None else latencies
     ports = [memory.b,memory.sw]
     activation=interface.activation if kind==2 else None

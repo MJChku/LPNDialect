@@ -294,13 +294,30 @@ class CompactOpenTPU(OpenTPU):
       interface.activation_groups=self._table(prefix+'_act_groups',[
           (c.instruction.w[5]>>16)&255 if c.instruction.op==I.MM else 0 for c in commands])
     vector_ranks=self._table(prefix+'_vector_ranks',ranks)
+    if t.vector_compatible_issue:
+      from .vector_select import vector_selector_factory
+      interface.vector_selector_factory=vector_selector_factory(net,slots,t.window,kinds,begins,ends,
+          indices,metadata,is_done,vector_ranks)
     units = [ExecutionUnit(net,prefix+f"_unit_{u}",u,interface,parameters,memory,
                  vector_ranks if u==W.U_VPU else None)
-             for u in (W.U_DMA,W.U_Q,W.U_VPU,W.U_COLL,5)]
+             for u in (W.U_DMA,W.U_Q,W.U_VPU,W.U_COLL,5)
+             if not (u==W.U_VPU and t.vector_result_chunks)]
+    vectors=[]
+    if t.vector_result_chunks:
+      from .vector_pool import VectorPoolEngine,result_shape
+      shapes=[result_shape(c.instruction,I,cfg.LANES) if c.instruction.op==I.VOP else (0,0) for c in commands]
+      if max(s[0] for s in shapes)>t.vector_result_chunks:
+        raise ValueError('one vector command must fit its finite result store')
+      result_chunks=self._table(prefix+'_vector_result_chunks',[s[0] for s in shapes])
+      result_drains=self._table(prefix+'_vector_result_drains',[s[1] for s in shapes])
+      result_port=net.place(prefix+'_vector_result_port',initial_tokens=1)
+      vectors=[VectorPoolEngine(net,prefix+f'_vpu_{v}',interface,parameters,vector_ranks,
+          result_chunks,result_drains,t.vector_result_chunks,result_port,W.U_VPU)
+          for v in range(t.vector_engines)]
     matrices = [MatrixEngine(net,prefix+f"_mxu_{engine}",cfg,t,interface,
         parameters,memory,W.U_MXU)
         for engine in range(t.matrix_engines)]
-    self.components[sid] = {"memory":memory,"units":units,"matrix_engines":matrices}
+    self.components[sid] = {"memory":memory,"units":units,"matrix_engines":matrices,"vector_engines":vectors}
 
     @net.transition(prefix+"_mark_done")
     def mark_done():

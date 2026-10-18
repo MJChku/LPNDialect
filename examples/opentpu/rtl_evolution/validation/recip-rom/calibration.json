@@ -1,0 +1,38 @@
+{
+  "status": "complete",
+  "scope": "Generate a compact exact table for openTPU's normalized reciprocal sequence.\n\nA 4096-segment fixed-point linear predictor supplies the significand. A signed\n2-bit correction indexed by all 23 input fraction bits restores the original\nNewton sequence bit for bit. This is arithmetic calibration, not workload data.\n",
+  "inputs": 8388608,
+  "coarse_segments": 4096,
+  "fraction_bits": 23,
+  "segment_low_bits": 11,
+  "fixed_point_fraction_bits": 12,
+  "correction_bits": 2,
+  "min_correction": -1,
+  "max_correction": 1,
+  "expected_physical_table_bits": 16986112,
+  "normalized_sequence_reconstructed_all_inputs": true,
+  "reference_float32_sha256": "9e8f89060a787dd2b72478f2c0cd2b50daacd7024d6f7b887aae8d633058e2b9",
+  "normalized_reference": "Separate float32 multiplies/adds: seed 0x7ef311c3, two Newton steps and correction; x=1.fraction",
+  "limitations": [
+    "SV primitive gate is separate",
+    "Scaled/exceptional reciprocal and QACT/VPU integration not yet validated",
+    "FPGA synthesis, inference and clock are not proven"
+  ],
+  "numpy_version": "2.5.4",
+  "generator_sha256": "4d151294fce1651b60672b52c4635b4313adb2879ded0e4ecc007d2f4b49dcc3",
+  "seconds": 3.3934952821582556,
+  "files": {
+    "coeff.hex": {
+      "bytes": 57344,
+      "sha256": "2ed322e9987b727d73cb592a2b886b85c138095f4b7babfee27224477b3ee9a3"
+    },
+    "correction.packed": {
+      "bytes": 2097152,
+      "sha256": "096ac2051550baa1de641f4d36f12b4259dc09889222988ddfd2ec4f3677af4e"
+    },
+    "correction.hex": {
+      "bytes": 16777216,
+      "sha256": "1d868c04b7226b703f299f2c3df4016fe3caf4be7b0c7af7a46a4fb7153fbf10"
+    }
+  }
+}

@@ -26,6 +26,10 @@ class Architecture:
     ceiling_only: bool = False
     buffered_quant: bool = False
     vector_row_contexts: int = 1
+    vector_engines: int = 1
+    vector_result_chunks: int = 0
+    vector_compatible_issue: bool = False
+    window: int = 32
     activation_streaming: bool = False
     fp_mul_latency: int = 2
     fp_add_latency: int = 4
@@ -37,6 +41,27 @@ def architectures():
         Architecture('fpga_quant_32x1', 32, 1, 2816, buffered_quant=True),
         Architecture('fpga_quant_128x1', 128, 1, 2816, buffered_quant=True),
         Architecture('fpga_quant_reductions_128x1', 128, 1, 2816, buffered_quant=True,vector_row_contexts=4),
+        *[Architecture(f'proposal_window{w}_vector2_128x1',128,1,2816,buffered_quant=True,
+                       vector_row_contexts=4,activation_streaming=True,vector_compatible_issue=True,
+                       vector_engines=2,vector_result_chunks=1024,window=w) for w in (128,512)],
+        *[Architecture(f'proposal_asic_window{w}_vector16_1024x1',1024,1,65536,buffered_quant=True,
+                       vector_row_contexts=4,activation_streaming=True,fp_add_latency=1,fp_mul_latency=1,
+                       vector_engines=16,vector_result_chunks=1024,vector_compatible_issue=True,
+                       window=w) for w in (128,512)],
+        Architecture('proposal_compatible_128x1',128,1,2816,buffered_quant=True,
+                     vector_row_contexts=4,activation_streaming=True,vector_compatible_issue=True),
+        Architecture('proposal_compatible_vector2_128x1',128,1,2816,buffered_quant=True,
+                     vector_row_contexts=4,activation_streaming=True,vector_compatible_issue=True,
+                     vector_engines=2,vector_result_chunks=1024),
+        *[Architecture(f'proposal_vector{v}_128x1',128,1,2816,buffered_quant=True,
+                       vector_row_contexts=4,activation_streaming=True,
+                       vector_engines=v,vector_result_chunks=1024) for v in (1,2,4,8)],
+        *[Architecture(f'proposal_vector{v}_128x1_add2',128,1,2816,buffered_quant=True,
+                       vector_row_contexts=4,activation_streaming=True,fp_add_latency=2,
+                       vector_engines=v,vector_result_chunks=1024) for v in (2,4)],
+        Architecture('proposal_asic_vector16_1024x1',1024,1,65536,buffered_quant=True,
+                     vector_row_contexts=4,activation_streaming=True,fp_add_latency=1,fp_mul_latency=1,
+                     vector_engines=16,vector_result_chunks=1024),
         Architecture('experimental_fpga_stream_32x1', 32, 1, 2816, buffered_quant=True,
                      vector_row_contexts=4,activation_streaming=True),
         Architecture('experimental_fpga_stream_128x1', 128, 1, 2816, buffered_quant=True,
@@ -75,7 +100,10 @@ def resources(point, config, clock_mhz):
     macs = config['D'] * point.rows * point.columns
     activation = point.rows * config['ACT_ROWS'] * config['ACT_BLOCKS'] * (config['D'] + 8)
     fifo = point.rows * 128 * config['D']
-    sram = activation + fifo + 4 * config['TMEM_WORDS']
+    vector_results=point.vector_engines*point.vector_result_chunks*64*4
+    # Two private input copies for each extra engine, propagated by every write.
+    vector_read_copies=2*max(0,point.vector_engines-1)*4*config['TMEM_WORDS']
+    sram = activation + fifo + 4 * config['TMEM_WORDS']+vector_results+vector_read_copies
     limits = dict(matrix_mac_lanes=20000, onchip_bytes=64 << 20, memory_bytes_per_cycle=2816)
     # Board is an illustrative reference, not a user-selected target. Reserve
     # 20% of DSPs and half of embedded memory for shell/other units and mapping.
@@ -89,6 +117,12 @@ def resources(point, config, clock_mhz):
     conservative=(macs<=v80_limits['matrix_mac_lanes'] and sram<=v80_limits['onchip_bytes'] and
                   point.bandwidth*clock_mhz/1000<=v80_limits['memory_gbs'])
     return dict(matrix_mac_lanes=macs, onchip_bytes_lower_bound=sram,
+        vector_engines=point.vector_engines,vector_result_bytes=vector_results,
+        additional_private_vector_read_copy_bytes=vector_read_copies,
+        vector_fp32_multiply_sites=272*point.vector_engines,
+        vector_pool_implemented=False if point.vector_result_chunks else None,
+        vector_pool_write_ports=1 if point.vector_result_chunks else None,
+        vector_pool_resource_scope='Result data and private input copies included; VPU pipeline state, DSP mapping, address/control and fanout need synthesis.',
         memory_bytes_per_cycle=point.bandwidth, memory_gbs=point.bandwidth * clock_mhz / 1000,
         provisional_v80_reference=v80,provisional_v80_limits=v80_limits,
         passes_conservative_v80_capacity_screen=conservative,
@@ -123,13 +157,13 @@ def run_kernel(task):
     start = time.perf_counter()
     workload = resolve_static(original, programs, record['args'])
     workload = replace(workload, config=replace(original, MCOLS=point.columns, LANES=64))
-    timing = Timing(batch_rows=point.rows, matrix_row_lanes=point.rows,
+    timing = Timing(window=point.window,batch_rows=point.rows, matrix_row_lanes=point.rows,
         dram_bytes_per_cycle=point.bandwidth, dram_port_bytes=point.bandwidth,
         dram_latency=point.latency, fifo_chunks=128 * point.rows, scale_lanes=point.rows,
         unified_dram=True, scalar_store_bytes=256, epilogue_lanes=max(1, point.columns // 2),
         quant_row_banks=8 if point.buffered_quant else 0,quant_store_buffered=point.buffered_quant,
         vector_row_contexts=point.vector_row_contexts,
-        fp_mul_latency=point.fp_mul_latency,fp_add_latency=point.fp_add_latency,activation_streaming=point.activation_streaming)
+        fp_mul_latency=point.fp_mul_latency,fp_add_latency=point.fp_add_latency,activation_streaming=point.activation_streaming,vector_engines=point.vector_engines,vector_result_chunks=point.vector_result_chunks,vector_compatible_issue=point.vector_compatible_issue)
     prepared = ReusableTiming(Path(task['compiler']), Path(task['cache']), capacity=65536).prepare(
         workload, timing, directory / 'timing.tables')
     cycles, core, _, log = prepared.run()
@@ -181,7 +215,7 @@ def main():
     output.mkdir(parents=True, exist_ok=False)
     project = Path(__file__).resolve().parent
     files = [project / name for name in ('tpu_dse.py', 'model.py', 'compact.py', 'components.py',
-                                       'workload.py', 'shape_workload.py', 'native_timing.py', 'benchmark.py','activation_stream.py')]
+                                       'workload.py', 'shape_workload.py', 'native_timing.py', 'benchmark.py','activation_stream.py','vector_pool.py','vector_select.py')]
     sources = {str(p): digest(p) for p in files}
     observations = {p.name: [] for p in points}
     failures = []

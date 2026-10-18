@@ -1,0 +1,9 @@
+test_compatible_selection_can_bypass_an_independent_blocked_rank (__main__.VectorPoolTest.test_compatible_selection_can_bypass_an_independent_blocked_rank) ... ok
+test_parallel_long_and_short_functions (__main__.VectorPoolTest.test_parallel_long_and_short_functions) ... ok
+test_result_store_backpressure_and_capacity_check (__main__.VectorPoolTest.test_result_store_backpressure_and_capacity_check) ... ok
+test_shared_output_port_bounds_aggregate_throughput (__main__.VectorPoolTest.test_shared_output_port_bounds_aggregate_throughput) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 3.302s
+
+OK

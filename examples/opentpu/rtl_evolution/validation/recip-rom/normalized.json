@@ -1,0 +1,28 @@
+{
+  "status": "complete",
+  "scope": "Check the normalized reciprocal RTL against its original SV arithmetic function.",
+  "tested_inputs": 8388608,
+  "full_reciprocal": false,
+  "exhaustive_normalized_inputs": true,
+  "original_sv_function_bit_exact": true,
+  "enable_holds": 786435,
+  "ports": 2,
+  "latency_enabled_clocks": 4,
+  "build_seconds": 8.040039585903287,
+  "run_seconds": 3.7683785017579794,
+  "simulator": "/home/ubuntu/FeSens-openTPU-act-streaming/build/verilator/tb_recip_rom_b6af43762bbe/Vtb_recip_rom",
+  "simulator_sha256": "bca7ce1da0391f56842c97a6658961bc9480c392b245f6b6fd78944f178c6fb6",
+  "source_and_table_sha256": {
+    "/home/ubuntu/FeSens-openTPU-act-streaming/rtl/vpu/otpu_fp.sv": "b476c83913d88ef5b4bcbc8cc07378ade8b2aeaaf7642b20976bd1fce33cd416",
+    "/home/ubuntu/LPNDialect-vector-pool/examples/opentpu/rtl_evolution/otpu_recip_rom.sv": "08be582b450197ff06a4cf4ecaca0a2fbe540b340176eea6a419982b68768f1a",
+    "/home/ubuntu/LPNDialect-vector-pool/examples/opentpu/rtl_evolution/tb_recip_rom.sv": "9b522f439be3e16f90e1cb27c3e18808352e2cd7f8ff6026cc9042ccf63e75ac",
+    "/home/ubuntu/lpn-runs/tpu-100x/recip-two-bit-table/coeff.hex": "2ed322e9987b727d73cb592a2b886b85c138095f4b7babfee27224477b3ee9a3",
+    "/home/ubuntu/lpn-runs/tpu-100x/recip-two-bit-table/correction.hex": "1d868c04b7226b703f299f2c3df4016fe3caf4be7b0c7af7a46a4fb7153fbf10"
+  },
+  "calibration_report_sha256": "3c9821a5972bc8aa3d1b62192521464206c34273525212fb31dc10d965fb9507",
+  "limitations": [
+    "Normalized primitive only",
+    "Not integrated with QACT or VPU",
+    "FPGA mapping and clock unverified"
+  ]
+}

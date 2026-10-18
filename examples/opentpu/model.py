@@ -113,6 +113,9 @@ class Timing:
   quant_row_banks: int = 0
   quant_store_buffered: bool = False
   vector_row_contexts: int = 1
+  vector_engines: int = 1
+  vector_result_chunks: int = 0
+  vector_compatible_issue: bool = False
   activation_streaming: bool = False
   fp_mul_latency: int = 2
   fp_add_latency: int = 4
@@ -133,6 +136,12 @@ class Timing:
       raise ValueError('ACT streaming requires row banks and at most one parallel matrix wave per batch')
     if self.quant_store_buffered and not self.quant_row_banks:
       raise ValueError('buffered QST requires explicit row banks')
+    if not isinstance(self.vector_engines,int) or self.vector_engines<1:
+      raise ValueError('vector_engines must be a positive integer')
+    if not isinstance(self.vector_result_chunks,int) or self.vector_result_chunks<0:
+      raise ValueError('vector_result_chunks must be a nonnegative integer')
+    if self.vector_engines>1 and not self.vector_result_chunks:
+      raise ValueError('multiple vector engines require a bounded result store')
     if self.vector_row_contexts not in (1,4):
       raise ValueError('vector_row_contexts must be 1 or 4')
     if (not isinstance(self.fp_mul_latency,int) or not 1<=self.fp_mul_latency<=2 or
@@ -206,6 +215,10 @@ class OpenTPU:
       raise ValueError("multiple matrix engines require CompactOpenTPU")
     if self.timing.activation_streaming and not self.supports_multiple_matrix_engines:
       raise ValueError('ACT streaming requires CompactOpenTPU')
+    if self.timing.vector_compatible_issue and not self.supports_multiple_matrix_engines:
+      raise ValueError('compatible vector selection requires CompactOpenTPU')
+    if self.timing.vector_result_chunks and not self.supports_multiple_matrix_engines:
+      raise ValueError('vector pools require CompactOpenTPU')
     self.matrix_batch_sizes = []
     cfg,t = workload.config,self.timing
     if (t.fp_mul_latency,t.fp_add_latency)!=(2,4) and cfg.LANES!=64:
