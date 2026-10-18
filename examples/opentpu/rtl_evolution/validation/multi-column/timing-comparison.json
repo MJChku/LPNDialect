@@ -1,0 +1,352 @@
+{
+  "status": "complete",
+  "scope": "Audit numerical gates and compare multi-column native LPN timing to raw RTL.",
+  "records": [
+    {
+      "columns": 1,
+      "case": "unit_19x8",
+      "rtl_cycles": 286,
+      "lpn_cycles": 285.0,
+      "relative_error": -0.0034965034965035446,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 1,
+      "case": "unit_5x3",
+      "rtl_cycles": 126,
+      "lpn_cycles": 120.0,
+      "relative_error": -0.04761904761904767,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 1,
+      "case": "scaled_17x8",
+      "rtl_cycles": 400,
+      "lpn_cycles": 399.0,
+      "relative_error": -0.0024999999999999467,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 1,
+      "case": "acc_ascale_rmax",
+      "rtl_cycles": 189,
+      "lpn_cycles": 179.0,
+      "relative_error": -0.05291005291005291,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 1,
+      "case": "fp4_pair",
+      "rtl_cycles": 148,
+      "lpn_cycles": 141.0,
+      "relative_error": -0.04729729729729726,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 1,
+      "case": "unit_16x1",
+      "rtl_cycles": 157,
+      "lpn_cycles": 149.0,
+      "relative_error": -0.05095541401273884,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 1,
+      "case": "qst_stride_1",
+      "rtl_cycles": 200,
+      "lpn_cycles": 197.0,
+      "relative_error": -0.015000000000000013,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 1,
+      "case": "qst_stride_4",
+      "rtl_cycles": 200,
+      "lpn_cycles": 197.0,
+      "relative_error": -0.015000000000000013,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 1,
+      "case": "qst_stride_17",
+      "rtl_cycles": 200,
+      "lpn_cycles": 197.0,
+      "relative_error": -0.015000000000000013,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 2,
+      "case": "unit_19x8",
+      "rtl_cycles": 264,
+      "lpn_cycles": 262.0,
+      "relative_error": -0.007575757575757569,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 2,
+      "case": "unit_5x3",
+      "rtl_cycles": 127,
+      "lpn_cycles": 121.0,
+      "relative_error": -0.047244094488189003,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 2,
+      "case": "scaled_17x8",
+      "rtl_cycles": 362,
+      "lpn_cycles": 360.0,
+      "relative_error": -0.0055248618784530246,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 2,
+      "case": "acc_ascale_rmax",
+      "rtl_cycles": 184,
+      "lpn_cycles": 174.0,
+      "relative_error": -0.05434782608695654,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 2,
+      "case": "fp4_pair",
+      "rtl_cycles": 147,
+      "lpn_cycles": 139.0,
+      "relative_error": -0.05442176870748294,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 2,
+      "case": "unit_16x1",
+      "rtl_cycles": 158,
+      "lpn_cycles": 150.0,
+      "relative_error": -0.05063291139240511,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 2,
+      "case": "qst_stride_1",
+      "rtl_cycles": 200,
+      "lpn_cycles": 197.0,
+      "relative_error": -0.015000000000000013,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 2,
+      "case": "qst_stride_4",
+      "rtl_cycles": 200,
+      "lpn_cycles": 197.0,
+      "relative_error": -0.015000000000000013,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 2,
+      "case": "qst_stride_17",
+      "rtl_cycles": 200,
+      "lpn_cycles": 197.0,
+      "relative_error": -0.015000000000000013,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 4,
+      "case": "unit_19x8",
+      "rtl_cycles": 254,
+      "lpn_cycles": 248.0,
+      "relative_error": -0.023622047244094446,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 4,
+      "case": "unit_5x3",
+      "rtl_cycles": 131,
+      "lpn_cycles": 122.0,
+      "relative_error": -0.06870229007633588,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 4,
+      "case": "scaled_17x8",
+      "rtl_cycles": 346,
+      "lpn_cycles": 338.0,
+      "relative_error": -0.023121387283236983,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 4,
+      "case": "acc_ascale_rmax",
+      "rtl_cycles": 180,
+      "lpn_cycles": 169.0,
+      "relative_error": -0.061111111111111116,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 4,
+      "case": "fp4_pair",
+      "rtl_cycles": 148,
+      "lpn_cycles": 140.0,
+      "relative_error": -0.05405405405405406,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 4,
+      "case": "unit_16x1",
+      "rtl_cycles": 160,
+      "lpn_cycles": 152.0,
+      "relative_error": -0.050000000000000044,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 4,
+      "case": "qst_stride_1",
+      "rtl_cycles": 200,
+      "lpn_cycles": 197.0,
+      "relative_error": -0.015000000000000013,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 4,
+      "case": "qst_stride_4",
+      "rtl_cycles": 200,
+      "lpn_cycles": 197.0,
+      "relative_error": -0.015000000000000013,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 4,
+      "case": "qst_stride_17",
+      "rtl_cycles": 200,
+      "lpn_cycles": 197.0,
+      "relative_error": -0.015000000000000013,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 8,
+      "case": "unit_19x8",
+      "rtl_cycles": 254,
+      "lpn_cycles": 244.0,
+      "relative_error": -0.03937007874015752,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 8,
+      "case": "unit_5x3",
+      "rtl_cycles": 135,
+      "lpn_cycles": 125.0,
+      "relative_error": -0.07407407407407407,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 8,
+      "case": "scaled_17x8",
+      "rtl_cycles": 340,
+      "lpn_cycles": 330.0,
+      "relative_error": -0.02941176470588236,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 8,
+      "case": "acc_ascale_rmax",
+      "rtl_cycles": 183,
+      "lpn_cycles": 172.0,
+      "relative_error": -0.060109289617486295,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 8,
+      "case": "fp4_pair",
+      "rtl_cycles": 152,
+      "lpn_cycles": 144.0,
+      "relative_error": -0.052631578947368474,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 8,
+      "case": "unit_16x1",
+      "rtl_cycles": 164,
+      "lpn_cycles": 156.0,
+      "relative_error": -0.04878048780487809,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 8,
+      "case": "qst_stride_1",
+      "rtl_cycles": 200,
+      "lpn_cycles": 197.0,
+      "relative_error": -0.015000000000000013,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 8,
+      "case": "qst_stride_4",
+      "rtl_cycles": 200,
+      "lpn_cycles": 197.0,
+      "relative_error": -0.015000000000000013,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    },
+    {
+      "columns": 8,
+      "case": "qst_stride_17",
+      "rtl_cycles": 200,
+      "lpn_cycles": 197.0,
+      "relative_error": -0.015000000000000013,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "all_input_log_source_and_binary_hashes_verified": true
+    }
+  ],
+  "source_sha256": {
+    "/home/ubuntu/LPNDialect-multi-column/examples/opentpu/model.py": "72f1d4aa59671bca15475907192e97d81cde658e98e6cc68a43471e079c8be60",
+    "/home/ubuntu/LPNDialect-multi-column/examples/opentpu/compact.py": "fd2f4dffd0c6a30b3c1039d5fbc2ced97c41124a323bb7f86c50b9576545f772",
+    "/home/ubuntu/LPNDialect-multi-column/examples/opentpu/components.py": "e1733492930a6bac3bea6266471c61b1e2839dfa9b33b52e32058a022fec60d1",
+    "/home/ubuntu/LPNDialect-multi-column/examples/opentpu/activation_stream.py": "83446e2b0a14629f734d3496b8f9e6b34afa6eeecd1d28f1a3996a01d9127aaa",
+    "/home/ubuntu/LPNDialect-multi-column/examples/opentpu/shape_workload.py": "d0f1db9e2bba7f3b1b1b119e9483b7ebc7ce17823d343ac135b26e5e51b91169",
+    "/home/ubuntu/LPNDialect-multi-column/examples/opentpu/native_timing.py": "b48b2bded7b7c112f5d837572002472904bad80478315524fb1d13563c3a3989",
+    "/home/ubuntu/LPNDialect-multi-column/examples/opentpu/weight_storage.py": "ad783424094455f54cb0bc307c3e0488ddd37cb7057d093d90e04990c03963e7",
+    "/home/ubuntu/LPNDialect-multi-column/examples/opentpu/rtl_evolution/compare_multi_column.py": "a8c34e3525eeaff8d8ef46c30c3e7ffc68666d68fb5ba6b40bce3c59c3466d61"
+  },
+  "gate_report_sha256": {
+    "/home/ubuntu/lpn-runs/tpu-100x/multi-column-matrix-1-logged/report.json": "67c1c7c12510a7a6dd89513db5a5656aa8af6f1df71ee4413d3df0b7e52617c1",
+    "/home/ubuntu/lpn-runs/tpu-100x/multi-column-matrix-2-logged/report.json": "030ce4736f5e69b438053c8e2213dd80c7734ce42f53d920164bcdf713a1739c",
+    "/home/ubuntu/lpn-runs/tpu-100x/multi-column-matrix-4-logged/report.json": "0f7f41bed5f098d7c77d54a26c0848cff23107e6d6f57f25ace6e2e256d4a8d5",
+    "/home/ubuntu/lpn-runs/tpu-100x/multi-column-matrix-8-logged/report.json": "95afb6372e85385e8720a47f6f88a51a0135402c8f3d87e4b7e50dcf4a321456"
+  },
+  "timing_target_met_all_cases": true,
+  "worst_case_relative_error": 0.07407407407407407,
+  "limitations": [
+    "Synthetic numerical/timing gates, not full inference",
+    "No FPGA resource or clock validation"
+  ]
+}

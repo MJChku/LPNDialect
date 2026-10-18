@@ -16,6 +16,7 @@ def main():
     ap.add_argument('--scalar-recip-lookup',action='store_true')
     ap.add_argument('--recip-table',type=Path)
     ap.add_argument('--rows',type=int,default=32)
+    ap.add_argument('--columns',type=int,choices=(1,2,4,8),default=1)
     ap.add_argument('--vector-lanes',type=int,default=64)
     ap.add_argument('--stores',type=int,default=64)
     ap.add_argument('--scale-cache-entries',type=int,choices=(0,16),default=0)
@@ -32,10 +33,12 @@ def main():
     import numpy as np
     from opentpu import Config,isa as I,quant as Q,rtlsim
     from opentpu.isasim import Machine
+    from examples.opentpu.e2e import digest
     if a.tree_source:
         rtlsim.RTL_SOURCES=[str(a.tree_source.resolve()) if s=='vpu/otpu_vtree.sv' else s for s in rtlsim.RTL_SOURCES]
     cfg=Config(D=a.depth,MCOLS=4,ACT_ROWS=16,LANES=a.lanes)
     ua=dict(MXU_ROWS=a.rows,VPU_LANES=a.vector_lanes,QST_LANES=a.stores)
+    if a.columns!=1:ua['MXU_COLS']=a.columns
     if a.scale_cache_entries:ua['SCALE_CACHE_ENTRIES']=a.scale_cache_entries
     if a.packed_qst:ua['QST_PACKED_WORDS']=1
     if a.stream_act: ua["ACT_STREAMING"]=1
@@ -49,6 +52,9 @@ def main():
     rtlsim.VFLAGS[rtlsim.VFLAGS.index('-j')+1]='12'
     rtlsim.VFLAGS+=['-CFLAGS','-O'+a.host_opt]
     rtlsim.VFLAGS += [f'-DOTPU_FP_MUL_LAT={a.fp_mul_latency}',f'-DOTPU_FP_ADD_LAT={a.fp_add_latency}']
+    source_files=[rtlsim.RTL/name for name in rtlsim.RTL_SOURCES]+[
+        rtlsim.TB/'tb_top.sv',rtlsim.TB/'lpn_wall.cpp',Path(__file__)]
+    source_hashes={str(f):digest(f) for f in source_files}
     results=[]
     # Partial engine groups, bank-wrapping output strides, activation replay,
     # scale dependencies, fused accumulation, matrix max, and packed weights.
@@ -103,6 +109,7 @@ def main():
         try:
             drams,tmems,stats=rtlsim.run(cfg,[prog],[image],uarch=ua,
                                       max_cycles=500000,keep=a.output/c['name'],trace=True,plusargs=lookup_args)
+            (a.output/c['name']/'rtl.log').write_text(stats['trace'])
             if not np.array_equal(drams[0],golden.dram) or not np.array_equal(tmems[0],golden.tmem):
                 bad=np.flatnonzero(tmems[0]!=golden.tmem)
                 raise RuntimeError(f'numerical mismatch: TMEM indices {bad[:16].tolist()}, '
@@ -111,11 +118,16 @@ def main():
         except Exception as e:
             (a.output/'failure.json').write_text(json.dumps(dict(case=c,error=str(e)),indent=2)+'\n')
             raise
+        exe=rtlsim.build_top(cfg,uarch=ua,dram_lat=8)
         result=dict(case=c,rtl_cycles=stats['cycles'],seconds=time.perf_counter()-before,
-                    all_dram_and_tmem_bit_exact=True)
+                    all_dram_and_tmem_bit_exact=True,simulator=str(exe),simulator_sha256=digest(exe),
+                    input_sha256={name:digest(a.output/c['name']/name) for name in ('prog_0.hex','dram_0.bin')},
+                    rtl_log_sha256=digest(a.output/c['name']/'rtl.log'))
         results.append(result)
         (a.output/'report.json').write_text(json.dumps(dict(status='running',config=cfg.__dict__,uarch=ua,lookup_table_sha256=lookup_hashes,records=results),indent=2)+'\n')
         print(json.dumps(result),flush=True)
-    (a.output/'report.json').write_text(json.dumps(dict(status='complete',config=cfg.__dict__,uarch=ua,lookup_table_sha256=lookup_hashes,records=results),indent=2)+'\n')
+    if source_hashes!={str(f):digest(f) for f in source_files}:raise RuntimeError('gate sources changed')
+    (a.output/'report.json').write_text(json.dumps(dict(status='complete',config=cfg.__dict__,uarch=ua,
+        source_sha256=source_hashes,rtl_compile_flags=list(rtlsim.VFLAGS),lookup_table_sha256=lookup_hashes,records=results),indent=2)+'\n')
 
 if __name__=='__main__':main()

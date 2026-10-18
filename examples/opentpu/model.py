@@ -293,12 +293,12 @@ class OpenTPU:
       raise ValueError('vector pools require CompactOpenTPU')
     self.matrix_batch_sizes = []
     cfg,t = workload.config,self.timing
-    if (t.matrix_retirement or t.physical_scale_lines) and (not self.supports_multiple_matrix_engines or cfg.MCOLS!=1):
-      raise ValueError('matrix diagnostics require CompactOpenTPU single-column cores')
+    if (t.matrix_retirement or t.physical_scale_lines) and (not self.supports_multiple_matrix_engines or cfg.MCOLS not in (1,2,4,8)):
+      raise ValueError('matrix details require CompactOpenTPU with 1/2/4/8-column cores')
     if (t.fp_mul_latency,t.fp_add_latency)!=(2,4) and cfg.LANES!=64:
       raise ValueError('experimental FP partition timing requires the 64-lane architecture')
-    if t.activation_streaming and (cfg.MCOLS!=1 or cfg.LANES!=cfg.D):
-      raise ValueError('ACT streaming requires single-column engines and one full block per quantizer write')
+    if t.activation_streaming and (cfg.MCOLS not in (1,2,4,8) or cfg.LANES!=cfg.D):
+      raise ValueError('ACT streaming requires 1/2/4/8-column engines and one full block per quantizer write')
     if (t.scalar_recip_lookup or t.reciprocal_lookup_lanes) and cfg.LANES!=64:
       raise ValueError('scalar reciprocal lookup timing requires the 64-lane VPU')
     if cfg.SEQ_WC:

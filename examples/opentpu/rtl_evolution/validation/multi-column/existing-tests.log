@@ -1,0 +1,35 @@
+test_accumulator_pipeline_does_not_serialize_rows (__main__.OpenTPUTest.test_accumulator_pipeline_does_not_serialize_rows) ... ok
+test_batched_rows_preserve_long_workload_timing (__main__.OpenTPUTest.test_batched_rows_preserve_long_workload_timing) ... ok
+test_buffered_quantizer_credits_and_rtl_pipeline (__main__.OpenTPUTest.test_buffered_quantizer_credits_and_rtl_pipeline) ... ok
+test_buffered_quantizer_native_matches_expanded (__main__.OpenTPUTest.test_buffered_quantizer_native_matches_expanded) ... ok
+test_compact_completion_banks_match_expanded_dataflow (__main__.OpenTPUTest.test_compact_completion_banks_match_expanded_dataflow) ... ok
+test_fpga_datapath_matches_expanded_and_native_models (__main__.OpenTPUTest.test_fpga_datapath_matches_expanded_and_native_models) ... ok
+test_fpga_output_bank_service_counts_actual_collisions (__main__.OpenTPUTest.test_fpga_output_bank_service_counts_actual_collisions) ... ok
+test_fpga_unscaled_prefetch_does_not_overtake_scale_fetch (__main__.OpenTPUTest.test_fpga_unscaled_prefetch_does_not_overtake_scale_fetch) ... ok
+test_interleaved_sum_credit_spacing_and_alias_fallback (__main__.OpenTPUTest.test_interleaved_sum_credit_spacing_and_alias_fallback) ... ok
+test_interleaved_sum_native_matches_expanded (__main__.OpenTPUTest.test_interleaved_sum_native_matches_expanded) ... ok
+test_lowlat_fp_native_matches_expanded_dataflow (__main__.OpenTPUTest.test_lowlat_fp_native_matches_expanded_dataflow) ... ok
+test_lowlat_fp_quantizer_pipeline_matches_rtl (__main__.OpenTPUTest.test_lowlat_fp_quantizer_pipeline_matches_rtl) ... ok
+test_matrix_admission_cannot_overtake_an_older_blocked_command (__main__.OpenTPUTest.test_matrix_admission_cannot_overtake_an_older_blocked_command) ... ok
+test_multi_engine_configuration_requires_compact_model (__main__.OpenTPUTest.test_multi_engine_configuration_requires_compact_model) ... ok
+test_multiple_engines_overlap_independent_commands_and_keep_write_hazards (__main__.OpenTPUTest.test_multiple_engines_overlap_independent_commands_and_keep_write_hazards) ... ok
+test_parallel_matrix_dependencies_preserve_raw_war_waw_and_barriers (__main__.OpenTPUTest.test_parallel_matrix_dependencies_preserve_raw_war_waw_and_barriers) ... ok
+test_parallel_rows_do_not_depend_on_aggregation_hint (__main__.OpenTPUTest.test_parallel_rows_do_not_depend_on_aggregation_hint) ... ok
+test_ready_scalar_units_keep_hazards_without_false_fifo_edges (__main__.OpenTPUTest.test_ready_scalar_units_keep_hazards_without_false_fifo_edges) ... ok
+test_real_program_native_matches_python_dataflow (__main__.OpenTPUTest.test_real_program_native_matches_python_dataflow) ... ok
+test_recorded_rtl_accuracy (__main__.OpenTPUTest.test_recorded_rtl_accuracy) ... ok
+test_register_relative_loop_uses_actual_inputs (__main__.OpenTPUTest.test_register_relative_loop_uses_actual_inputs) ... ok
+test_reusable_timing_accepts_changed_command_count_without_recompilation (__main__.OpenTPUTest.test_reusable_timing_accepts_changed_command_count_without_recompilation) ... ok
+test_shape_trace_matches_numerical_control_and_footprints (__main__.OpenTPUTest.test_shape_trace_matches_numerical_control_and_footprints) ... ok
+test_shape_trace_rejects_data_dependent_control (__main__.OpenTPUTest.test_shape_trace_rejects_data_dependent_control) ... ok
+test_shared_dram_load_can_finish_while_quantizer_computes (__main__.OpenTPUTest.test_shared_dram_load_can_finish_while_quantizer_computes) ... ok
+test_small_matrix_prefetch_uses_actual_fifo_capacity (__main__.OpenTPUTest.test_small_matrix_prefetch_uses_actual_fifo_capacity) ... ok
+test_truncated_input_is_rejected (__main__.OpenTPUTest.test_truncated_input_is_rejected) ... ok
+test_unsupported_host_synchronization_is_rejected (__main__.OpenTPUTest.test_unsupported_host_synchronization_is_rejected) ... ok
+test_vector_overlap_drains_for_reductions_and_shorter_paths (__main__.OpenTPUTest.test_vector_overlap_drains_for_reductions_and_shorter_paths) ... ok
+test_wide_vector_timing_matches_rtl_latency_fixture (__main__.OpenTPUTest.test_wide_vector_timing_matches_rtl_latency_fixture) ... ok
+
+----------------------------------------------------------------------
+Ran 30 tests in 114.566s
+
+OK

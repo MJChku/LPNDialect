@@ -48,6 +48,22 @@ class Architecture:
 
 def architectures():
     return [
+        Architecture('physical_multicol_64x2_add2',64,2,2816,buffered_quant=True,
+                     vector_row_contexts=4,activation_streaming=True,quant_scale_lookup=True,
+                     scalar_recip_lookup=True,fp_add_latency=2,vector_command_queue=2,
+                     matrix_retirement=True,physical_scale_lines=True,act_rows=8,act_blocks=64,fifo_per_core=64),
+        *[Architecture(f'proposal_pair_{rows}x2_add2',rows,2,2816,buffered_quant=True,
+                       vector_row_contexts=4,activation_streaming=True,quant_scale_lookup=True,
+                       scalar_recip_lookup=True,fp_add_latency=2,vector_command_queue=2,
+                       matrix_retirement=True,physical_scale_lines=True,act_rows=8,act_blocks=64,fifo_per_core=64)
+          for rows in (96,112,128)],
+        *[Architecture(f'proposal_asic_{rows}x8_vpu16_bw{bw}',rows,8,bw,buffered_quant=True,
+                       vector_row_contexts=4,activation_streaming=True,quant_scale_lookup=True,
+                       scalar_recip_lookup=True,fp_mul_latency=1,fp_add_latency=1,
+                       matrix_retirement=True,physical_scale_lines=True,act_rows=8,act_blocks=64,
+                       fifo_per_core=64,vector_engines=16,vector_result_chunks=1024,
+                       vector_compatible_issue=True,window=128)
+          for rows,bw in ((256,8192),(1024,8192),(1024,32768))],
         Architecture('physical_compact_act_128x1_add2',128,1,2816,buffered_quant=True,
                      vector_row_contexts=4,activation_streaming=True,quant_scale_lookup=True,
                      scalar_recip_lookup=True,fp_add_latency=2,vector_command_queue=2,

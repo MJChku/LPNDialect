@@ -312,6 +312,7 @@ class MatrixEngine:
   def _stream_compute(self,net,prefix,cfg,t,interface,parameters,resources,ready,publish,window,is_done):
     offsets,indices=interface.compute_offsets,interface.compute_indices
     groups,producers=interface.activation_groups,interface.activation_producers
+    activation_rows=interface.activation_rows
     can_read=interface.activation.can_read
     batches,rows,chunks=parameters.batches,parameters.rows,parameters.chunks
     kbs,tails=parameters.kb,parameters.tails
@@ -339,7 +340,9 @@ class MatrixEngine:
       guard(count(active)>0)
       idx=peek(active).get('id')
       group=peek(active).get('group')
-      guard(can_read(array(producers)[idx],group))
+      end_row=muli(group+1,cfg.MCOLS)
+      last=select(end_row<array(activation_rows)[idx],end_row,array(activation_rows)[idx])-1
+      guard(can_read(array(producers)[idx],last))
       token=take(active)
       waves=divi(token.get('width')+t.matrix_row_lanes-1,t.matrix_row_lanes)
       clocks=muli(waves,array(kbs)[idx])

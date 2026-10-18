@@ -103,6 +103,8 @@ class CompactOpenTPU(OpenTPU):
   def _table(self,name,values):
     if self.input_capacity is None:
       return values
+    if name in self.input_tables:
+      raise ValueError(f'duplicate timing input table: {name}')
     self.input_tables[name] = values
     return InputArray(name,values)
 
@@ -333,6 +335,8 @@ class CompactOpenTPU(OpenTPU):
       interface.activation=activation
       interface.activation_producers=producer_table
       interface.activation_groups=self._table(prefix+'_act_groups',[
+          ceil(((c.instruction.w[5]>>16)&255)/cfg.MCOLS) if c.instruction.op==I.MM else 0 for c in commands])
+      interface.activation_rows=self._table(prefix+'_matrix_activation_rows',[
           (c.instruction.w[5]>>16)&255 if c.instruction.op==I.MM else 0 for c in commands])
     vector_ranks=self._table(prefix+'_vector_ranks',ranks)
     if t.vector_compatible_issue:

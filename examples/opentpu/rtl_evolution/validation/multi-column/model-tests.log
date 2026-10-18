@@ -1,0 +1,6 @@
+test_group_waits_for_last_useful_row_and_native_agrees (__main__.MultiColumnTest.test_group_waits_for_last_useful_row_and_native_agrees) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 1.736s
+
+OK

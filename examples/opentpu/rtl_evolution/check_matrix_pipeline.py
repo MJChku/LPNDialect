@@ -8,6 +8,8 @@ def main():
     ap=argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--opentpu-root',type=Path,required=True)
     ap.add_argument('--output',type=Path,required=True)
+    ap.add_argument('--rows',type=int,default=32)
+    ap.add_argument('--columns',type=int,choices=(1,2,4,8),default=1)
     a=ap.parse_args()
     sys.path.insert(0,str(a.opentpu_root.resolve()))
     import numpy as np
@@ -15,15 +17,18 @@ def main():
     from opentpu.isasim import Machine
     # Numerical/cycle gates need no optimizing host compiler; long benchmarks
     # separately use -O3. Verilator's SV optimization and all assertions stay on.
-    rtlsim.VFLAGS+=['-CFLAGS','-O0']
     from examples.opentpu.rtl_evolution.check_matrix import main as primitive_gates
-    sys.argv=[sys.argv[0],'--opentpu-root',str(a.opentpu_root),'--output',str(a.output)]
+    sys.argv=[sys.argv[0],'--opentpu-root',str(a.opentpu_root),'--output',str(a.output),
+              '--rows',str(a.rows),'--columns',str(a.columns)]
     primitive_gates()
     report=json.loads((a.output/'report.json').read_text())
     report['status']='running'
     (a.output/'report.json').write_text(json.dumps(report,indent=2)+'\n')
     cfg=Config(D=64,MCOLS=4,ACT_ROWS=16,LANES=64)
-    ua=dict(MXU_ROWS=32,VPU_LANES=64,QST_LANES=64)
+    ua=dict(MXU_ROWS=a.rows,VPU_LANES=64,QST_LANES=64)
+    if a.columns!=1:ua['MXU_COLS']=a.columns
+    from examples.opentpu.e2e import digest
+    report['pipeline_script_sha256']=digest(Path(__file__))
     for overlap in (False,True):
         rng=np.random.default_rng(713+overlap)
         kb=3;k=kb*cfg.D;maxn=67;m=8
@@ -65,6 +70,7 @@ def main():
         report['records'].append(result)
         (a.output/'report.json').write_text(json.dumps(dict(report,status='running'),indent=2)+'\n')
         print(json.dumps(result),flush=True)
+    if report['pipeline_script_sha256']!=digest(Path(__file__)):raise RuntimeError('pipeline gate changed')
     report['status']='complete'
     (a.output/'report.json').write_text(json.dumps(report,indent=2)+'\n')
 
