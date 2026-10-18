@@ -29,6 +29,16 @@ def main():
         source=original['kernels'][index]
         if record['step']!=index or not record['all_dram_and_tmem_bit_exact'] or not record['identical_input_files']:
             raise RuntimeError('invalid kernel evidence')
+        if record['timing']!=report['timing']:
+            raise RuntimeError('worker timing parameters differ from the requested architecture')
+        if 'rtl_compile_flags' in record:
+            flags=record['rtl_compile_flags']
+            for field,define,default in (('fp_mul_latency','OTPU_FP_MUL_LAT',2),
+                                          ('fp_add_latency','OTPU_FP_ADD_LAT',4)):
+                selected=[f for f in flags if f.startswith('-D'+define+'=')]
+                actual=int(selected[0].split('=')[1]) if selected else default
+                if len(selected)>1 or actual!=record['timing'].get(field,default):
+                    raise RuntimeError('RTL arithmetic defines differ from model timing')
         directory=a.case/'kernels'/f'{index:04d}'
         if record['input_sha256']!=source['input_sha256']:
             raise RuntimeError('input hashes differ from reference')

@@ -23,6 +23,8 @@ def main():
     p.add_argument('--workers',type=int,default=8)
     p.add_argument('--rtl-timeout',type=float,default=7200)
     p.add_argument('--matrix-rows',type=int,choices=(32,128),default=128)
+    p.add_argument('--fp-mul-latency',type=int,choices=(1,2),default=2)
+    p.add_argument('--fp-add-latency',type=int,choices=(1,2,3,4),default=4)
     a=p.parse_args()
     from examples.opentpu.e2e import atomic_json,digest
     from examples.opentpu.model import Timing
@@ -48,7 +50,8 @@ def main():
     uarch=dict(reference['uarch'],MXU_ROWS=a.matrix_rows)
     timing=Timing(batch_rows=a.matrix_rows,matrix_row_lanes=a.matrix_rows,dram_bytes_per_cycle=2816,dram_port_bytes=2816,
         dram_latency=8,fifo_chunks=128*a.matrix_rows,scale_lanes=a.matrix_rows,unified_dram=True,scalar_store_bytes=256,
-        epilogue_lanes=1,quant_row_banks=8,quant_store_buffered=True,vector_row_contexts=4)
+        epilogue_lanes=1,quant_row_banks=8,quant_store_buffered=True,vector_row_contexts=4,
+        fp_mul_latency=a.fp_mul_latency,fp_add_latency=a.fp_add_latency)
     records=[];failures=[];started=time.perf_counter()
     def save(status):
         result=dict(status=status,pid=os.getpid(),scope=__doc__,case=str(case),

@@ -27,12 +27,25 @@ def files_equal(a,b):
     return True
 
 
-def configure_rtlsim(rtlsim):
+def configure_rtlsim(rtlsim,fp_mul_latency=2,fp_add_latency=4):
     # A pool worker handles multiple kernels. Repeated flags alter upstream's
     # cache key even though they do not change the generated simulator.
+    if fp_mul_latency not in (1,2) or fp_add_latency not in (1,2,3,4):
+        raise ValueError('invalid arithmetic pipeline configuration')
     rtlsim.VFLAGS[rtlsim.VFLAGS.index('-j')+1]='12'
     if not any(rtlsim.VFLAGS[i:i+2]==['-CFLAGS','-O3'] for i in range(len(rtlsim.VFLAGS)-1)):
         rtlsim.VFLAGS+=['-CFLAGS','-O3']
+    # Reused workers may select another architecture. Remove previous defines
+    # before installing this one; defaults preserve the earlier build key.
+    rtlsim.VFLAGS[:]=[flag for flag in rtlsim.VFLAGS if not
+        flag.startswith(('-DOTPU_FP_MUL_LAT=','-DOTPU_FP_ADD_LAT='))]
+    if (fp_mul_latency,fp_add_latency)!=(2,4):
+        rtlsim.VFLAGS += [f'-DOTPU_FP_MUL_LAT={fp_mul_latency}',f'-DOTPU_FP_ADD_LAT={fp_add_latency}']
+
+
+def simulator_cache_key(rtlsim,cfg,uarch):
+    sources=[rtlsim.RTL/s for s in rtlsim.RTL_SOURCES]+[rtlsim.TB/'lpn_wall.cpp',rtlsim.TB/'tb_top.sv']
+    return rtlsim.build_dir('tb_top',sources,rtlsim.top_params(cfg,8,uarch,False,None)).name
 
 
 def check_kernel(task):
@@ -52,7 +65,8 @@ def check_kernel(task):
             raise RuntimeError(f'kernel {index}: input hashes differ from original RTL')
         if task['args']!=original['args']:
             raise RuntimeError(f'kernel {index}: argument registers differ from original RTL')
-        configure_rtlsim(rtlsim)
+        requested=task.get('timing') or {}
+        configure_rtlsim(rtlsim,requested.get('fp_mul_latency',2),requested.get('fp_add_latency',4))
         atomic_json(directory/'worker.json',dict(status='building',pid=os.getpid()))
         reused=None
         if task.get('reuse_directory'):
@@ -67,6 +81,8 @@ def check_kernel(task):
                     not reused['identical_input_files'] or reused['step']!=index):
                     raise RuntimeError(f'kernel {index}: retained RTL evidence differs')
                 exe=Path(reused['simulator'])
+                if exe.parent.name!=simulator_cache_key(rtlsim,cfg,task['uarch']):
+                    raise RuntimeError('retained simulator source/parameters/flags cache key differs')
                 if digest(exe)!=reused['baseline_binary_sha256']:
                     raise RuntimeError('retained simulator binary changed')
                 for sid in range(cfg.S):
@@ -127,7 +143,8 @@ def check_kernel(task):
             lpn_core_seconds=lpn_core,rtl_core_seconds=float(wall[1]),
             rtl_process_seconds=process,rtl_build_seconds=build,
             all_dram_and_tmem_bit_exact=True,identical_input_files=True,zero_rollbacks=True,
-            simulator=str(exe),baseline_binary_sha256=digest(exe),timing=asdict(timing))
+            simulator=str(exe),baseline_binary_sha256=digest(exe),timing=asdict(timing),
+            rtl_compile_flags=list(rtlsim.VFLAGS),rtl_top_parameters=rtlsim.top_params(cfg,8,task['uarch'],False,None))
         if reused is not None:record['rtl_reused_from']=str(previous)
         atomic_json(directory/'rtl-result.json',record)
         atomic_json(directory/'worker.json',dict(status='complete',pid=os.getpid()))

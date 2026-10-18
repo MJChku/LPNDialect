@@ -106,8 +106,24 @@ python -m examples.opentpu.tpu_dse \
 ```
 
 Select corresponding LPN fields `Timing(fp_mul_latency=1,fp_add_latency=1)`
-explicitly. Do not use the existing full-inference replay launcher with these
-defines yet: its workers still build the default arithmetic configuration.
+explicitly. The retained-input replay launcher passes these settings to each
+RTL worker and records its exact compile flags and top parameters. Reused
+observations must also match the current simulator source/parameter/flag cache
+key; changing FP stages cannot silently reuse another architecture's binary.
+The two-cycle-adder real-workload pilot is:
+
+```sh
+python -m examples.opentpu.rtl_evolution.replay_architecture \
+  --case /path/to/evolved-pipeline-final \
+  --baseline /path/to/baseline-smol128x32-continued/report.json \
+  --opentpu-root /path/to/FeSens-openTPU-lowlat-fp \
+  --compiler build/tools/lpn-compile/lpn-compile \
+  --matrix-rows 32 --fp-mul-latency 2 --fp-add-latency 2 \
+  --indices 0,15,16,47 --workers 4 --output /tmp/fp-add2-inference-pilot
+```
+
+This smaller matrix configuration isolates the arithmetic change. A four-kernel
+pilot cannot establish a complete inference cycle reduction.
 The event-driven runtime, guards and heartbeat caching are unchanged.
 
 Reports and source fingerprints are in
