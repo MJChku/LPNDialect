@@ -21,6 +21,11 @@ scratchpad states match. Whole and partial QACT loads exercise physical row
 boundary gates, not a full inference replay. The replay driver accepts
 `--act-rows 8 --fifo-depth 64` to validate unchanged retained workload inputs
 on this hardware configuration, with corresponding LPN storage and timing.
+The new driver path was first checked at the original 16-row/128-chunk
+capacities by reusing the four retained RTL pilot outputs. It reproduces
+the corrected control cycles exactly and passes a fresh full-state/source/
+input/binary audit; see `driver-control*.json`. The actual smaller-capacity
+inference pilot is building/running separately, with no reused RTL outputs.
 
 The corrected prefill profile is compute-heavy: matrix execution occupies
 73.5% of elapsed cycles and VPU issue 54.5%, while the memory link occupies
