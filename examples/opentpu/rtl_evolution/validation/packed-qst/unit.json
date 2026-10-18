@@ -1,0 +1,19 @@
+{
+  "status": "complete",
+  "scope": "Check coalesced QST write data, byte masks, grant bubbles and scatter fallback.",
+  "checked": 720,
+  "original_word_transactions": 7820,
+  "coalesced_word_transactions": 6879,
+  "all_data_and_byte_masks_equal": true,
+  "source_sha256": {
+    "/home/ubuntu/FeSens-openTPU-packed-qst/rtl/mem/otpu_qst_coalesce.sv": "d36d129746a8614a529747a1a36114ac549552345930523cb2117a158d51f990",
+    "/home/ubuntu/LPNDialect-packed-qst/examples/opentpu/rtl_evolution/tb_qst_coalesce.sv": "57869f6e0248caa2277c9503f8e5d5bb7eb646d023fe1893ee07963ebd29f697",
+    "/home/ubuntu/LPNDialect-packed-qst/examples/opentpu/rtl_evolution/check_qst_coalesce.py": "30c790f6abb6b3b4d246973127028760e92c5911d367bea13c07043c637bcc99"
+  },
+  "simulator": "/home/ubuntu/FeSens-openTPU-packed-qst/build/verilator/tb_qst_coalesce_ae03b53f4f6f/Vtb_qst_coalesce",
+  "simulator_sha256": "cf8490a53694676e177476ad386b9358da95ce3c467e2c640f68c8149e848038",
+  "limitations": [
+    "Component gate; full accelerator and workload gates are separate",
+    "No FPGA mapping or clock measurement"
+  ]
+}

@@ -1,0 +1,132 @@
+--- a/opentpu/rtlsim.py
++++ b/opentpu/rtlsim.py
+@@ -22,7 +22,7 @@
+ 
+ RTL_SOURCES = [
+     "vpu/otpu_fp.sv", "vpu/otpu_fpipe.sv", "top/otpu_pkg.sv", "mem/otpu_dram.sv", "mem/otpu_tmem.sv",
+-    "mem/otpu_scale_cache.sv", "mem/otpu_native_dram.sv", "mem/otpu_actram.sv", "seq/otpu_seq.sv",
++    "mem/otpu_qst_coalesce.sv", "mem/otpu_scale_cache.sv", "mem/otpu_native_dram.sv", "mem/otpu_actram.sv", "seq/otpu_seq.sv",
+     "vpu/otpu_vtree.sv", "dma/otpu_dma.sv", "mxu/otpu_mxu.sv", "mxu/otpu_mxu_parallel.sv", "tech/generic/otpu_tech_dsp.sv",
+     "tech/generic/otpu_tech_ram.sv",
+     "vpu/otpu_recip_rom.sv", "vpu/otpu_qscale_lookup.sv", "vpu/otpu_quant.sv", "vpu/otpu_se_comp.sv", "vpu/otpu_se_tail.sv", "vpu/otpu_vpu.sv",
+diff --git a/rtl/mem/otpu_qst_coalesce.sv b/rtl/mem/otpu_qst_coalesce.sv
+new file mode 100644
+--- /dev/null
++++ b/rtl/mem/otpu_qst_coalesce.sv
+@@ -0,0 +1,47 @@
++// Merge consecutive byte stores into real byte-enabled word transactions.
++// Packed detection uses wants/addresses, independent of downstream grant.
++// Scatter, repeated addresses and unexpected masks retain the original ports.
++module otpu_qst_coalesce #(parameter int L=64) (
++  input logic [L-1:0] want, req,
++  input logic [L-1:0][31:0] addr, data,
++  input logic [L-1:0][3:0] be,
++  output logic [L-1:0] want_o, req_o,
++  output logic [L-1:0][31:0] addr_o, data_o,
++  output logic [L-1:0][3:0] be_o
++);
++  logic packed_bytes;
++  int unsigned offset;
++  always_comb begin
++    packed_bytes=want[0]; offset=0;
++    case (be[0])
++      4'b0001: offset=0;
++      4'b0010: offset=1;
++      4'b0100: offset=2;
++      4'b1000: offset=3;
++      default: packed_bytes=1'b0;
++    endcase
++    for (int l=0;l<L;l++) if (want[l])
++      if (addr[l]!=addr[0]+32'((offset+l)/4) || be[l]!=(4'b0001<<((offset+l)%4)))
++        packed_bytes=1'b0;
++    want_o=want; req_o=req; addr_o=addr; data_o=data; be_o=be;
++    if (packed_bytes) begin
++      want_o='0; req_o='0; data_o='0; be_o='0;
++      for (int l=0;l<L;l++) begin
++        logic owner;
++        owner=want[l];
++        for (int k=1;k<=3;k++)
++          if (l>=k && want[l-k] && addr[l-k]==addr[l]) owner=1'b0;
++        if (owner) begin
++          want_o[l]=1'b1;
++          for (int k=0;k<=3;k++) if (l+k<L && req[l+k] && addr[l+k]==addr[l]) begin
++            req_o[l]=1'b1;
++            for (int b=0;b<4;b++) if (be[l+k][b]) begin
++              be_o[l][b]=1'b1;
++              data_o[l][8*b+:8]=data[l+k][8*b+:8];
++            end
++          end
++        end
++      end
++    end
++  end
++endmodule
+--- a/rtl/top/otpu_top.sv
++++ b/rtl/top/otpu_top.sv
+@@ -27,6 +27,7 @@
+   parameter int MXU_ROWS   = 1,
+   parameter int MEM_BYTES  = 2816,
+   parameter int SCALE_CACHE_ENTRIES = 0,
++  parameter bit QST_PACKED_WORDS = 0,
+   parameter int VPU_LANES  = LANES,
+   parameter int MXU_IMPL   = 2,
+   parameter int MXU_CL     = 16,
+@@ -117,6 +118,18 @@
+       logic [MXU_ROWS-1:0][31:0] mem_a_addr;
+       logic [MXU_ROWS-1:0][255:0] mem_a_data;
+       logic dram_idle;
++      logic [LANES-1:0] packed_want, packed_req;
++      logic [LANES-1:0][31:0] packed_addr, packed_data;
++      logic [LANES-1:0][3:0] packed_be;
++      if (QST_PACKED_WORDS) begin : g_qst_pack
++        otpu_qst_coalesce #(.L(LANES)) u_pack (
++          .want(x_sw_want), .req(x_sw_req), .addr(x_sw_addr), .data(x_sw_data), .be(x_sw_be),
++          .want_o(packed_want), .req_o(packed_req), .addr_o(packed_addr),
++          .data_o(packed_data), .be_o(packed_be));
++      end else begin : g_qst_unpacked
++        assign packed_want=x_sw_want, packed_req=x_sw_req, packed_addr=x_sw_addr,
++               packed_data=x_sw_data, packed_be=x_sw_be;
++      end
+       wire scale_flush=a_inval || (a_req && a_we) || (b_req && b_we) || sw_req || (|x_sw_req);
+       if (SCALE_CACHE_ENTRIES>0) begin : g_scale_cache
+         for (genvar p=0;p<MXU_ROWS;p++) begin : g_lane
+@@ -147,9 +160,9 @@
+       always_comb begin
+         int left, p, cost, write_cost;
+         left = MEM_BYTES - ((b_req) ? D : 0) - ((a_req) ? 32 : 0) - ((sw_req) ? 4 : 0);
+-        write_cost=4*$countones(x_sw_want);
++        write_cost=4*$countones(packed_want);
+         x_sw_rdy=write_cost<=left;
+-        if (x_sw_rdy) left-=4*$countones(x_sw_req);
++        if (x_sw_rdy) left-=4*$countones(packed_req);
+         x_gnt = '0;
+         for (int q = 0; q < MXU_ROWS; q++) begin
+           p = (rr + q) % MXU_ROWS;
+@@ -163,7 +176,7 @@
+         .b_req, .b_tag, .b_we, .b_wmask, .b_wdata, .b_addr, .b_rvalid, .b_rtag, .b_rdata, .rd_idle(dram_idle),
+         .x_a_req(mem_a_req), .x_b_req, .x_a_addr(mem_a_addr), .x_b_addr,
+         .x_a_valid(mem_a_valid), .x_b_valid, .x_a_data(mem_a_data), .x_b_data,
+-        .x_sw_req, .x_sw_addr, .x_sw_data, .x_sw_be,
++        .x_sw_req(packed_req), .x_sw_addr(packed_addr), .x_sw_data(packed_data), .x_sw_be(packed_be),
+         .dump);
+     end else begin : g_native
+       logic [1:0] cvalid, cready, cwe, wvalid, wready, rvalid;
+--- a/sim/verilator/tb_top.sv
++++ b/sim/verilator/tb_top.sv
+@@ -25,6 +25,7 @@
+   parameter int MXU_ROWS   = 1;
+   parameter int MEM_BYTES  = 2816;
+   parameter int SCALE_CACHE_ENTRIES = 0;
++  parameter bit QST_PACKED_WORDS = 0;
+   parameter int VPU_LANES  = LANES;
+   parameter int MXU_IMPL   = 2;
+   parameter int MXU_CL     = 16;
+@@ -67,7 +68,7 @@
+ 
+   otpu_top #(.S(S), .D(D), .MCOLS(MCOLS), .ACT_BLOCKS(ACT_BLOCKS), .ACT_ROWS(ACT_ROWS), .TMEM_WORDS(TMEM_WORDS),
+              .IMEM_WORDS(IMEM_WORDS), .DRAM_WORDS(DRAM_WORDS), .DRAM_LAT(DRAM_LAT),
+-             .LANES(LANES), .WIN(WIN), .RPB(RPB), .WPB(WPB), .QST_LANES(QST_LANES), .MXU_ROWS(MXU_ROWS), .ACT_STREAMING(ACT_STREAMING), .VPU_LANES(VPU_LANES), .MXU_IMPL(MXU_IMPL), .MXU_CL(MXU_CL), .MXU_E(MXU_E), .QUANT_XD(QUANT_XD), .QUANT_LOOKUP(QUANT_LOOKUP), .VPU_SCALAR_RECIP(VPU_SCALAR_RECIP), .VPU_RECIP_COEFF_FILE(VPU_RECIP_COEFF_FILE), .VPU_RECIP_CORRECTION_FILE(VPU_RECIP_CORRECTION_FILE), .QUANT_COEFF_FILE(QUANT_COEFF_FILE), .QUANT_CORRECTION_FILE(QUANT_CORRECTION_FILE), .VPU_CL(VPU_CL), .ULANES(ULANES), .MEM_BYTES(MEM_BYTES), .SCALE_CACHE_ENTRIES(SCALE_CACHE_ENTRIES), .AXI(AXI), .FIFO_DEPTH(FIFO_DEPTH),
++             .LANES(LANES), .WIN(WIN), .RPB(RPB), .WPB(WPB), .QST_LANES(QST_LANES), .MXU_ROWS(MXU_ROWS), .ACT_STREAMING(ACT_STREAMING), .VPU_LANES(VPU_LANES), .MXU_IMPL(MXU_IMPL), .MXU_CL(MXU_CL), .MXU_E(MXU_E), .QUANT_XD(QUANT_XD), .QUANT_LOOKUP(QUANT_LOOKUP), .VPU_SCALAR_RECIP(VPU_SCALAR_RECIP), .VPU_RECIP_COEFF_FILE(VPU_RECIP_COEFF_FILE), .VPU_RECIP_CORRECTION_FILE(VPU_RECIP_CORRECTION_FILE), .QUANT_COEFF_FILE(QUANT_COEFF_FILE), .QUANT_CORRECTION_FILE(QUANT_CORRECTION_FILE), .VPU_CL(VPU_CL), .ULANES(ULANES), .MEM_BYTES(MEM_BYTES), .SCALE_CACHE_ENTRIES(SCALE_CACHE_ENTRIES), .QST_PACKED_WORDS(QST_PACKED_WORDS), .AXI(AXI), .FIFO_DEPTH(FIFO_DEPTH),
+              .TMEM_IMPL(TMEM_IMPL), .TMEM_RQ(TMEM_RQ), .TMEM_NCP(TMEM_NCP),
+              .TMEM_NSB(TMEM_NSB), .TMEM_SBP(TMEM_SBP), .TMEM_SBH(TMEM_SBH),
+              .TMEM_RPL(TMEM_RPL), .TMEM_TDP(TMEM_TDP), .TMEM_GST(TMEM_GST),
