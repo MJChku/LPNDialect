@@ -1,0 +1,38 @@
+{
+  "status": "complete",
+  "scope": "Compare one-DSP paired int8 arithmetic against two original scalar chains.",
+  "vendor_source": "https://github.com/Xilinx/XilinxUnisimLibrary",
+  "vendor_revision": "1c8e05fd1e9a79ceb8b996a0996674122eed086f",
+  "exhaustive_signed_int8_triplets": false,
+  "checked_single_clocks": 65536,
+  "checked_chain_clocks": 100079,
+  "chain_positions": 8,
+  "enable_stalls": 14300,
+  "max_positive_low_sum_cases": 19,
+  "both_behavioral_and_vendor_primitive_match_two_scalar_PEs": true,
+  "vendor_model_specialization": {
+    "binary_driven_pins_only": true,
+    "floating_input_tests_replaced": 168,
+    "arithmetic_and_register_logic_unchanged": true
+  },
+  "primitives_per_pair": 1,
+  "source_sha256": {
+    "/home/ubuntu/XilinxUnisimLibrary/verilog/src/glbl.v": "de59a57e3e0091f1b9162d9914dce24c469820a0c5b5a41d1d202d93fae0abdd",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/build/verilator/lpn_vendor_binary/DSP48E2_56e9ab7456964984338c96af9ef206e415186b94016a9fe0a67bf690ca9867fa.v": "56e9ab7456964984338c96af9ef206e415186b94016a9fe0a67bf690ca9867fa",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/tech/generic/otpu_tech_dsp.sv": "89b0d45e303491dd8dfe6cdeb4e623e60d04a415697a567d1a70836dba9d8de7",
+    "/home/ubuntu/LPNDialect-paired-dsp/examples/opentpu/rtl_evolution/otpu_pair_pe.sv": "fece0aaa77670342ea1dc316b265168f368aa49af1dd7027b855110c38799e4b",
+    "/home/ubuntu/LPNDialect-paired-dsp/examples/opentpu/rtl_evolution/tb_pair_pe.sv": "2ef65eb69bf4080f09dc5bf6994d27410387111496f0f3852039928fa4fd9fec",
+    "/home/ubuntu/XilinxUnisimLibrary/verilog/src/unisims/DSP48E2.v": "d2ab5e8f0bbb6c99183d559fcab3bcdb6f49c1c2961e5896c27b054b32d10c04",
+    "/home/ubuntu/LPNDialect-paired-dsp/examples/opentpu/rtl_evolution/check_pair_pe.py": "b717cb4c288635f9f9b2955cea828124a3cca0379ff115367e92edb03d9bc364"
+  },
+  "simulator": "/home/ubuntu/FeSens-openTPU-scalar-recip/build/verilator/tb_pair_pe_5f831cae5c84/Vtb_pair_pe",
+  "simulator_sha256": "405c40e000ff8f1a94e8c3c018476cde7572eca8ec7608da1c822d400c34e329",
+  "build_seconds": 8.08569565974176,
+  "run_seconds": 1.5766814071685076,
+  "limitations": [
+    "Component arithmetic gate, not integrated MXU or model inference",
+    "Shared operand required; independent asynchronous engines cannot simply be packed",
+    "DSP48E2 tested; DSP58 mapping, FPGA placement and Fmax not established",
+    "Column-end scale multipliers and FP epilogues are not packed by this component"
+  ]
+}
