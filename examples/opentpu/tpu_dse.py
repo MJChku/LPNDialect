@@ -44,10 +44,17 @@ class Architecture:
     act_rows: int = 0
     act_blocks: int = 0
     fifo_per_core: int = 128
+    matrix_engines: int = 1
 
 
 def architectures():
     return [
+        *[Architecture(f'proposal_clusters_{engines}x{128//engines}x1_add2',128//engines,1,2816,
+                       matrix_engines=engines,buffered_quant=True,vector_row_contexts=4,
+                       activation_streaming=True,quant_scale_lookup=True,scalar_recip_lookup=True,
+                       fp_add_latency=2,vector_command_queue=2,matrix_retirement=True,
+                       physical_scale_lines=True,act_rows=8,act_blocks=64,fifo_per_core=64)
+          for engines in (2,4,8,16)],
         Architecture('physical_multicol_64x2_add2',64,2,2816,buffered_quant=True,
                      vector_row_contexts=4,activation_streaming=True,quant_scale_lookup=True,
                      scalar_recip_lookup=True,fp_add_latency=2,vector_command_queue=2,
@@ -170,9 +177,9 @@ def architectures():
 
 def resources(point, config, clock_mhz):
     # Lower bounds, not placement, routing, DSP-packing or SRAM-port proof.
-    macs = config['D'] * point.rows * point.columns
-    activation = point.rows * (point.act_rows or config['ACT_ROWS']) * (point.act_blocks or config['ACT_BLOCKS']) * (config['D'] + 8)
-    fifo = point.rows * point.fifo_per_core * config['D']
+    macs = config['D'] * point.rows * point.columns * point.matrix_engines
+    activation = point.matrix_engines * point.rows * (point.act_rows or config['ACT_ROWS']) * (point.act_blocks or config['ACT_BLOCKS']) * (config['D'] + 8)
+    fifo = point.matrix_engines * point.rows * point.fifo_per_core * config['D']
     vector_results=point.vector_engines*point.vector_result_chunks*64*4
     # Two private input copies for each extra engine, propagated by every write.
     vector_read_copies=2*max(0,point.vector_engines-1)*4*config['TMEM_WORDS']
@@ -194,7 +201,9 @@ def resources(point, config, clock_mhz):
         onchip_bytes=int(673e6/8*.5),memory_gbs=810*.7)
     conservative=(macs<=v80_limits['matrix_mac_lanes'] and sram<=v80_limits['onchip_bytes'] and
                   point.bandwidth*clock_mhz/1000<=v80_limits['memory_gbs'])
-    return dict(matrix_mac_lanes=macs, onchip_bytes_lower_bound=sram,
+    return dict(matrix_engines=point.matrix_engines,matrix_cluster_rtl_implemented=False if point.matrix_engines>1 else None,
+        matrix_write_ports=1,matrix_write_service_scope='Aggregate bank service reserved at batch compute start; output-wave arbitration not validated.',
+        matrix_mac_lanes=macs, onchip_bytes_lower_bound=sram,
         pinned_cache_data_bytes=point.pinned_cache_bytes,pinned_cache_valid_bytes=cache_valid_bytes,
         pinned_cache_read_bytes_per_cycle=point.cache_read_bytes_per_cycle if point.pinned_cache_bytes else 0,
         pinned_cache_rtl_implemented=False,
@@ -255,9 +264,9 @@ def run_kernel(task):
                 raise ValueError('program exceeds proposed physical activation capacity')
     workload = replace(workload, config=replace(original, MCOLS=point.columns, LANES=64,
         ACT_ROWS=point.act_rows or original.ACT_ROWS,ACT_BLOCKS=point.act_blocks or original.ACT_BLOCKS))
-    timing = Timing(window=point.window,batch_rows=point.rows, matrix_row_lanes=point.rows,
+    timing = Timing(window=point.window,batch_rows=point.rows,matrix_engines=point.matrix_engines, matrix_row_lanes=point.rows,
         dram_bytes_per_cycle=point.bandwidth, dram_port_bytes=point.bandwidth,
-        dram_latency=point.latency, fifo_chunks=point.fifo_per_core * point.rows, scale_lanes=point.rows,
+        dram_latency=point.latency, fifo_chunks=point.fifo_per_core * point.rows, scale_lanes=point.rows*point.matrix_engines,
         unified_dram=True, scalar_store_bytes=256, epilogue_lanes=max(1, point.columns // 2),
         quant_row_banks=8 if point.buffered_quant else 0,quant_store_buffered=point.buffered_quant,quant_scale_lookup=point.quant_scale_lookup,scalar_recip_lookup=point.scalar_recip_lookup,reciprocal_lookup_lanes=point.reciprocal_lookup_lanes,pinned_cache_bytes=point.pinned_cache_bytes,cache_read_bytes_per_cycle=point.cache_read_bytes_per_cycle,
         vector_row_contexts=point.vector_row_contexts,

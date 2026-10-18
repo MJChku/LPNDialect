@@ -45,6 +45,8 @@ def configure_rtlsim(rtlsim,fp_mul_latency=2,fp_add_latency=4):
 
 
 def validate_variant(timing,uarch):
+    if timing.get('matrix_engines',1)!=1:
+        raise ValueError('multiple matrix engines have no matching RTL implementation')
     if timing.get('pinned_cache_bytes',0):
         raise ValueError('pinned cache proposal has no matching RTL implementation')
     if timing.get('reciprocal_lookup_lanes',0):

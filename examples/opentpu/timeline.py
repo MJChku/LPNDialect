@@ -29,7 +29,7 @@ class TimelineSimulator(PythonSimulator):
 
   @staticmethod
   def resource(name):
-    return bool(re.search(r'_(resource|compute|port_[ab]|scalar_write|issue|vector_result_port)$',name))
+    return bool(re.search(r'_(resource|compute|port_[ab]|scalar_write|issue|vector_result_port|matrix_result_port)$',name))
 
   def _commit_transaction(self):
     ctx=self._require_transaction();now=self.current_time

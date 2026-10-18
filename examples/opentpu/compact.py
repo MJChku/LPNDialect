@@ -360,8 +360,12 @@ class CompactOpenTPU(OpenTPU):
       vectors=[VectorPoolEngine(net,prefix+f'_vpu_{v}',interface,parameters,vector_ranks,
           result_chunks,result_drains,t.vector_result_chunks,result_port,W.U_VPU)
           for v in range(t.vector_engines)]
+    # One aggregate MXU scratchpad write port across independent arrays.
+    # Reserve each batch's bank service at compute start. This bounds shared
+    # throughput; exact output-wave arbitration still needs matching RTL.
+    matrix_result_port=net.place(prefix+'_matrix_result_port',initial_tokens=1) if t.matrix_engines>1 else None
     matrices = [MatrixEngine(net,prefix+f"_mxu_{engine}",cfg,t,interface,
-        parameters,memory,W.U_MXU)
+        parameters,memory,W.U_MXU,matrix_result_port)
         for engine in range(t.matrix_engines)]
     self.components[sid] = {"memory":memory,"units":units,"matrix_engines":matrices,"vector_engines":vectors}
 

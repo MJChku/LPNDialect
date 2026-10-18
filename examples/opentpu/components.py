@@ -174,8 +174,9 @@ class MatrixEngine:
   and window credits return after the pipeline/epilogue tail. There is no
   ordering link to another matrix engine.
   """
-  def __init__(self,net,prefix,cfg,timing,interface,parameters,memory,kind):
+  def __init__(self,net,prefix,cfg,timing,interface,parameters,memory,kind,shared_write=None):
     t = timing
+    self.shared_write=shared_write
     self.resources = resources = SystolicArray(net,prefix,t)
     self.prefetch_credit = prefetch_credit = net.place(prefix+"_prefetch_credit",initial_tokens=1)
     self.request = request = net.place(prefix+"_request")
@@ -284,6 +285,8 @@ class MatrixEngine:
       guard(count(ready)>0)
       guard(count(resources.compute)>0)
       guard(count(resources.buffers)>0)
+      if shared_write is not None:
+        guard(count(shared_write)>0)
       idx = peek(ready).get("id")
       ci = array(indices)
       enabled = const_i64(0)==0
@@ -294,6 +297,9 @@ class MatrixEngine:
       port = take(resources.compute)
       compute_cycles = muli(divi(token.get("width")+t.matrix_row_lanes-1,t.matrix_row_lanes),array(row_services)[idx])
       write_cycles = select(token.get("width")==array(batches)[idx],array(write_full)[idx],array(write_tail)[idx])
+      if shared_write is not None:
+        write_port=take(shared_write)
+        emit(shared_write,write_port,delay=sitofp(write_cycles))
       service = sitofp(select(compute_cycles>write_cycles,compute_cycles,write_cycles))
       emit(resources.compute,port,delay=service)
       capacity = take(resources.buffers)
@@ -318,6 +324,7 @@ class MatrixEngine:
     kbs,tails=parameters.kb,parameters.tails
     retirement,retire_cycles=self.retirement,parameters.retire_cycles
     write_full,write_tail=parameters.write_full,parameters.write_tail
+    shared_write=self.shared_write
     self.active_rows=active=net.place(prefix+'_active_rows')
     self.returned_chunks=returned=net.place(prefix+'_returned_chunks')
 
@@ -343,12 +350,18 @@ class MatrixEngine:
       end_row=muli(group+1,cfg.MCOLS)
       last=select(end_row<array(activation_rows)[idx],end_row,array(activation_rows)[idx])-1
       guard(can_read(array(producers)[idx],last))
+      if shared_write is not None:
+        guard(select(group==0,count(shared_write)>0,True,typ='i1'))
       token=take(active)
       waves=divi(token.get('width')+t.matrix_row_lanes-1,t.matrix_row_lanes)
       clocks=muli(waves,array(kbs)[idx])
       ng=array(groups)[idx]
       final=group+1>=ng
       writes=select(token.get('width')==array(batches)[idx],array(write_full)[idx],array(write_tail)[idx])
+      if shared_write is not None:
+        if group==0:
+          write_port=take(shared_write)
+          emit(shared_write,write_port,delay=sitofp(writes))
       compute=muli(clocks,ng)
       padding=select(writes>compute,writes-compute,0)
       service=sitofp(clocks+select(final,padding,0))
