@@ -35,6 +35,17 @@ The observer test checks streaming matrix and vector commands, exact agreement
 with ordinary Python and native execution, reset behavior, completion coverage
 and bounded resource occupancy.
 
+The corresponding prefill kernel 0 also finishes with exact native/Python
+agreement at **308,932 cycles**. Its matrix compute credit is occupied for
+217,436 cycles (70.38%), vector issue for 164,800 (53.35%), quantizer issue for
+80,569 (26.08%), and memory port B for 47,156 (15.26%). Thus the two phases have
+different pressure: memory traffic is much more prominent in decode, while
+prefill still needs better use of matrix and vector resources. Matrix occupancy
+includes time holding its credit while waiting for ACT row availability. The
+raw timeline is under `timeline-small128-add2-0`; `prefill-profile.json` retains
+its summary and hashes. The Python observer takes hundreds of host seconds;
+this is optional profiling, not a replacement for native timing execution.
+
 ## Full-workload necessary budgets
 
 An independent instruction-only pass counts all 48 original kernels:
