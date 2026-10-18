@@ -33,6 +33,8 @@ and a four-kernel real-workload RTL pilot. It predicts 13.617x / 15.720x for the
 128-engine candidates. A [single-lane small-row reciprocal](SMALL_RECIP.md)
 passes numerical gates and predicts 14.209x / 16.286x. These full-inference
 forecasts and FPGA synthesis remain pending validation.
+The [wider reciprocal proposal](WIDE_RECIP.md) budgets independent lookup ports
+and table replicas explicitly before selecting further FPGA RTL work.
 
 **Inference workload correction:** earlier `e2e.py`, `replay_e2e.py` and
 weight-free FPGA sequence results used a custom token-by-token prompt loop.

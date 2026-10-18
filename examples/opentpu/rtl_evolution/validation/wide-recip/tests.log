@@ -1,0 +1,8 @@
+test_geometry_falls_back_and_rtl_replay_rejects_proposal (__main__.WideReciprocalTest.test_geometry_falls_back_and_rtl_replay_rejects_proposal) ... ok
+test_native_matches_python_and_wide_dependent_chain_improves (__main__.WideReciprocalTest.test_native_matches_python_and_wide_dependent_chain_improves) ... ok
+test_table_cost_counts_dual_port_replicas (__main__.WideReciprocalTest.test_table_cost_counts_dual_port_replicas) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.486s
+
+OK

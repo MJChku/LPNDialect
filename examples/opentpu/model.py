@@ -114,6 +114,7 @@ class Timing:
   quant_store_buffered: bool = False
   quant_scale_lookup: bool = False
   scalar_recip_lookup: bool = False
+  reciprocal_lookup_lanes: int = 0 # proposal: independently addressed exact ROM lanes
   vector_row_contexts: int = 1
   vector_engines: int = 1
   vector_result_chunks: int = 0
@@ -138,6 +139,9 @@ class Timing:
       raise ValueError('ACT streaming requires row banks and at most one parallel matrix wave per batch')
     if self.quant_scale_lookup and not self.quant_row_banks:
       raise ValueError('lookup quantizer scale requires explicit row banks')
+    if (type(self.reciprocal_lookup_lanes) is not int or self.reciprocal_lookup_lanes not in (0,2,4,8,16)
+        or (self.reciprocal_lookup_lanes and self.scalar_recip_lookup)):
+      raise ValueError('choose either scalar lookup or a 2/4/8/16-lane reciprocal proposal')
     if self.quant_store_buffered and not self.quant_row_banks:
       raise ValueError('buffered QST requires explicit row banks')
     if not isinstance(self.vector_engines,int) or self.vector_engines<1:
@@ -194,12 +198,26 @@ def scalar_recip_eligible(ins,I,timing):
           and rows*(cols-1)<=(6-tap)*slot+3-(3 if tap>1 else 0))
 
 
+def reciprocal_lookup_width(ins,I,timing):
+  if scalar_recip_eligible(ins,I,timing):
+    return 1
+  width=timing.reciprocal_lookup_lanes
+  if width and (ins.w[5]>>16)&255==I.V_RECIP:
+    rows,cols=ins.w[3]&65535,ins.w[3]>>16
+    slot=1+timing.fp_mul_latency+timing.fp_add_latency
+    tap=1 if slot>=4 else 2
+    extra=rows*(ceil(cols/width)-ceil(cols/16))
+    if rows>0 and cols>0 and extra<=(6-tap)*slot+3-(3 if tap>1 else 0):
+      return width
+  return 0
+
+
 def vector_rank(ins,I,timing=None):
   """RTL n_slots ordering; reductions additionally require an empty pipeline."""
   function=(ins.w[5]>>16)&255
   if function in I.REDUCE:
     return VECTOR_DRAIN_RANK
-  if timing is not None and scalar_recip_eligible(ins,I,timing):
+  if timing is not None and reciprocal_lookup_width(ins,I,timing):
     return 1 if 1+timing.fp_mul_latency+timing.fp_add_latency>=4 else 2
   return {I.V_ADD:1,I.V_SUB:1,I.V_RSUB:1,I.V_MUL:1,I.V_OUTER:1,
           I.V_EXP2:9,I.V_EXP2SUB:9,I.V_RECIP:6,I.V_RSQRT:10,I.V_LOG2:10}.get(function,0)
@@ -229,7 +247,7 @@ class OpenTPU:
       raise ValueError("multiple matrix engines require CompactOpenTPU")
     if self.timing.activation_streaming and not self.supports_multiple_matrix_engines:
       raise ValueError('ACT streaming requires CompactOpenTPU')
-    if self.timing.scalar_recip_lookup and not self.supports_multiple_matrix_engines:
+    if (self.timing.scalar_recip_lookup or self.timing.reciprocal_lookup_lanes) and not self.supports_multiple_matrix_engines:
       raise ValueError('lookup reciprocal requires CompactOpenTPU command selection')
     if self.timing.vector_compatible_issue and not self.supports_multiple_matrix_engines:
       raise ValueError('compatible vector selection requires CompactOpenTPU')
@@ -241,7 +259,7 @@ class OpenTPU:
       raise ValueError('experimental FP partition timing requires the 64-lane architecture')
     if t.activation_streaming and (cfg.MCOLS!=1 or cfg.LANES!=cfg.D):
       raise ValueError('ACT streaming requires single-column engines and one full block per quantizer write')
-    if t.scalar_recip_lookup and cfg.LANES!=64:
+    if (t.scalar_recip_lookup or t.reciprocal_lookup_lanes) and cfg.LANES!=64:
       raise ValueError('scalar reciprocal lookup timing requires the 64-lane VPU')
     if cfg.SEQ_WC:
       raise ValueError("the timing model currently requires the range-scoreboard sequencer")
@@ -388,9 +406,10 @@ class OpenTPU:
         slot_one=function in (I.V_ADD,I.V_SUB,I.V_RSUB,I.V_MUL,I.V_OUTER)
         ordinary=12-((2-t.fp_mul_latency)+(4-t.fp_add_latency) if slot_one else 0)
         latency = rows*ceil(cols/lanes)+((1+t.fp_mul_latency+t.fp_add_latency)*slots+8 if composite else ordinary)
-      if scalar_recip_eligible(ins,I,t):
+      lookup_width=reciprocal_lookup_width(ins,I,t)
+      if lookup_width:
         slot=vector_rank(ins,I,t)
-        latency=rows*cols+slot*(1+t.fp_mul_latency+t.fp_add_latency)+(3 if slot>1 else 0)+5
+        latency=rows*ceil(cols/lookup_width)+slot*(1+t.fp_mul_latency+t.fp_add_latency)+(3 if slot>1 else 0)+5
       if function==I.V_OUTER:
         latency += max(2,ceil(cols/cfg.LANES))
       if function in I.REDUCE:
@@ -435,8 +454,9 @@ class OpenTPU:
     rows,cols=ins.w[3]&65535,ins.w[3]>>16
     function=(ins.w[5]>>16)&255
     lanes=self.workload.config.LANES
-    if scalar_recip_eligible(ins,I,self.timing):
-      return rows*cols+2
+    lookup_width=reciprocal_lookup_width(ins,I,self.timing)
+    if lookup_width:
+      return rows*ceil(cols/lookup_width)+2
     if lanes==8 and vector_rank(ins,I,self.timing)>1:
       # COMP8 has three shared stages and a 25-cycle recirculation loop.
       # This is its aggregate issue bandwidth; return-slot collisions are

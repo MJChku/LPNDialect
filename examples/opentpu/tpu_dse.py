@@ -27,6 +27,7 @@ class Architecture:
     buffered_quant: bool = False
     quant_scale_lookup: bool = False
     scalar_recip_lookup: bool = False
+    reciprocal_lookup_lanes: int = 0
     vector_row_contexts: int = 1
     vector_engines: int = 1
     vector_result_chunks: int = 0
@@ -39,6 +40,9 @@ class Architecture:
 
 def architectures():
     return [
+        *[Architecture(f'proposal_recip{lanes}_128x1_add2',128,1,2816,buffered_quant=True,
+                       vector_row_contexts=4,activation_streaming=True,quant_scale_lookup=True,
+                       reciprocal_lookup_lanes=lanes,fp_add_latency=2) for lanes in (2,4,8,16)],
         Architecture('validated_32x1', 32, 1, 2816),
         Architecture('fpga_quant_32x1', 32, 1, 2816, buffered_quant=True),
         Architecture('fpga_quant_128x1', 128, 1, 2816, buffered_quant=True),
@@ -122,7 +126,9 @@ def resources(point, config, clock_mhz):
     vector_read_copies=2*max(0,point.vector_engines-1)*4*config['TMEM_WORDS']
     lookup_bytes=(1<<21)+4096*51//8 if point.quant_scale_lookup else 0
     scalar_lookup_bytes=point.vector_engines*((1<<21)+4096*51//8) if point.scalar_recip_lookup else 0
-    sram = activation + fifo + 4 * config['TMEM_WORDS']+vector_results+vector_read_copies+lookup_bytes+scalar_lookup_bytes
+    # Two independently addressed ports share each ROM instance and enable.
+    wide_lookup_bytes=point.vector_engines*((point.reciprocal_lookup_lanes+1)//2)*((1<<21)+4096*51//8)
+    sram = activation + fifo + 4 * config['TMEM_WORDS']+vector_results+vector_read_copies+lookup_bytes+scalar_lookup_bytes+wide_lookup_bytes
     limits = dict(matrix_mac_lanes=20000, onchip_bytes=64 << 20, memory_bytes_per_cycle=2816)
     # Board is an illustrative reference, not a user-selected target. Reserve
     # 20% of DSPs and half of embedded memory for shell/other units and mapping.
@@ -137,6 +143,9 @@ def resources(point, config, clock_mhz):
                   point.bandwidth*clock_mhz/1000<=v80_limits['memory_gbs'])
     return dict(matrix_mac_lanes=macs, onchip_bytes_lower_bound=sram,
         quant_scale_lookup_bytes=lookup_bytes,scalar_reciprocal_lookup_bytes=scalar_lookup_bytes,
+        wide_reciprocal_lookup_bytes=wide_lookup_bytes,wide_reciprocal_rtl_implemented=False,
+        reciprocal_predictor_integer_multipliers=(int(point.quant_scale_lookup)+point.vector_engines*
+            (int(point.scalar_recip_lookup)+point.reciprocal_lookup_lanes)),
         vector_engines=point.vector_engines,vector_result_bytes=vector_results,
         additional_private_vector_read_copy_bytes=vector_read_copies,
         vector_fp32_multiply_sites=272*point.vector_engines,
@@ -159,7 +168,7 @@ def run_kernel(task):
     from examples.opentpu.workload import use_checkout
     from examples.opentpu.shape_workload import resolve_static
     from examples.opentpu.native_timing import ReusableTiming
-    from examples.opentpu.model import Timing,scalar_recip_eligible
+    from examples.opentpu.model import Timing,reciprocal_lookup_width
     from examples.opentpu.e2e import atomic_json, digest
     use_checkout(Path(task['opentpu_root']))
     from opentpu import Config, isa as I
@@ -185,16 +194,16 @@ def run_kernel(task):
         dram_bytes_per_cycle=point.bandwidth, dram_port_bytes=point.bandwidth,
         dram_latency=point.latency, fifo_chunks=128 * point.rows, scale_lanes=point.rows,
         unified_dram=True, scalar_store_bytes=256, epilogue_lanes=max(1, point.columns // 2),
-        quant_row_banks=8 if point.buffered_quant else 0,quant_store_buffered=point.buffered_quant,quant_scale_lookup=point.quant_scale_lookup,scalar_recip_lookup=point.scalar_recip_lookup,
+        quant_row_banks=8 if point.buffered_quant else 0,quant_store_buffered=point.buffered_quant,quant_scale_lookup=point.quant_scale_lookup,scalar_recip_lookup=point.scalar_recip_lookup,reciprocal_lookup_lanes=point.reciprocal_lookup_lanes,
         vector_row_contexts=point.vector_row_contexts,
         fp_mul_latency=point.fp_mul_latency,fp_add_latency=point.fp_add_latency,activation_streaming=point.activation_streaming,vector_engines=point.vector_engines,vector_result_chunks=point.vector_result_chunks,vector_compatible_issue=point.vector_compatible_issue)
     prepared = ReusableTiming(Path(task['compiler']), Path(task['cache']), capacity=65536).prepare(
         workload, timing, directory / 'timing.tables')
     cycles, core, _, log = prepared.run()
     (directory / 'lpn.log').write_text(log)
-    accelerated=sum(c.instruction.op==I.VOP and scalar_recip_eligible(c.instruction,I,timing)
+    accelerated=sum(c.instruction.op==I.VOP and bool(reciprocal_lookup_width(c.instruction,I,timing))
                     for commands in workload.commands for c in commands)
-    result = dict(accelerated_small_reciprocal_commands=accelerated,kernel=record['step'], phase=record['phase'], position_before=record['position_before'],
+    result = dict(accelerated_reciprocal_commands=accelerated,kernel=record['step'], phase=record['phase'], position_before=record['position_before'],
         cycles=cycles, original_rtl_cycles=record['baseline_rtl_cycles'],
         validated_evolved_rtl_cycles=record['rtl_cycles'],
         predicted_speedup_vs_original=record['baseline_rtl_cycles'] / cycles,
