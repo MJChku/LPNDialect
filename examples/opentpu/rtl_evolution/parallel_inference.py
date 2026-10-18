@@ -156,7 +156,16 @@ def check_kernel(task):
         from examples.opentpu.native_timing import ReusableTiming
         from examples.opentpu.model import Timing
         workload=resolve_static(cfg,programs,task['args'])
-        physical=replace(workload,config=replace(cfg,MCOLS=1,LANES=64))
+        physical=replace(workload,config=replace(cfg,MCOLS=1,LANES=64,
+            ACT_ROWS=task['uarch'].get('ACT_ROWS',cfg.ACT_ROWS),
+            ACT_BLOCKS=task['uarch'].get('ACT_BLOCKS',cfg.ACT_BLOCKS)))
+        if 'ACT_ROWS' in task['uarch']:
+            from examples.opentpu.storage_envelope import command_bounds
+            for items in workload.commands:
+                bounds=command_bounds(items,I)
+                if (bounds['activation_rows']>physical.config.ACT_ROWS or
+                    bounds['activation_blocks']>physical.config.ACT_BLOCKS):
+                    raise ValueError('program exceeds smaller physical activation storage')
         timing=Timing(**task['timing']) if task.get('timing') else Timing(batch_rows=32,matrix_row_lanes=32,dram_bytes_per_cycle=2816,
             dram_port_bytes=2816,dram_latency=8,fifo_chunks=4096,scale_lanes=32,
             unified_dram=True,scalar_store_bytes=256,epilogue_lanes=1)

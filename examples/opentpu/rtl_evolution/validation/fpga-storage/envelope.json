@@ -1,0 +1,745 @@
+{
+  "status": "complete",
+  "scope": "Check physical activation/FIFO capacity on all unchanged inference programs.",
+  "records": [
+    {
+      "kernel": 0,
+      "program_json_sha256": {
+        "0": "429c954f6c50c0ca8cbbc7cfa4870b9bc1b0cb062844b2ac6699d4ad5edc9d85"
+      },
+      "bounds": [
+        {
+          "activation_rows": 8,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 2408,
+          "quantizer_commands": 1771
+        }
+      ]
+    },
+    {
+      "kernel": 1,
+      "program_json_sha256": {
+        "0": "a6084db9857d1ef9299eb2eefd7274f37094070ca5326845665c42776f6d64b4"
+      },
+      "bounds": [
+        {
+          "activation_rows": 8,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 2408,
+          "quantizer_commands": 1771
+        }
+      ]
+    },
+    {
+      "kernel": 2,
+      "program_json_sha256": {
+        "0": "400be29edf2f5c2fa4b470a7188b39cae8a691f35a61ac8d23143e71e0328675"
+      },
+      "bounds": [
+        {
+          "activation_rows": 8,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 2408,
+          "quantizer_commands": 1771
+        }
+      ]
+    },
+    {
+      "kernel": 3,
+      "program_json_sha256": {
+        "0": "ff08dad9e798d32445daf4fb0a56b4570650218e3457e1d300787b32647c4c9a"
+      },
+      "bounds": [
+        {
+          "activation_rows": 8,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 2408,
+          "quantizer_commands": 1771
+        }
+      ]
+    },
+    {
+      "kernel": 4,
+      "program_json_sha256": {
+        "0": "44974a0352c0525baface3562a075d43b915d41f33a12655cf22597aec210fd9"
+      },
+      "bounds": [
+        {
+          "activation_rows": 8,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 2408,
+          "quantizer_commands": 1771
+        }
+      ]
+    },
+    {
+      "kernel": 5,
+      "program_json_sha256": {
+        "0": "761e53cbb04d14eecc255212c3a7b97f7bb8ebc68d57f879e4f42f2c2275e11b"
+      },
+      "bounds": [
+        {
+          "activation_rows": 8,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 2408,
+          "quantizer_commands": 1771
+        }
+      ]
+    },
+    {
+      "kernel": 6,
+      "program_json_sha256": {
+        "0": "b6459b672e6af745cde46f9043ad8d5233f3cfa1edc476284615c791677410d1"
+      },
+      "bounds": [
+        {
+          "activation_rows": 8,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 2408,
+          "quantizer_commands": 1771
+        }
+      ]
+    },
+    {
+      "kernel": 7,
+      "program_json_sha256": {
+        "0": "baa378cbd5a4acfc42cc99597218ca4ffbc5062e70a9fecf0feba6a9f36fa46e"
+      },
+      "bounds": [
+        {
+          "activation_rows": 8,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 2408,
+          "quantizer_commands": 1771
+        }
+      ]
+    },
+    {
+      "kernel": 8,
+      "program_json_sha256": {
+        "0": "aff015f94c5133ecffa5f692f4d77822e0b50294bc6ed5d1432bb92aaf605c69"
+      },
+      "bounds": [
+        {
+          "activation_rows": 8,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 2408,
+          "quantizer_commands": 1771
+        }
+      ]
+    },
+    {
+      "kernel": 9,
+      "program_json_sha256": {
+        "0": "221d7caf50526a2d683aa6d72ef3498f4945c3e673649c18ac619582500e0f26"
+      },
+      "bounds": [
+        {
+          "activation_rows": 8,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 2408,
+          "quantizer_commands": 1771
+        }
+      ]
+    },
+    {
+      "kernel": 10,
+      "program_json_sha256": {
+        "0": "c5da9df9efe666d197e134e2b0bafa41c1ae455020b3018a8684034d3362aff8"
+      },
+      "bounds": [
+        {
+          "activation_rows": 8,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 2408,
+          "quantizer_commands": 1771
+        }
+      ]
+    },
+    {
+      "kernel": 11,
+      "program_json_sha256": {
+        "0": "601b547873e47fc13d7b9bf4fa6f372fec49a977831359abfc86c8585221eb48"
+      },
+      "bounds": [
+        {
+          "activation_rows": 8,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 2408,
+          "quantizer_commands": 1771
+        }
+      ]
+    },
+    {
+      "kernel": 12,
+      "program_json_sha256": {
+        "0": "21b7d4bb34c6d7ab060030504ea9126ceec94dd8772d4994bf76927c092e9441"
+      },
+      "bounds": [
+        {
+          "activation_rows": 8,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 2408,
+          "quantizer_commands": 1771
+        }
+      ]
+    },
+    {
+      "kernel": 13,
+      "program_json_sha256": {
+        "0": "2ca327c227863a42c184a25b9412357ce2e670c62de995a0253cbf037bf8cc78"
+      },
+      "bounds": [
+        {
+          "activation_rows": 8,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 2408,
+          "quantizer_commands": 1771
+        }
+      ]
+    },
+    {
+      "kernel": 14,
+      "program_json_sha256": {
+        "0": "b9819c38aabb96a9285daca7f383d2ab3b11a31c8d3c7cdad414d6031750e5e9"
+      },
+      "bounds": [
+        {
+          "activation_rows": 8,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 2408,
+          "quantizer_commands": 1771
+        }
+      ]
+    },
+    {
+      "kernel": 15,
+      "program_json_sha256": {
+        "0": "bad8787a97c383ba9a2f9cc484e2eba547657dbaec9411f0976630998e6f9520"
+      },
+      "bounds": [
+        {
+          "activation_rows": 8,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 2414,
+          "quantizer_commands": 1772
+        }
+      ]
+    },
+    {
+      "kernel": 16,
+      "program_json_sha256": {
+        "0": "d0cfcb995eb454885223567974802c72acd44e03c0bf0d730424a74ec55d781a"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 17,
+      "program_json_sha256": {
+        "0": "1e5785ad7b1ece2d2f47d148a4c8bb89ae1579e9f87c9642cbeb4001afdcf67d"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 18,
+      "program_json_sha256": {
+        "0": "b16a32f75bb4907cd282788f7059b161dc5166024397d1ef68743b04afd972c0"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 19,
+      "program_json_sha256": {
+        "0": "9ca1a8652388764f4ca895f9d47fb38425b90b0201dd5265c3a179acdc2cac9a"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 20,
+      "program_json_sha256": {
+        "0": "7ec74d80abaff6a30c3e7d99cfb7d895baa9fb9465a51b9aba15c29bc3731536"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 21,
+      "program_json_sha256": {
+        "0": "73aa4bcd3ec48b4f1d05c1c5d166ddef9490ae05bf941e3c6e83eee83d686cef"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 22,
+      "program_json_sha256": {
+        "0": "c934fbffd910f5c78437807d76eee9016106235e91f184c076e3c7951553beb6"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 23,
+      "program_json_sha256": {
+        "0": "e619fb1a42d28bc94d506e17fb5152ed51c35738a8270481c16db3a2878af87d"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 24,
+      "program_json_sha256": {
+        "0": "933cb18e7c952c321f294d120c1c5e367177ad23485b2ee231e306166d05de2a"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 25,
+      "program_json_sha256": {
+        "0": "cd56bb45bc56e81045c94e3ca500fcace7443b5a45c6f80f01ab26b40ce8cf87"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 26,
+      "program_json_sha256": {
+        "0": "baf91c88e04dcf12bb55cb3b4b0391de12631a627986cb1b4b95efeec41552a4"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 27,
+      "program_json_sha256": {
+        "0": "e1d035f4259dc6a8eeaad48a8cb4411a73b2bbc79bdc447e0a9e704cf3ab9fb5"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 28,
+      "program_json_sha256": {
+        "0": "706254449f061ce2e23eb42413306323caae55f4267c84441f8d702242a6320c"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 29,
+      "program_json_sha256": {
+        "0": "6f69c39216c3313d0c1ee370643ce1153949b884c1b65d56b1c62e91a66e76af"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 30,
+      "program_json_sha256": {
+        "0": "59c04b45df703921c4e727371ef200cffb1b836bf4ce184a23155114ee4aaa10"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 31,
+      "program_json_sha256": {
+        "0": "69d04209e43e945f3a19cda099844cb693dbbb94241a3bbbdee9f4ab1fad418c"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 32,
+      "program_json_sha256": {
+        "0": "cbbd7528ff72de2251d0c8212c777e8075291debd27301b3b3c71f5d96b3da12"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 33,
+      "program_json_sha256": {
+        "0": "5e730237a17b3297da435353ebf4251477ff32b11f9a90fd52eb4a8a4db91d05"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 34,
+      "program_json_sha256": {
+        "0": "79060395f5998485e4d7ccf223fed5785d85af2b3a727ef870972b4b9cbdabad"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 35,
+      "program_json_sha256": {
+        "0": "9aba8dc8ee91210a6f9e4f376494351001ed40d77190d4a7516731cc8583ceb4"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 36,
+      "program_json_sha256": {
+        "0": "e53cb4f7d7716f4e73dadd27ebc5817a246e94440d9f0f0ef7442533dc14b6b0"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 37,
+      "program_json_sha256": {
+        "0": "5edeabb7c1d7dea3c432b52e1426590ebbf3e067bc528314a3c16eddb50fc476"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 38,
+      "program_json_sha256": {
+        "0": "cfb946fafb5880d4ed632257a9f0f2e31af5ee07c1348f8a1e3ac26f450a8781"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 39,
+      "program_json_sha256": {
+        "0": "d5aa8a1af2ab886fe94f24550f609a8c00771ab703dc9f130b3f995e405fce8e"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 40,
+      "program_json_sha256": {
+        "0": "18e6b31515d798efdb73175e04b254985896f3ccb81e2ae1e11bd0514de44d79"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 41,
+      "program_json_sha256": {
+        "0": "f5d300a3bb51143e54612370a76b0ab6f52ae947918e68dcb6b6425cea780aaf"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 42,
+      "program_json_sha256": {
+        "0": "d3a87d8cad724b8c0e7de66aecb7695d2da42772c4d0e7630481b8c714adb58b"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 43,
+      "program_json_sha256": {
+        "0": "6cd8bb206eb8a2d8bd60676163f666d31f270fcfc9b16dda2d1ad9992bdb1c0c"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 44,
+      "program_json_sha256": {
+        "0": "9267c8c8bbe687c57a25c2f56623fc947de73304bfadbefa6e59bbe8344c7ad5"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 45,
+      "program_json_sha256": {
+        "0": "61e1d83c0100e17f7559b14830e6cfa6b2676a64ef8d429d2af4df2ba8b7ad97"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 46,
+      "program_json_sha256": {
+        "0": "d06d272cd8b7ef0b47b708109c4faf5df8e1a228dc029e9e913a39548b4bf681"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    },
+    {
+      "kernel": 47,
+      "program_json_sha256": {
+        "0": "e04f762594473b91fa70dab8e958bd1a1ae7b352ade48c564dfe612d42d46a91"
+      },
+      "bounds": [
+        {
+          "activation_rows": 4,
+          "activation_blocks": 64,
+          "row_fifo_chunks": 9,
+          "matrix_commands": 1102,
+          "quantizer_commands": 512
+        }
+      ]
+    }
+  ],
+  "maximum_requirements": {
+    "activation_rows": 8,
+    "activation_blocks": 64,
+    "row_fifo_chunks": 9
+  },
+  "reference_report_sha256": "f037e875e73760f7c3d70b6851d0ce4f01bbdd9f0c62ef27ccd75ba5659f07fe",
+  "source_sha256": {
+    "/home/ubuntu/LPNDialect-fpga-storage/examples/opentpu/storage_envelope.py": "6caaeb80b8c20e5eb440c6aff2079c8e024442e32ff629b716b496a0d1a4b58f",
+    "/home/ubuntu/LPNDialect-fpga-storage/examples/opentpu/shape_workload.py": "d0f1db9e2bba7f3b1b1b119e9483b7ebc7ce17823d343ac135b26e5e51b91169",
+    "/home/ubuntu/LPNDialect-fpga-storage/examples/opentpu/retained_inputs.py": "50111fb14a2678b615b34f8b726fd6d4b804b3ef76a116a4d139a00086d18b59"
+  },
+  "original_activation_rows": 16,
+  "original_activation_blocks": 64,
+  "numerical_arithmetic_executed": false,
+  "limitations": [
+    "Workload-specific capacity proof, not a universal smaller ISA configuration",
+    "Row FIFO bound proves one row fits, not unchanged performance at smaller depth",
+    "Changed physical capacities still require RTL numerical and cycle validation"
+  ]
+}

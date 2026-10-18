@@ -25,6 +25,8 @@ def main():
     p.add_argument('--reuse-rtl',type=Path,
         help='Recheck completed identical-hardware RTL outputs with new LPN timing details')
     p.add_argument('--matrix-rows',type=int,choices=(32,128),default=128)
+    p.add_argument('--act-rows',type=int,choices=(8,16))
+    p.add_argument('--fifo-depth',type=int,choices=(32,64,128),default=128)
     p.add_argument('--activation-streaming',action='store_true')
     p.add_argument('--lookup-scale',action='store_true')
     p.add_argument('--scalar-recip-lookup',action='store_true')
@@ -55,6 +57,7 @@ def main():
     sources=[rtlsim.RTL/name for name in rtlsim.RTL_SOURCES]+[rtlsim.TB/'tb_top.sv',rtlsim.TB/'lpn_wall.cpp']
     project=Path(__file__).resolve().parents[1]
     sources += [project/name for name in ('model.py','components.py','compact.py','native_timing.py','shape_workload.py','activation_stream.py','retained_inputs.py')]
+    if a.act_rows is not None:sources.append(project/'storage_envelope.py')
     sources += [Path(__file__).resolve(),Path(__file__).with_name('parallel_inference.py')]
     if a.lookup_scale or a.scalar_recip_lookup:
         from .rom_inputs import reciprocal_inputs
@@ -73,11 +76,13 @@ def main():
         if any(not (a.reuse_rtl/'kernels'/f'{i:04d}'/'rtl-result.json').exists() for i in indices):
             raise ValueError('retained RTL kernel result is missing')
     uarch=dict(reference['uarch'],MXU_ROWS=a.matrix_rows)
+    if a.act_rows is not None:uarch['ACT_ROWS']=a.act_rows
+    if a.fifo_depth!=128:uarch['FIFO_DEPTH']=a.fifo_depth
     if a.activation_streaming:uarch['ACT_STREAMING']=1
     if a.lookup_scale:uarch['QUANT_LOOKUP']=1
     if a.scalar_recip_lookup:uarch['VPU_SCALAR_RECIP']=1
     timing=Timing(batch_rows=a.matrix_rows,matrix_row_lanes=a.matrix_rows,dram_bytes_per_cycle=2816,dram_port_bytes=2816,
-        dram_latency=8,fifo_chunks=128*a.matrix_rows,scale_lanes=a.matrix_rows,unified_dram=True,scalar_store_bytes=256,
+        dram_latency=8,fifo_chunks=a.fifo_depth*a.matrix_rows,scale_lanes=a.matrix_rows,unified_dram=True,scalar_store_bytes=256,
         epilogue_lanes=1,quant_row_banks=8,quant_store_buffered=True,vector_row_contexts=4,
         fp_mul_latency=a.fp_mul_latency,fp_add_latency=a.fp_add_latency,activation_streaming=a.activation_streaming,quant_scale_lookup=a.lookup_scale,scalar_recip_lookup=a.scalar_recip_lookup,
         vector_command_queue=a.vector_command_queue,matrix_retirement=a.matrix_retirement,physical_scale_lines=a.physical_scale_lines)

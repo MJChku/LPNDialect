@@ -1,0 +1,77 @@
+{
+  "status": "complete",
+  "scope": "Check the smaller physical ACT/FIFO allocation at its highest used addresses.",
+  "config": {
+    "S": 1,
+    "D": 64,
+    "MCOLS": 4,
+    "ACT_BLOCKS": 64,
+    "TMEM_WORDS": 65536,
+    "DRAM_BYTES": 4194304,
+    "IMEM_WORDS": 65536,
+    "LANES": 64,
+    "PAIR": false,
+    "DSTEP": false,
+    "STREAM": false,
+    "ACT_ROWS": 16,
+    "SEQ_WC": false
+  },
+  "uarch": {
+    "MXU_ROWS": 8,
+    "VPU_LANES": 64,
+    "QST_LANES": 64,
+    "ACT_ROWS": 8,
+    "ACT_BLOCKS": 64,
+    "FIFO_DEPTH": 64
+  },
+  "records": [
+    {
+      "case": "whole_activation",
+      "rtl_cycles": 3165,
+      "physical_last_activation_row": 7,
+      "physical_last_activation_block": 63,
+      "all_full_dram_and_tmem_bit_exact": true
+    },
+    {
+      "case": "partial_high_blocks",
+      "rtl_cycles": 2670,
+      "physical_last_activation_row": 7,
+      "physical_last_activation_block": 63,
+      "all_full_dram_and_tmem_bit_exact": true
+    }
+  ],
+  "simulator": "/home/ubuntu/FeSens-openTPU-scalar-recip/build/verilator/tb_top_6270e06b6c94/Vtb_top",
+  "simulator_sha256": "561394cd5027b03f4adc861137ca72b9e04d53464d4a3176e1633e8f45dfb441",
+  "source_sha256": {
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/vpu/otpu_fp.sv": "b476c83913d88ef5b4bcbc8cc07378ade8b2aeaaf7642b20976bd1fce33cd416",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/vpu/otpu_fpipe.sv": "6f9feaf92b539bb989e90dd77d8c066c92ae01c1b9c826f335e6b45231c45bd0",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/top/otpu_pkg.sv": "ca41c32141fdf224d24481842b182063ce5692a976176eca82c4c78d4d7ad3c6",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/mem/otpu_dram.sv": "adccbba947e4f4940ac0dc0995c052ebadc0aa6df16364b3b7ee07e25c8321c2",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/mem/otpu_tmem.sv": "2e8cb0e266d4c6f82910dc85a2240899c7d36061d31e1f09aa0ec9190b2a1df6",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/mem/otpu_native_dram.sv": "8598544bfc996aece2ab65c98003629eb25979265b3a0f4e8bec72c14bbf6eb5",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/mem/otpu_actram.sv": "17f9e30a1f9bfec27a205be4eda62596779c6f0b024b8a1b99b64171278c9f49",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/seq/otpu_seq.sv": "dd137dab5993720454bae46c03e48669192546b6a416556685f797e30b47a409",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/vpu/otpu_vtree.sv": "3a4ff0df2398fc7162043dea22ea2937d5f38f61894255fda48d6312b3b10842",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/dma/otpu_dma.sv": "22283a5bbcfda393945b368122a71d22918917a1441b514b89e3d4e989180a02",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/mxu/otpu_mxu.sv": "320c95001a7f7a48215bb7f9c39663a4b2e8ca9fac4f137cd0d88e722be48652",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/mxu/otpu_mxu_parallel.sv": "d0464e389726cc0b042289f2be19d6c6ccfeb72e323a37806499f8741e5fadbd",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/tech/generic/otpu_tech_dsp.sv": "89b0d45e303491dd8dfe6cdeb4e623e60d04a415697a567d1a70836dba9d8de7",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/tech/generic/otpu_tech_ram.sv": "f2c74dc55f26ad01568271ec22469208d93af2d9248ff1f9cfef3dafe1083881",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/vpu/otpu_recip_rom.sv": "e253c9b4d1a1f7c2ed834d42e7389dc523f20efd530545c072e1a7289e97efc4",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/vpu/otpu_qscale_lookup.sv": "4e4b4337fbd8c9fa1be68f18c7cd0c8c7d476615ac2005714dd4a82be524ffd2",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/vpu/otpu_quant.sv": "6664b00f953ed26120e6cc084929fe4b044c4df07f35fc5034158c088b2bf0ec",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/vpu/otpu_se_comp.sv": "71e0c047e122094076697a15bb027e1208137ec6df75ed681002a45e930faf0f",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/vpu/otpu_se_tail.sv": "a76c0fa830d0a70cbbf6f0dc5ace9526061c5634e3377d156b5459e4c8d724af",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/vpu/otpu_vpu.sv": "2b92c483a28641c2ed1b7790683438d2e64a489844050c61992a1003c1fdc282",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/top/otpu_coll.sv": "3f6d295b021a56de25e9e6dbc90e2fa1d94224cef1bf8d03c58dbe771dcb8f07",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/exp/tmem_nocopy/otpu_tmem_model.sv": "4d8f55b8774811a1d548d80b384d6ed41f71d1d1801958f6f9e3fc5c9cc3715e",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/top/otpu_slice.sv": "f38b5d7ca2b091e08cbee74b55309bd97d222a0d31668c09e18fc67f788690a3",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/top/otpu_top.sv": "1ecfe475cae0c660da4115daf7518ad2d6d2c7999dd24e4a6ab41ecf41eadd24",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/sim/verilator/tb_top.sv": "314d4178ee87bd6b0dbcc67404fbe2fd2051bf35a184ca1dd21d24538af75318",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/sim/verilator/lpn_wall.cpp": "8892bb27d0c38eef196487a68806e6bc69fc8698c60bdfb58fa7d21aff0fcbc4",
+    "/home/ubuntu/LPNDialect-fpga-storage-v2/examples/opentpu/rtl_evolution/check_compact_storage.py": "42e372ada0612d17c45685e5d44817e64773eaf4609faf984aac6650d9a3c3d4"
+  },
+  "limitations": [
+    "Boundary numerical gates, not a complete inference replay or FPGA synthesis"
+  ]
+}
