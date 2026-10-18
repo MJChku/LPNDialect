@@ -3,7 +3,7 @@ from .model import VECTOR_DRAIN_RANK
 
 
 def vector_selector_factory(net,slots,window,kinds,begins,ends,indices,metadata,is_done,ranks):
-  def build(prefix,state,capacity,chunks):
+  def build(prefix,state,capacity,chunks,accepted=None):
     @net.func(name=prefix+'_select_compatible',args=('i64',),results=('i64',))
     def select_compatible(unit):
       current=peek(state)
@@ -12,6 +12,8 @@ def vector_selector_factory(net,slots,window,kinds,begins,ends,indices,metadata,
         token=peek(array(slots)[s])
         idx=token.get('id')
         enabled=select(token.get('active')==1,array(kinds)[idx]==unit,False,typ='i1')
+        if accepted is not None:
+          enabled=select(enabled,array(accepted)[idx]!=0,False,typ='i1')
         for d in range(select(enabled,array(begins)[idx],0),select(enabled,array(ends)[idx],0)):
           enabled=select(enabled,is_done(array(indices)[d]),False,typ='i1')
         rank=array(ranks)[idx]

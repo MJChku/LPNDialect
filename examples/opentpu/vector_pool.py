@@ -19,7 +19,7 @@ def result_shape(ins,I,lanes):
 
 
 class VectorPoolEngine:
-  def __init__(self,net,prefix,interface,parameters,ranks,chunks,drains,capacity,write_port,kind):
+  def __init__(self,net,prefix,interface,parameters,ranks,chunks,drains,capacity,write_port,kind,accepted=None):
     resource=net.place(prefix+'_issue',initial_tokens=1)
     buffered=net.place(prefix+'_result_capacity',initial_tokens=1)
     initialize=net.place(prefix+'_initialize',initial_tokens=1)
@@ -30,7 +30,7 @@ class VectorPoolEngine:
     select_ready,publish=interface.select_ready,interface.publish
     latencies,intervals=parameters.latencies,parameters.services
     if interface.vector_selector_factory is not None:
-      select_ready=interface.vector_selector_factory(prefix,pipeline.state,buffered,chunks)
+      select_ready=interface.vector_selector_factory(prefix,pipeline.state,buffered,chunks,accepted)
 
     @net.transition(prefix+'_initialize_capacity')
     def initialize_capacity():

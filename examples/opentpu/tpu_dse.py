@@ -32,6 +32,7 @@ class Architecture:
     cache_read_bytes_per_cycle: int = 8192
     vector_row_contexts: int = 1
     vector_engines: int = 1
+    vector_fast_engine: bool = False
     vector_result_chunks: int = 0
     vector_compatible_issue: bool = False
     window: int = 32
@@ -48,6 +49,12 @@ class Architecture:
 
 def architectures():
     return [
+        *[Architecture(f'proposal_fast_vector{int(fast)}_window{window}_128x1_add2',128,1,2816,
+                       buffered_quant=True,vector_row_contexts=4,activation_streaming=True,
+                       quant_scale_lookup=True,scalar_recip_lookup=True,fp_add_latency=2,
+                       matrix_retirement=True,physical_scale_lines=True,act_rows=8,act_blocks=64,
+                       fifo_per_core=64,vector_result_chunks=1024,vector_compatible_issue=True,
+                       vector_fast_engine=fast,window=window) for fast in (False,True) for window in (32,128)],
         Architecture('physical_compact_act_128x1_add2',128,1,2816,buffered_quant=True,
                      vector_row_contexts=4,activation_streaming=True,quant_scale_lookup=True,
                      scalar_recip_lookup=True,fp_add_latency=2,vector_command_queue=2,
@@ -157,9 +164,9 @@ def resources(point, config, clock_mhz):
     macs = config['D'] * point.rows * point.columns
     activation = point.rows * (point.act_rows or config['ACT_ROWS']) * (point.act_blocks or config['ACT_BLOCKS']) * (config['D'] + 8)
     fifo = point.rows * point.fifo_per_core * config['D']
-    vector_results=point.vector_engines*point.vector_result_chunks*64*4
+    vector_results=(point.vector_engines+int(point.vector_fast_engine))*point.vector_result_chunks*64*4
     # Two private input copies for each extra engine, propagated by every write.
-    vector_read_copies=2*max(0,point.vector_engines-1)*4*config['TMEM_WORDS']
+    vector_read_copies=(2*max(0,point.vector_engines-1)+int(point.vector_fast_engine))*4*config['TMEM_WORDS']
     lookup_bytes=(1<<21)+4096*51//8 if point.quant_scale_lookup else 0
     scalar_lookup_bytes=point.vector_engines*((1<<21)+4096*51//8) if point.scalar_recip_lookup else 0
     # Two independently addressed ports share each ROM instance and enable.
@@ -189,6 +196,10 @@ def resources(point, config, clock_mhz):
         reciprocal_predictor_integer_multipliers=(int(point.quant_scale_lookup)+point.vector_engines*
             (int(point.scalar_recip_lookup)+point.reciprocal_lookup_lanes)),
         vector_engines=point.vector_engines,vector_result_bytes=vector_results,
+        fast_vector_engine=point.vector_fast_engine,
+        fast_vector_rtl_implemented=False if point.vector_fast_engine else None,
+        fast_vector_result_bytes=point.vector_result_chunks*64*4 if point.vector_fast_engine else 0,
+        fast_vector_read_copy_bytes=4*config['TMEM_WORDS'] if point.vector_fast_engine else 0,
         additional_private_vector_read_copy_bytes=vector_read_copies,
         vector_fp32_multiply_sites=272*point.vector_engines,
         vector_pool_implemented=False if point.vector_result_chunks else None,
@@ -245,7 +256,7 @@ def run_kernel(task):
         unified_dram=True, scalar_store_bytes=256, epilogue_lanes=max(1, point.columns // 2),
         quant_row_banks=8 if point.buffered_quant else 0,quant_store_buffered=point.buffered_quant,quant_scale_lookup=point.quant_scale_lookup,scalar_recip_lookup=point.scalar_recip_lookup,reciprocal_lookup_lanes=point.reciprocal_lookup_lanes,pinned_cache_bytes=point.pinned_cache_bytes,cache_read_bytes_per_cycle=point.cache_read_bytes_per_cycle,
         vector_row_contexts=point.vector_row_contexts,
-        fp_mul_latency=point.fp_mul_latency,fp_add_latency=point.fp_add_latency,activation_streaming=point.activation_streaming,vector_engines=point.vector_engines,vector_result_chunks=point.vector_result_chunks,vector_compatible_issue=point.vector_compatible_issue,
+        fp_mul_latency=point.fp_mul_latency,fp_add_latency=point.fp_add_latency,activation_streaming=point.activation_streaming,vector_engines=point.vector_engines,vector_fast_engine=point.vector_fast_engine,vector_result_chunks=point.vector_result_chunks,vector_compatible_issue=point.vector_compatible_issue,
         vector_command_queue=point.vector_command_queue,matrix_retirement=point.matrix_retirement,physical_scale_lines=point.physical_scale_lines)
     profile=None;profile_hash=None
     if point.pinned_cache_bytes:

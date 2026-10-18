@@ -139,6 +139,7 @@ class Timing:
   matrix_retirement: bool = False
   physical_scale_lines: bool = False
   vector_engines: int = 1
+  vector_fast_engine: bool = False
   vector_result_chunks: int = 0
   vector_compatible_issue: bool = False
   activation_streaming: bool = False
@@ -150,6 +151,8 @@ class Timing:
       raise ValueError('vector command queue must be 0 or the RTL two-entry FIFO')
     if self.vector_command_queue and (self.vector_result_chunks or self.vector_compatible_issue):
       raise ValueError('queued VPU model currently requires the single original issue path')
+    if self.vector_fast_engine and (self.vector_engines!=1 or not self.vector_result_chunks or not self.vector_compatible_issue):
+      raise ValueError('fast vector engine requires one FP engine, bounded results and compatible issue')
     if type(self.pinned_cache_bytes) is not int or self.pinned_cache_bytes<0 or self.pinned_cache_bytes%64:
       raise ValueError('pinned cache size must be a nonnegative multiple of 64 bytes')
     if type(self.cache_read_bytes_per_cycle) is not int or self.cache_read_bytes_per_cycle<1:

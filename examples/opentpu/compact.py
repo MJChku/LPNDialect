@@ -353,9 +353,17 @@ class CompactOpenTPU(OpenTPU):
       result_chunks=self._table(prefix+'_vector_result_chunks',[s[0] for s in shapes])
       result_drains=self._table(prefix+'_vector_result_drains',[s[1] for s in shapes])
       result_port=net.place(prefix+'_vector_result_port',initial_tokens=1)
+      fp_accepted=fast_accepted=None
+      if t.vector_fast_engine:
+        fast=[int(c.instruction.op==I.VOP and (c.instruction.w[5]>>16)&255 in (I.V_FILL,I.V_COPY)) for c in commands]
+        fast_accepted=self._table(prefix+'_fast_accepted',fast)
+        fp_accepted=self._table(prefix+'_fp_accepted',[1-v for v in fast])
       vectors=[VectorPoolEngine(net,prefix+f'_vpu_{v}',interface,parameters,vector_ranks,
-          result_chunks,result_drains,t.vector_result_chunks,result_port,W.U_VPU)
+          result_chunks,result_drains,t.vector_result_chunks,result_port,W.U_VPU,fp_accepted)
           for v in range(t.vector_engines)]
+      if t.vector_fast_engine:
+        vectors.append(VectorPoolEngine(net,prefix+'_vpu_fast',interface,parameters,vector_ranks,
+            result_chunks,result_drains,t.vector_result_chunks,result_port,W.U_VPU,fast_accepted))
     matrices = [MatrixEngine(net,prefix+f"_mxu_{engine}",cfg,t,interface,
         parameters,memory,W.U_MXU)
         for engine in range(t.matrix_engines)]
