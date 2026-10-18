@@ -1,0 +1,361 @@
+{
+  "status": "complete",
+  "config": {
+    "S": 1,
+    "D": 64,
+    "MCOLS": 4,
+    "ACT_BLOCKS": 64,
+    "TMEM_WORDS": 65536,
+    "DRAM_BYTES": 1048576,
+    "IMEM_WORDS": 65536,
+    "LANES": 64,
+    "PAIR": false,
+    "DSTEP": false,
+    "STREAM": false,
+    "ACT_ROWS": 16,
+    "SEQ_WC": false
+  },
+  "uarch": {
+    "MXU_ROWS": 8,
+    "VPU_LANES": 64,
+    "QST_LANES": 64,
+    "MXU_COLS": 8,
+    "MXU_PAIR_DOT": 1
+  },
+  "source_sha256": {
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/vpu/otpu_fp.sv": "b476c83913d88ef5b4bcbc8cc07378ade8b2aeaaf7642b20976bd1fce33cd416",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/vpu/otpu_fpipe.sv": "6f9feaf92b539bb989e90dd77d8c066c92ae01c1b9c826f335e6b45231c45bd0",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/top/otpu_pkg.sv": "ca41c32141fdf224d24481842b182063ce5692a976176eca82c4c78d4d7ad3c6",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/mem/otpu_dram.sv": "adccbba947e4f4940ac0dc0995c052ebadc0aa6df16364b3b7ee07e25c8321c2",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/mem/otpu_tmem.sv": "2e8cb0e266d4c6f82910dc85a2240899c7d36061d31e1f09aa0ec9190b2a1df6",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/mem/otpu_qst_coalesce.sv": "d36d129746a8614a529747a1a36114ac549552345930523cb2117a158d51f990",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/mem/otpu_scale_cache.sv": "d0e14d182894eb6a80a430782dcc6c6653392895cf0e93c28ba2ed1e624834e0",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/mem/otpu_native_dram.sv": "8598544bfc996aece2ab65c98003629eb25979265b3a0f4e8bec72c14bbf6eb5",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/mem/otpu_actram.sv": "17f9e30a1f9bfec27a205be4eda62596779c6f0b024b8a1b99b64171278c9f49",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/seq/otpu_seq.sv": "dd137dab5993720454bae46c03e48669192546b6a416556685f797e30b47a409",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/vpu/otpu_vtree.sv": "3a4ff0df2398fc7162043dea22ea2937d5f38f61894255fda48d6312b3b10842",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/dma/otpu_dma.sv": "22283a5bbcfda393945b368122a71d22918917a1441b514b89e3d4e989180a02",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/mxu/otpu_pair_pe.sv": "e169a23029a696494ca5e31d9fc84436a70c7aa590ee3b98879980a53c8d7b5f",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/mxu/otpu_mxu.sv": "2324d0e9f804eb6c405ae4367422968df908337d9861e3b45f40810faf0e2340",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/mxu/otpu_mxu_parallel.sv": "ccb82072788623610f0959493a4065cb8b00e181f789d5bae653dabba488f7a4",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/tech/generic/otpu_tech_dsp.sv": "89b0d45e303491dd8dfe6cdeb4e623e60d04a415697a567d1a70836dba9d8de7",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/tech/generic/otpu_tech_ram.sv": "f2c74dc55f26ad01568271ec22469208d93af2d9248ff1f9cfef3dafe1083881",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/vpu/otpu_recip_rom.sv": "e253c9b4d1a1f7c2ed834d42e7389dc523f20efd530545c072e1a7289e97efc4",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/vpu/otpu_qscale_lookup.sv": "4e4b4337fbd8c9fa1be68f18c7cd0c8c7d476615ac2005714dd4a82be524ffd2",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/vpu/otpu_quant.sv": "6664b00f953ed26120e6cc084929fe4b044c4df07f35fc5034158c088b2bf0ec",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/vpu/otpu_se_comp.sv": "71e0c047e122094076697a15bb027e1208137ec6df75ed681002a45e930faf0f",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/vpu/otpu_se_tail.sv": "a76c0fa830d0a70cbbf6f0dc5ace9526061c5634e3377d156b5459e4c8d724af",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/vpu/otpu_vpu.sv": "2b92c483a28641c2ed1b7790683438d2e64a489844050c61992a1003c1fdc282",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/top/otpu_coll.sv": "3f6d295b021a56de25e9e6dbc90e2fa1d94224cef1bf8d03c58dbe771dcb8f07",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/exp/tmem_nocopy/otpu_tmem_model.sv": "4d8f55b8774811a1d548d80b384d6ed41f71d1d1801958f6f9e3fc5c9cc3715e",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/top/otpu_slice.sv": "81c295f9982e53a4786bf347255988522e60af6bb63d2385a4a953ae92a09328",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/top/otpu_top.sv": "ea80ed873e3bcc7791864a51bf5da62d7e86bf1d5d0e93a94f995fb08ce86b9f",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/sim/verilator/tb_top.sv": "0e85e4866aaaffb3e7b38fe1f6d8fc1ac6a230b080ec5305056b6a4022bc20f1",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/sim/verilator/lpn_wall.cpp": "8892bb27d0c38eef196487a68806e6bc69fc8698c60bdfb58fa7d21aff0fcbc4",
+    "/home/ubuntu/LPNDialect-packed-mxu-tests/examples/opentpu/rtl_evolution/check_matrix.py": "0d07fa4ceccd373859d21708d8421fd8ba06b33a470a1bfad0039bb275c8372a"
+  },
+  "rtl_compile_flags": [
+    "--binary",
+    "-j",
+    "12",
+    "-Wno-fatal",
+    "-Wno-WIDTHEXPAND",
+    "-Wno-WIDTHTRUNC",
+    "-Wno-UNUSEDSIGNAL",
+    "-Wno-UNUSEDPARAM",
+    "-O3",
+    "--x-assign",
+    "0",
+    "--x-initial",
+    "0",
+    "-CFLAGS",
+    "-O0",
+    "-DOTPU_FP_MUL_LAT=2",
+    "-DOTPU_FP_ADD_LAT=4"
+  ],
+  "lookup_table_sha256": {},
+  "records": [
+    {
+      "case": {
+        "name": "unit_19x8",
+        "n": 19,
+        "m": 8,
+        "kb": 3,
+        "unit": true
+      },
+      "rtl_cycles": 259,
+      "seconds": 91.25330173969269,
+      "all_dram_and_tmem_bit_exact": true,
+      "simulator": "/home/ubuntu/FeSens-openTPU-packed-mxu/build/verilator/tb_top_587a89aee77f/Vtb_top",
+      "simulator_sha256": "de823191a2956c649c81d6d2bd575d42f51d155e34296b45e98586b8c347d4b1",
+      "input_sha256": {
+        "prog_0.hex": "29b86986dcd950e3c33e4affeb66713352a1c796da0bc060a2f3f1dc3197692d",
+        "dram_0.bin": "244a4bd1d337c17f44c9fa0764b03cff3be00cdcf8ba88855bb7b9c9bf2ed21f"
+      },
+      "rtl_log_sha256": "8f7873556941b95fa243e7e85b880062cb8f6033dd2c1cb3fa58cd3b75e28d63"
+    },
+    {
+      "case": {
+        "name": "unit_5x3",
+        "n": 5,
+        "m": 3,
+        "kb": 1,
+        "unit": true
+      },
+      "rtl_cycles": 137,
+      "seconds": 3.04339830391109,
+      "all_dram_and_tmem_bit_exact": true,
+      "simulator": "/home/ubuntu/FeSens-openTPU-packed-mxu/build/verilator/tb_top_587a89aee77f/Vtb_top",
+      "simulator_sha256": "de823191a2956c649c81d6d2bd575d42f51d155e34296b45e98586b8c347d4b1",
+      "input_sha256": {
+        "prog_0.hex": "c2b67b044726395116d9a380f21f95c605ffcddaebee634a3da160af70d941ee",
+        "dram_0.bin": "6890e438fb734772bcca53ad5e88c4ce947766eb6fc4599860e70f1dd3148034"
+      },
+      "rtl_log_sha256": "d6a49b707710ea6f2f5f76ee783e8e58c22408f776e1eb079269d901abacbe96"
+    },
+    {
+      "case": {
+        "name": "scaled_17x8",
+        "n": 17,
+        "m": 8,
+        "kb": 5
+      },
+      "rtl_cycles": 346,
+      "seconds": 4.04352174885571,
+      "all_dram_and_tmem_bit_exact": true,
+      "simulator": "/home/ubuntu/FeSens-openTPU-packed-mxu/build/verilator/tb_top_587a89aee77f/Vtb_top",
+      "simulator_sha256": "de823191a2956c649c81d6d2bd575d42f51d155e34296b45e98586b8c347d4b1",
+      "input_sha256": {
+        "prog_0.hex": "3f586220f45b2e55dce20a53fada2fe241bf0a9b565f240c3c00c3f697bd2030",
+        "dram_0.bin": "d0eb120d2fa7b1cafb4f3e597ce605305c8f0e24ab06ee9f3247f41d9439ab09"
+      },
+      "rtl_log_sha256": "71821da7c01950599b5f44e17327131c4aa6c340ae95df0bc0272cef553ee2d3"
+    },
+    {
+      "case": {
+        "name": "acc_ascale_rmax",
+        "n": 19,
+        "m": 3,
+        "kb": 3,
+        "unit": true,
+        "acc": true,
+        "ascale": true,
+        "rmax": true
+      },
+      "rtl_cycles": 187,
+      "seconds": 3.042743043974042,
+      "all_dram_and_tmem_bit_exact": true,
+      "simulator": "/home/ubuntu/FeSens-openTPU-packed-mxu/build/verilator/tb_top_587a89aee77f/Vtb_top",
+      "simulator_sha256": "de823191a2956c649c81d6d2bd575d42f51d155e34296b45e98586b8c347d4b1",
+      "input_sha256": {
+        "prog_0.hex": "656e6f3e283ab7b1b9551efe41f1a5e015796fe56ffc8e12f1096761c22d8ac2",
+        "dram_0.bin": "01aea691616b77b81cc1680280e39df1c6c78e6887b39e08de4afae75426156f"
+      },
+      "rtl_log_sha256": "b8705abc60fdf2494a73d6c5fb10195569e4f1a7cddcc52ef53b3fe7feb3446a"
+    },
+    {
+      "case": {
+        "name": "fp4_pair",
+        "n": 11,
+        "m": 2,
+        "kb": 3,
+        "wf": 2,
+        "pair": true
+      },
+      "rtl_cycles": 156,
+      "seconds": 3.0432094763964415,
+      "all_dram_and_tmem_bit_exact": true,
+      "simulator": "/home/ubuntu/FeSens-openTPU-packed-mxu/build/verilator/tb_top_587a89aee77f/Vtb_top",
+      "simulator_sha256": "de823191a2956c649c81d6d2bd575d42f51d155e34296b45e98586b8c347d4b1",
+      "input_sha256": {
+        "prog_0.hex": "b60dd03f00ca063564b3afeb1a6c0f38e0eb64d6309f4eb84ab32832cf669a17",
+        "dram_0.bin": "91e4b09a9cfe926f6d31400a574b2c7a3620359319b0da22bafb9dfe1f9497d7"
+      },
+      "rtl_log_sha256": "d18e4fe3184ebdcdb0550baecb090210a2204073e4dfbafe972e3a25392e3d03"
+    },
+    {
+      "case": {
+        "name": "unit_16x1",
+        "n": 16,
+        "m": 1,
+        "kb": 7,
+        "unit": true
+      },
+      "rtl_cycles": 172,
+      "seconds": 3.0439715031534433,
+      "all_dram_and_tmem_bit_exact": true,
+      "simulator": "/home/ubuntu/FeSens-openTPU-packed-mxu/build/verilator/tb_top_587a89aee77f/Vtb_top",
+      "simulator_sha256": "de823191a2956c649c81d6d2bd575d42f51d155e34296b45e98586b8c347d4b1",
+      "input_sha256": {
+        "prog_0.hex": "232b1028c8e76ba7fdc1b959331ee15598de0ca9a79e222eeaec64528f67b2c1",
+        "dram_0.bin": "86b3a9f9fd362440b04bf5c17c6dad14f66566b05840761517603755e062e5fd"
+      },
+      "rtl_log_sha256": "76f780920762876e936435f7f0556323fc522d9cc8df1aeac8315c3f00abdf25"
+    },
+    {
+      "case": {
+        "name": "qst_stride_1",
+        "n": 35,
+        "m": 3,
+        "kb": 3,
+        "unit": true,
+        "qst_stride": 1
+      },
+      "rtl_cycles": 200,
+      "seconds": 3.0424398873001337,
+      "all_dram_and_tmem_bit_exact": true,
+      "simulator": "/home/ubuntu/FeSens-openTPU-packed-mxu/build/verilator/tb_top_587a89aee77f/Vtb_top",
+      "simulator_sha256": "de823191a2956c649c81d6d2bd575d42f51d155e34296b45e98586b8c347d4b1",
+      "input_sha256": {
+        "prog_0.hex": "bf7fc05289d74a888e90bf6148c998f2d3b426ec44c494b570f19a792315aad1",
+        "dram_0.bin": "6650d60b06755b181424de61afd749b279925e2d663fe66bd5d152e284dba1f4"
+      },
+      "rtl_log_sha256": "005c54c108f256d2734bd1d956a11291989ae8c248ac56ab6c2406718c451e2b"
+    },
+    {
+      "case": {
+        "name": "qst_stride_4",
+        "n": 35,
+        "m": 3,
+        "kb": 3,
+        "unit": true,
+        "qst_stride": 4
+      },
+      "rtl_cycles": 200,
+      "seconds": 4.0449341759085655,
+      "all_dram_and_tmem_bit_exact": true,
+      "simulator": "/home/ubuntu/FeSens-openTPU-packed-mxu/build/verilator/tb_top_587a89aee77f/Vtb_top",
+      "simulator_sha256": "de823191a2956c649c81d6d2bd575d42f51d155e34296b45e98586b8c347d4b1",
+      "input_sha256": {
+        "prog_0.hex": "d1367d5595015793e2ca4c33702b65045f379d5eee3781d19db372f65f7d380b",
+        "dram_0.bin": "d9c3915f1f5a4067c0b03e8c0a63c411b61f9c5a584fa2a633e57b1c4db22038"
+      },
+      "rtl_log_sha256": "443ac402ad49e5462b462246ccedae6c798d3a96a18f6a3855a4abf5fba04c34"
+    },
+    {
+      "case": {
+        "name": "qst_stride_17",
+        "n": 35,
+        "m": 3,
+        "kb": 3,
+        "unit": true,
+        "qst_stride": 17
+      },
+      "rtl_cycles": 200,
+      "seconds": 4.045314369723201,
+      "all_dram_and_tmem_bit_exact": true,
+      "simulator": "/home/ubuntu/FeSens-openTPU-packed-mxu/build/verilator/tb_top_587a89aee77f/Vtb_top",
+      "simulator_sha256": "de823191a2956c649c81d6d2bd575d42f51d155e34296b45e98586b8c347d4b1",
+      "input_sha256": {
+        "prog_0.hex": "5a7f669c61fefbd548f7a76afa2c7c7810d41b2d98f1dae399a640552d9594c2",
+        "dram_0.bin": "941b310ecce244d542df42c3b81535a5b9ba2d38b37c179a48b12cf60c9c75a6"
+      },
+      "rtl_log_sha256": "081819b18f458989615081b75451153034d72eb0126daddcc643ccf400c2c801"
+    },
+    {
+      "case": {
+        "name": "pipeline_independent",
+        "commands": 6,
+        "shapes": [
+          [
+            5,
+            3
+          ],
+          [
+            67,
+            8
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            35,
+            2
+          ],
+          [
+            64,
+            4
+          ],
+          [
+            3,
+            3
+          ]
+        ]
+      },
+      "rtl_cycles": 900,
+      "seconds": 7.046469207853079,
+      "all_dram_and_tmem_bit_exact": true,
+      "overlapping_command_admissions": 5,
+      "matrix_start_cycles": [
+        10,
+        16,
+        714,
+        755,
+        782,
+        828
+      ],
+      "matrix_end_cycles": [
+        713,
+        754,
+        781,
+        827,
+        871,
+        897
+      ]
+    },
+    {
+      "case": {
+        "name": "pipeline_waw",
+        "commands": 6,
+        "shapes": [
+          [
+            5,
+            3
+          ],
+          [
+            67,
+            8
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            35,
+            2
+          ],
+          [
+            64,
+            4
+          ],
+          [
+            3,
+            3
+          ]
+        ]
+      },
+      "rtl_cycles": 900,
+      "seconds": 7.0463070925325155,
+      "all_dram_and_tmem_bit_exact": true,
+      "overlapping_command_admissions": 5,
+      "matrix_start_cycles": [
+        10,
+        16,
+        714,
+        755,
+        782,
+        828
+      ],
+      "matrix_end_cycles": [
+        713,
+        754,
+        781,
+        827,
+        871,
+        897
+      ]
+    }
+  ],
+  "pipeline_script_sha256": "6579d9246ae202e71c9db99d5219503521e2e2363bf2990f9ee327a985fdcf3f"
+}

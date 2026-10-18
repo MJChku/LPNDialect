@@ -1,0 +1,370 @@
+{
+  "status": "complete",
+  "config": {
+    "S": 1,
+    "D": 64,
+    "MCOLS": 4,
+    "ACT_BLOCKS": 64,
+    "TMEM_WORDS": 65536,
+    "DRAM_BYTES": 1048576,
+    "IMEM_WORDS": 65536,
+    "LANES": 64,
+    "PAIR": false,
+    "DSTEP": false,
+    "STREAM": false,
+    "ACT_ROWS": 16,
+    "SEQ_WC": false
+  },
+  "uarch": {
+    "MXU_ROWS": 8,
+    "VPU_LANES": 64,
+    "QST_LANES": 64,
+    "MXU_COLS": 2,
+    "MXU_PAIR_DOT": 1
+  },
+  "source_sha256": {
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/vpu/otpu_fp.sv": "b476c83913d88ef5b4bcbc8cc07378ade8b2aeaaf7642b20976bd1fce33cd416",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/vpu/otpu_fpipe.sv": "6f9feaf92b539bb989e90dd77d8c066c92ae01c1b9c826f335e6b45231c45bd0",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/top/otpu_pkg.sv": "ca41c32141fdf224d24481842b182063ce5692a976176eca82c4c78d4d7ad3c6",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/mem/otpu_dram.sv": "adccbba947e4f4940ac0dc0995c052ebadc0aa6df16364b3b7ee07e25c8321c2",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/mem/otpu_tmem.sv": "2e8cb0e266d4c6f82910dc85a2240899c7d36061d31e1f09aa0ec9190b2a1df6",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/mem/otpu_qst_coalesce.sv": "d36d129746a8614a529747a1a36114ac549552345930523cb2117a158d51f990",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/mem/otpu_scale_cache.sv": "d0e14d182894eb6a80a430782dcc6c6653392895cf0e93c28ba2ed1e624834e0",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/mem/otpu_native_dram.sv": "8598544bfc996aece2ab65c98003629eb25979265b3a0f4e8bec72c14bbf6eb5",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/mem/otpu_actram.sv": "17f9e30a1f9bfec27a205be4eda62596779c6f0b024b8a1b99b64171278c9f49",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/seq/otpu_seq.sv": "dd137dab5993720454bae46c03e48669192546b6a416556685f797e30b47a409",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/vpu/otpu_vtree.sv": "3a4ff0df2398fc7162043dea22ea2937d5f38f61894255fda48d6312b3b10842",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/dma/otpu_dma.sv": "22283a5bbcfda393945b368122a71d22918917a1441b514b89e3d4e989180a02",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/mxu/otpu_pair_pe.sv": "e169a23029a696494ca5e31d9fc84436a70c7aa590ee3b98879980a53c8d7b5f",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/mxu/otpu_mxu.sv": "2324d0e9f804eb6c405ae4367422968df908337d9861e3b45f40810faf0e2340",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/mxu/otpu_mxu_parallel.sv": "ccb82072788623610f0959493a4065cb8b00e181f789d5bae653dabba488f7a4",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/tech/generic/otpu_tech_dsp.sv": "89b0d45e303491dd8dfe6cdeb4e623e60d04a415697a567d1a70836dba9d8de7",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/tech/generic/otpu_tech_ram.sv": "f2c74dc55f26ad01568271ec22469208d93af2d9248ff1f9cfef3dafe1083881",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/vpu/otpu_recip_rom.sv": "e253c9b4d1a1f7c2ed834d42e7389dc523f20efd530545c072e1a7289e97efc4",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/vpu/otpu_qscale_lookup.sv": "4e4b4337fbd8c9fa1be68f18c7cd0c8c7d476615ac2005714dd4a82be524ffd2",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/vpu/otpu_quant.sv": "6664b00f953ed26120e6cc084929fe4b044c4df07f35fc5034158c088b2bf0ec",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/vpu/otpu_se_comp.sv": "71e0c047e122094076697a15bb027e1208137ec6df75ed681002a45e930faf0f",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/vpu/otpu_se_tail.sv": "a76c0fa830d0a70cbbf6f0dc5ace9526061c5634e3377d156b5459e4c8d724af",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/vpu/otpu_vpu.sv": "2b92c483a28641c2ed1b7790683438d2e64a489844050c61992a1003c1fdc282",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/top/otpu_coll.sv": "3f6d295b021a56de25e9e6dbc90e2fa1d94224cef1bf8d03c58dbe771dcb8f07",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/exp/tmem_nocopy/otpu_tmem_model.sv": "4d8f55b8774811a1d548d80b384d6ed41f71d1d1801958f6f9e3fc5c9cc3715e",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/top/otpu_slice.sv": "81c295f9982e53a4786bf347255988522e60af6bb63d2385a4a953ae92a09328",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/rtl/top/otpu_top.sv": "ea80ed873e3bcc7791864a51bf5da62d7e86bf1d5d0e93a94f995fb08ce86b9f",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/sim/verilator/tb_top.sv": "0e85e4866aaaffb3e7b38fe1f6d8fc1ac6a230b080ec5305056b6a4022bc20f1",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/sim/verilator/lpn_wall.cpp": "8892bb27d0c38eef196487a68806e6bc69fc8698c60bdfb58fa7d21aff0fcbc4",
+    "/home/ubuntu/LPNDialect-packed-mxu-tests/examples/opentpu/rtl_evolution/check_matrix.py": "0d07fa4ceccd373859d21708d8421fd8ba06b33a470a1bfad0039bb275c8372a"
+  },
+  "report_sha256": "aa0e1cd487ced47a3c797d4b6c6b84f3eb9bcce164d46ef60604cbe7dd66d6ae",
+  "binary_sha256": "230287196e32435def8807cf1ccb683ecdfbca7c1a63223a8ba266e7b8781273",
+  "records": [
+    {
+      "case": {
+        "name": "unit_19x8",
+        "n": 19,
+        "m": 8,
+        "kb": 3,
+        "unit": true
+      },
+      "rtl_cycles": 277,
+      "input_sha256": {
+        "prog_0.hex": "29b86986dcd950e3c33e4affeb66713352a1c796da0bc060a2f3f1dc3197692d",
+        "dram_0.bin": "244a4bd1d337c17f44c9fa0764b03cff3be00cdcf8ba88855bb7b9c9bf2ed21f"
+      },
+      "output_sha256": {
+        "dram_out_0.bin": "b4ebc609989b6c094f8ef1a2877300e68eb9e05325c0a4a818a0db55314d4415",
+        "tmem_0.hex": "43e92e9ab4bfe2b4276a774fd79efa29ad7955f58bee2ddc8eb760631a8b19e8"
+      },
+      "raw_log_sha256": "716fb4cfe50773b2175182ef5ab6d0024085fd526aacc286070b5bd59a1a6b12",
+      "historical_input_and_log_hashes_recorded": true,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "lpn_cycles": 271.0,
+      "relative_cycle_error": -0.02166064981949456
+    },
+    {
+      "case": {
+        "name": "unit_5x3",
+        "n": 5,
+        "m": 3,
+        "kb": 1,
+        "unit": true
+      },
+      "rtl_cycles": 131,
+      "input_sha256": {
+        "prog_0.hex": "c2b67b044726395116d9a380f21f95c605ffcddaebee634a3da160af70d941ee",
+        "dram_0.bin": "6890e438fb734772bcca53ad5e88c4ce947766eb6fc4599860e70f1dd3148034"
+      },
+      "output_sha256": {
+        "dram_out_0.bin": "cbd94a8111aa08362ec32d76cc00fcc60e46e928c0fd8e176bce2a17c783128d",
+        "tmem_0.hex": "31e8e5dcecddbd590b4af4c8f2db031f05ac6bac8a6a1fbf9baaa9ab33e85fb1"
+      },
+      "raw_log_sha256": "d614753e91802ba8966740e6f4f43c656e60d3d3046c4fdaabc1f16bfd9a39a2",
+      "historical_input_and_log_hashes_recorded": true,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "lpn_cycles": 121.0,
+      "relative_cycle_error": -0.07633587786259544
+    },
+    {
+      "case": {
+        "name": "scaled_17x8",
+        "n": 17,
+        "m": 8,
+        "kb": 5
+      },
+      "rtl_cycles": 383,
+      "input_sha256": {
+        "prog_0.hex": "3f586220f45b2e55dce20a53fada2fe241bf0a9b565f240c3c00c3f697bd2030",
+        "dram_0.bin": "d0eb120d2fa7b1cafb4f3e597ce605305c8f0e24ab06ee9f3247f41d9439ab09"
+      },
+      "output_sha256": {
+        "dram_out_0.bin": "62974638028f9fbaaf5e6f02ef52f17817a78d3a70c2aabdab9579d98ae06634",
+        "tmem_0.hex": "c6d4cac2f90f212316281795d2c03c53bdd7146ae4bec12e639fa6e83da68020"
+      },
+      "raw_log_sha256": "07c68eb04855ccd5d235ec89432382ebd5aca60127f8a13953b0923d6eebb8ad",
+      "historical_input_and_log_hashes_recorded": true,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "lpn_cycles": 377.0,
+      "relative_cycle_error": -0.015665796344647487
+    },
+    {
+      "case": {
+        "name": "acc_ascale_rmax",
+        "n": 19,
+        "m": 3,
+        "kb": 3,
+        "unit": true,
+        "acc": true,
+        "ascale": true,
+        "rmax": true
+      },
+      "rtl_cycles": 191,
+      "input_sha256": {
+        "prog_0.hex": "656e6f3e283ab7b1b9551efe41f1a5e015796fe56ffc8e12f1096761c22d8ac2",
+        "dram_0.bin": "01aea691616b77b81cc1680280e39df1c6c78e6887b39e08de4afae75426156f"
+      },
+      "output_sha256": {
+        "dram_out_0.bin": "8adf76184db97790bcd0dae60f3c5e1a261dc68e1338393af9c7c72775091484",
+        "tmem_0.hex": "caaec28a2a1b3c9ea4fd6073fcba6c811ee9a7f6dcf8cca25d4518db11cb7d9d"
+      },
+      "raw_log_sha256": "1555cf7256dd066368ebf4dba014fbf00b76ab152c0d731ac652427b6b94262e",
+      "historical_input_and_log_hashes_recorded": true,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "lpn_cycles": 177.0,
+      "relative_cycle_error": -0.0732984293193717
+    },
+    {
+      "case": {
+        "name": "fp4_pair",
+        "n": 11,
+        "m": 2,
+        "kb": 3,
+        "wf": 2,
+        "pair": true
+      },
+      "rtl_cycles": 151,
+      "input_sha256": {
+        "prog_0.hex": "b60dd03f00ca063564b3afeb1a6c0f38e0eb64d6309f4eb84ab32832cf669a17",
+        "dram_0.bin": "91e4b09a9cfe926f6d31400a574b2c7a3620359319b0da22bafb9dfe1f9497d7"
+      },
+      "output_sha256": {
+        "dram_out_0.bin": "91e7eb409830c7e6b2f59488e49aa0db860f5e583a5accdaae9a37c7043c0eba",
+        "tmem_0.hex": "7f955d1b8e654470de35dd7e06e0655e4135fd4deddda596d5e1246dcb96d932"
+      },
+      "raw_log_sha256": "e770b838fa7c74bede92eb7f697e7d930674d2cead24cac5962510aca30cb2d6",
+      "historical_input_and_log_hashes_recorded": true,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "lpn_cycles": 139.0,
+      "relative_cycle_error": -0.07947019867549665
+    },
+    {
+      "case": {
+        "name": "unit_16x1",
+        "n": 16,
+        "m": 1,
+        "kb": 7,
+        "unit": true
+      },
+      "rtl_cycles": 166,
+      "input_sha256": {
+        "prog_0.hex": "232b1028c8e76ba7fdc1b959331ee15598de0ca9a79e222eeaec64528f67b2c1",
+        "dram_0.bin": "86b3a9f9fd362440b04bf5c17c6dad14f66566b05840761517603755e062e5fd"
+      },
+      "output_sha256": {
+        "dram_out_0.bin": "9557d9ed1aabffa3628704733b0d67cb98a53ef585a8acb3f9b6a9e95dad4c76",
+        "tmem_0.hex": "781d52da60ee78a422a517954beea9ca7767b63d1ea6cbf816f051ed74193247"
+      },
+      "raw_log_sha256": "8e60b3e566126a5ae1bb0bd4639642221d7ad198cf3e377687811f1e289762dc",
+      "historical_input_and_log_hashes_recorded": true,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "lpn_cycles": 154.0,
+      "relative_cycle_error": -0.07228915662650603
+    },
+    {
+      "case": {
+        "name": "qst_stride_1",
+        "n": 35,
+        "m": 3,
+        "kb": 3,
+        "unit": true,
+        "qst_stride": 1
+      },
+      "rtl_cycles": 200,
+      "input_sha256": {
+        "prog_0.hex": "bf7fc05289d74a888e90bf6148c998f2d3b426ec44c494b570f19a792315aad1",
+        "dram_0.bin": "6650d60b06755b181424de61afd749b279925e2d663fe66bd5d152e284dba1f4"
+      },
+      "output_sha256": {
+        "dram_out_0.bin": "d7c90e075827c84115b17d27fba6a8ebcfd832c2b1b53087228b852b408582e6",
+        "tmem_0.hex": "5f3ce0dc290efa72b8ec93d81f5eaf37cafc6f49a6c132cc5c94628dab76aa79"
+      },
+      "raw_log_sha256": "0b8e33c0130ba2c8ac6905a9a21ca2e198a290d7ea75d1b1bebe8b32a9a6b611",
+      "historical_input_and_log_hashes_recorded": true,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "lpn_cycles": 197.0,
+      "relative_cycle_error": -0.015000000000000013
+    },
+    {
+      "case": {
+        "name": "qst_stride_4",
+        "n": 35,
+        "m": 3,
+        "kb": 3,
+        "unit": true,
+        "qst_stride": 4
+      },
+      "rtl_cycles": 200,
+      "input_sha256": {
+        "prog_0.hex": "d1367d5595015793e2ca4c33702b65045f379d5eee3781d19db372f65f7d380b",
+        "dram_0.bin": "d9c3915f1f5a4067c0b03e8c0a63c411b61f9c5a584fa2a633e57b1c4db22038"
+      },
+      "output_sha256": {
+        "dram_out_0.bin": "7c04149cd11128c0754eb739aa499d81fde7c9f4058f032371a2714309b77c2c",
+        "tmem_0.hex": "b6391266c28ec070c3b7229a7b4c35dc5aa4bad66e07edba4f62f2d86fdf178d"
+      },
+      "raw_log_sha256": "348898a605a958d7254feea5ffeb7df6aa10e0ea56543228f91657736c02793c",
+      "historical_input_and_log_hashes_recorded": true,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "lpn_cycles": 197.0,
+      "relative_cycle_error": -0.015000000000000013
+    },
+    {
+      "case": {
+        "name": "qst_stride_17",
+        "n": 35,
+        "m": 3,
+        "kb": 3,
+        "unit": true,
+        "qst_stride": 17
+      },
+      "rtl_cycles": 200,
+      "input_sha256": {
+        "prog_0.hex": "5a7f669c61fefbd548f7a76afa2c7c7810d41b2d98f1dae399a640552d9594c2",
+        "dram_0.bin": "941b310ecce244d542df42c3b81535a5b9ba2d38b37c179a48b12cf60c9c75a6"
+      },
+      "output_sha256": {
+        "dram_out_0.bin": "ee1cae567c5f5ffd953847f690bdfa8db81014f4c6bd50fab29a530ce4d6eca9",
+        "tmem_0.hex": "0d1b6fc45275f1cacd3a524326c2db8c75621a0b02734e853cf700c8c87f32ac"
+      },
+      "raw_log_sha256": "85865a88b28b85e011393d58e2e760ce32e6ce72a37ba9cacb2153dec043d3c0",
+      "historical_input_and_log_hashes_recorded": true,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "lpn_cycles": 197.0,
+      "relative_cycle_error": -0.015000000000000013
+    },
+    {
+      "case": {
+        "name": "pipeline_independent",
+        "commands": 6,
+        "shapes": [
+          [
+            5,
+            3
+          ],
+          [
+            67,
+            8
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            35,
+            2
+          ],
+          [
+            64,
+            4
+          ],
+          [
+            3,
+            3
+          ]
+        ]
+      },
+      "rtl_cycles": 987,
+      "input_sha256": {
+        "prog_0.hex": "c5787ec3076d0f51374f1196d5d2e137c30cdfa3e1d643e7ca52ce1296cccce3",
+        "dram_0.bin": "c31e77e543518fb613e5f17813c0098b700b3a58d4f73b8aff24aececedddb5e"
+      },
+      "output_sha256": {
+        "dram_out_0.bin": "c8899f5ff2d7d366d5375ac011113de9d739fd4cdfad48c71dd0bb8d1ac5a93d",
+        "tmem_0.hex": "9367cf5fc987d45882903dd80203b159299d003b6315440899f73844ac2f8a0d"
+      },
+      "raw_log_sha256": "824eee577dd98cceaad5fcde45a5efdf57a32035a2673e889620b51151af5866",
+      "historical_input_and_log_hashes_recorded": false,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "lpn_cycles": 957.0,
+      "relative_cycle_error": -0.03039513677811545
+    },
+    {
+      "case": {
+        "name": "pipeline_waw",
+        "commands": 6,
+        "shapes": [
+          [
+            5,
+            3
+          ],
+          [
+            67,
+            8
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            35,
+            2
+          ],
+          [
+            64,
+            4
+          ],
+          [
+            3,
+            3
+          ]
+        ]
+      },
+      "rtl_cycles": 987,
+      "input_sha256": {
+        "prog_0.hex": "5ba7497d1ad569fd673d6a01a765cee95bcee27ff0486c7dc458db650e194c78",
+        "dram_0.bin": "e1119e7fc67336b1788cdfd8a4e06b0fcc943df9cbe95f54e6e3fe098884663f"
+      },
+      "output_sha256": {
+        "dram_out_0.bin": "22c420c9c510cdfba58cfa8dda693494c57dc63352bdec986db7b9eb6e27a7c4",
+        "tmem_0.hex": "e9e2dcd1e4998e66dae6abfb87381d7ae2318a4d5d713712c3c672b623c47b95"
+      },
+      "raw_log_sha256": "3e0568ae2e88840a59888d37977db88060858691b5a9ff88a6b859a148ef8b47",
+      "historical_input_and_log_hashes_recorded": false,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "lpn_cycles": 957.0,
+      "relative_cycle_error": -0.03039513677811545
+    }
+  ],
+  "limitations": [
+    "Queued gate inputs/logs are freshly hashed; original gate did not record historical hashes",
+    "Synthetic gates, not full inference or physical FPGA mapping"
+  ]
+}

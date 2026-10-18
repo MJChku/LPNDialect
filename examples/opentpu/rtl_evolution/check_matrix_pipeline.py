@@ -10,6 +10,7 @@ def main():
     ap.add_argument('--output',type=Path,required=True)
     ap.add_argument('--rows',type=int,default=32)
     ap.add_argument('--columns',type=int,choices=(1,2,4,8),default=1)
+    ap.add_argument('--paired-dsp',action='store_true')
     a=ap.parse_args()
     sys.path.insert(0,str(a.opentpu_root.resolve()))
     import numpy as np
@@ -20,6 +21,7 @@ def main():
     from examples.opentpu.rtl_evolution.check_matrix import main as primitive_gates
     sys.argv=[sys.argv[0],'--opentpu-root',str(a.opentpu_root),'--output',str(a.output),
               '--rows',str(a.rows),'--columns',str(a.columns)]
+    if a.paired_dsp:sys.argv.append('--paired-dsp')
     primitive_gates()
     report=json.loads((a.output/'report.json').read_text())
     report['status']='running'
@@ -27,6 +29,7 @@ def main():
     cfg=Config(D=64,MCOLS=4,ACT_ROWS=16,LANES=64)
     ua=dict(MXU_ROWS=a.rows,VPU_LANES=64,QST_LANES=64)
     if a.columns!=1:ua['MXU_COLS']=a.columns
+    if a.paired_dsp:ua['MXU_PAIR_DOT']=1
     from examples.opentpu.e2e import digest
     report['pipeline_script_sha256']=digest(Path(__file__))
     for overlap in (False,True):

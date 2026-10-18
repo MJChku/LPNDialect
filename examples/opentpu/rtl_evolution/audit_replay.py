@@ -13,9 +13,10 @@ def main():
     p.add_argument('--selected-kernels',action='store_true',help='Audit an explicitly labeled subset without claiming complete inference')
     a=p.parse_args()
     from examples.opentpu.e2e import atomic_json,digest
-    from .parallel_inference import files_equal
+    from .parallel_inference import files_equal,validate_variant
     from examples.opentpu.retained_inputs import verified_program
     report=json.loads((a.case/'report.json').read_text())
+    validate_variant(report['timing'],report['uarch'])
     if report.get('timing',{}).get('pinned_cache_bytes',0):
         raise ValueError('pinned cache proposal has no matching RTL implementation')
     if report.get('timing',{}).get('reciprocal_lookup_lanes',0):

@@ -45,6 +45,14 @@ def configure_rtlsim(rtlsim,fp_mul_latency=2,fp_add_latency=4):
 
 
 def validate_variant(timing,uarch):
+    if timing.get('matrix_engines',1)!=1:
+        raise ValueError('multiple matrix engines have no matching RTL implementation')
+    columns=uarch.get('MXU_COLS',1)
+    if columns not in (1,2,4,8):raise ValueError('unsupported physical column count')
+    if uarch.get('MXU_PAIR_DOT',0) and columns<2:
+        raise ValueError('paired DSP requires multiple physical columns')
+    if 'epilogue_lanes' in timing and timing['epilogue_lanes']!=max(1,columns//2):
+        raise ValueError('matrix epilogue lanes differ from RTL column count')
     if timing.get('pinned_cache_bytes',0):
         raise ValueError('pinned cache proposal has no matching RTL implementation')
     if timing.get('reciprocal_lookup_lanes',0):
@@ -156,7 +164,7 @@ def check_kernel(task):
         from examples.opentpu.native_timing import ReusableTiming
         from examples.opentpu.model import Timing
         workload=resolve_static(cfg,programs,task['args'])
-        physical=replace(workload,config=replace(cfg,MCOLS=1,LANES=64,
+        physical=replace(workload,config=replace(cfg,MCOLS=task['uarch'].get('MXU_COLS',1),LANES=64,
             ACT_ROWS=task['uarch'].get('ACT_ROWS',cfg.ACT_ROWS),
             ACT_BLOCKS=task['uarch'].get('ACT_BLOCKS',cfg.ACT_BLOCKS)))
         if 'ACT_ROWS' in task['uarch']:

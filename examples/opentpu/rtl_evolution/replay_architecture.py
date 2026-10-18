@@ -24,7 +24,9 @@ def main():
     p.add_argument('--rtl-timeout',type=float,default=7200)
     p.add_argument('--reuse-rtl',type=Path,
         help='Recheck completed identical-hardware RTL outputs with new LPN timing details')
-    p.add_argument('--matrix-rows',type=int,choices=(32,128),default=128)
+    p.add_argument('--matrix-rows',type=int,choices=(16,24,32,48,64,96,112,128),default=128)
+    p.add_argument('--matrix-columns',type=int,choices=(1,2,4,8),default=1)
+    p.add_argument('--paired-dsp',action='store_true')
     p.add_argument('--act-rows',type=int,choices=(8,16))
     p.add_argument('--fifo-depth',type=int,choices=(32,64,128),default=128)
     p.add_argument('--activation-streaming',action='store_true')
@@ -37,6 +39,7 @@ def main():
     p.add_argument('--matrix-retirement',action='store_true')
     p.add_argument('--physical-scale-lines',action='store_true')
     a=p.parse_args()
+    if a.paired_dsp and a.matrix_columns<2:p.error('paired DSP requires multiple columns')
     if (a.lookup_scale or a.scalar_recip_lookup) and a.recip_table is None:p.error('lookup hardware requires --recip-table')
     from examples.opentpu.e2e import atomic_json,digest
     from examples.opentpu.model import Timing
@@ -76,6 +79,8 @@ def main():
         if any(not (a.reuse_rtl/'kernels'/f'{i:04d}'/'rtl-result.json').exists() for i in indices):
             raise ValueError('retained RTL kernel result is missing')
     uarch=dict(reference['uarch'],MXU_ROWS=a.matrix_rows)
+    if a.matrix_columns!=1:uarch['MXU_COLS']=a.matrix_columns
+    if a.paired_dsp:uarch['MXU_PAIR_DOT']=1
     if a.act_rows is not None:uarch['ACT_ROWS']=a.act_rows
     if a.fifo_depth!=128:uarch['FIFO_DEPTH']=a.fifo_depth
     if a.activation_streaming:uarch['ACT_STREAMING']=1
@@ -83,7 +88,7 @@ def main():
     if a.scalar_recip_lookup:uarch['VPU_SCALAR_RECIP']=1
     timing=Timing(batch_rows=a.matrix_rows,matrix_row_lanes=a.matrix_rows,dram_bytes_per_cycle=2816,dram_port_bytes=2816,
         dram_latency=8,fifo_chunks=a.fifo_depth*a.matrix_rows,scale_lanes=a.matrix_rows,unified_dram=True,scalar_store_bytes=256,
-        epilogue_lanes=1,quant_row_banks=8,quant_store_buffered=True,vector_row_contexts=4,
+        epilogue_lanes=max(1,a.matrix_columns//2),quant_row_banks=8,quant_store_buffered=True,vector_row_contexts=4,
         fp_mul_latency=a.fp_mul_latency,fp_add_latency=a.fp_add_latency,activation_streaming=a.activation_streaming,quant_scale_lookup=a.lookup_scale,scalar_recip_lookup=a.scalar_recip_lookup,
         vector_command_queue=a.vector_command_queue,matrix_retirement=a.matrix_retirement,physical_scale_lines=a.physical_scale_lines)
     records=[];failures=[];started=time.perf_counter()
