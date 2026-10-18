@@ -6,6 +6,10 @@ The implemented parallel RTL completes SmolLM2-135M with 128 prompt tokens and
 memory. Corrected LPN total error is +0.622% / +1.793% for original/evolved RTL.
 See [RTL implementation, reproduction and audited evidence](rtl_evolution/README.md).
 FPGA resource fit, Fmax and a vendor HBM controller are not established.
+The buffered-quantizer follow-up completes the same full inference in
+15,335,479 RTL cycles (**8.662x**), with bit-exact memory and LPN total error
+-0.649% (worst kernel 2.958%). See its
+[report and fresh audit](TPU_EXPLORATION.md#implemented-quantizer-change).
 The current [FPGA-first architecture exploration](TPU_EXPLORATION.md) retains
 this verified baseline and reports new predictions separately from fresh RTL
 validation. Its 100x cycle-reduction target has not yet been achieved.

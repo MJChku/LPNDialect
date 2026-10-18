@@ -3,7 +3,8 @@
 The objective is 100x fewer hardware cycles on the **same upstream SmolLM2-135M
 128-input/32-output inference**, compared with the original 132,828,263-cycle
 RTL run. **100x has not been achieved.** The existing fully audited RTL result
-is [8.605x](rtl_evolution/README.md). A successful capacity screen is not FPGA
+was [8.605x](rtl_evolution/README.md); the buffered-quantizer follow-up is
+**8.662x**, as measured below. A successful capacity screen is not FPGA
 synthesis, placement, routing or Fmax proof.
 
 LPN consumes the original compiled commands. Upstream `Engine.generate()` owns
@@ -85,9 +86,21 @@ With the **same 1,024-chunk FIFO** in both unit-level RTL builds:
 | QACT, eight rows of 64 elements | 104 | 68 |
 | QACT, eight rows of 576 elements | 160 | 140 |
 
-These unit gains are not full-model speedups. The fresh 48-kernel quantizer-only
-RTL validation is running at `~/lpn-runs/tpu-100x/quant-normal128x32` on
-`icdslab2.epfl.ch`; its report and worker states identify progress and failures.
+The full 48-kernel quantizer-only RTL validation completed in **15,335,479
+cycles**, versus the original 132,828,263: **8.6615x fewer hardware cycles**.
+Every kernel has identical input files and bit-exact complete DRAM/scratchpad
+outputs. This is only a 0.655% cycle speedup over the previous 32-engine RTL;
+the unit gains above do not translate directly to full inference.
+
+LPN predicts 15,236,007 cycles: **-0.649% total error**, with **2.958% worst
+kernel error**, inside the accepted 10% target for every kernel. This remains a
+32-engine implementation; the larger geometry predictions are separate. The
+current fixed-lane matrix wrapper requires two scratchpad lanes per engine, so
+the 128-engine prediction needs shared-bank routing before it can be validated.
+
+The [completed report](rtl_evolution/validation/tpu-100x/quant-full-rtl.json) and
+[fresh audit](rtl_evolution/validation/tpu-100x/quant-full-audit.json) retain the
+evidence. Raw data is at `~/lpn-runs/tpu-100x/quant-normal128x32` on `icdslab2`.
 
 ## Remaining dependency work
 
