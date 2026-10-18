@@ -1,0 +1,40 @@
+{
+  "status": "complete",
+  "scope": "Python/native agreement and behavioral integration tests; no matching multi-engine RTL",
+  "remote_host": "icdslab2.epfl.ch",
+  "source_root": "/home/ubuntu/LPNDialect-matrix-clusters-tests",
+  "source_sha256": {
+    "examples/opentpu/compact.py": "53b38e95b862068f54859ec238be30a9ac75554eab5e70ec1c7c750e7d7b30c9",
+    "examples/opentpu/components.py": "8a636203370215332a24f0e4b5b3783a3127f64c1cda92c71feedd5a919307f7",
+    "examples/opentpu/timeline.py": "feee5881dd60f0db317046244503f4c514948b2f6e715edb52ce868367359ea9",
+    "examples/opentpu/tpu_dse.py": "e706eb068731b614d84f12c993d661b8d1c9bbe7e777335d8dd1833275cfb6a8",
+    "examples/opentpu/rtl_evolution/parallel_inference.py": "088e9075901fb206e383fb096781cf2d409d1133e242ccfe79296ba0e5cac2c5",
+    "examples/opentpu/rtl_evolution/audit_replay.py": "4b2ba459bc79156ec5820002eab818903ed4a7f376c08ac2cca1991cfba928fd",
+    "test/test_opentpu_matrix_clusters.py": "510da163593bf4b597289575c2b310576ec096b32510ea0ff999c96a63a516a7",
+    "test/test_opentpu.py": "64b110138aa55653af930a4e5c3e55fb4777afd4a5872dabee0a6ade3e537ad2"
+  },
+  "tests": [
+    {
+      "suite": "test_opentpu_matrix_clusters.py",
+      "passed": 2,
+      "seconds": 9.587,
+      "all_native_python_agree": true,
+      "streaming_modes": [
+        false,
+        true
+      ],
+      "waw_modes": [
+        false,
+        true
+      ],
+      "shared_output_busy_cycles_each_case": 128
+    },
+    {
+      "suite": "test_opentpu.py",
+      "passed": 30,
+      "seconds": 112.225
+    }
+  ],
+  "compiler": "/home/ubuntu/LPNDialect-heartbeat/build/tools/lpn-compile/lpn-compile",
+  "opentpu_root": "/home/ubuntu/FeSens-openTPU"
+}

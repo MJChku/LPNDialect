@@ -23,3 +23,20 @@ The studies retain the original upstream 128-input/32-output programs and
 do not split token positions, change inference scheduling, or edit the LPN
 scheduler, guards or heartbeats. Predictions are architecture proposals;
 FPGA mapping, routing, clock and numerical/cycle RTL validation are pending.
+
+All 30 previous general integration tests pass. The full 48-kernel constant-MAC
+sweep completed with zero failures. Predictions versus the original RTL:
+
+| Arrays x rows | Total MAC lanes | Cycles | Cycle speedup |
+| --- | ---: | ---: | ---: |
+| 1 x 128 control | 8192 | 8,477,788 | 15.6678x |
+| 2 x 64 | 8192 | 8,994,492 | 14.7677x |
+| 4 x 32 | 8192 | 10,734,532 | 12.3739x |
+| 8 x 16 | 8192 | 14,019,791 | 9.4743x |
+| 16 x 8 | 8192 | 21,455,197 | 6.1910x |
+
+The unchanged single-array control reproduces its prior prediction exactly.
+These homogeneous clusters are rejected as the next FPGA implementation:
+smaller arrays lose more per-command throughput than independent command
+execution recovers. This does not establish that asymmetric engines or a
+new explicit hardware dispatcher cannot help, but neither is modeled here.
