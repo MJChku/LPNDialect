@@ -40,6 +40,17 @@ The selected RTL total is 878,386 cycles, or 14.3047x fewer than the same
 selected original kernels. A full changed-RTL replay is still running.
 No empirical timing multiplier was added.
 
+The supported replay driver independently rechecked these four retained RTL
+outputs with the new timing details. `physical-pilot-replay.json` and
+`physical-pilot-audit.json` retain the result and fresh audit. All inputs,
+raw logs, instruction counts, sources, simulator and complete numerical
+outputs passed. The corrected prediction over **all 48 original programs**
+is **8,476,740 cycles**, or **15.6697x** fewer than original RTL; see
+`physical-full-prediction.json`. This full prediction has not yet passed
+the complete changed-RTL validation. Its 8,192 matrix MAC lanes and roughly
+14.3 MiB of accounted storage pass the provisional V80 capacity screen,
+which is only a capacity estimate, not an implementation or FPGA-fit claim.
+
 `physical-pilot-diagnostic.json` retains controls reproducing old cycles.
 `retirement-only-pilot.json` isolates the retirement change, which alone
 still fails 10%. Its source snapshot is reproducible by applying
