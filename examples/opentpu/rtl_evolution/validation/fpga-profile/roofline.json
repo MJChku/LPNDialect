@@ -1,0 +1,658 @@
+{
+  "status": "complete",
+  "scope": "Necessary dense-MAC and uncached-weight bandwidth budgets, not timing predictions.\n\nWeight bytes exclude scale metadata, DMA, KV writes, burst rounding and latency,\nso this is optimistic for a design that fetches each MM's weights from HBM.\nCaching or lossless compression can change that traffic assumption.\n",
+  "records": [
+    {
+      "kernel": 0,
+      "phase": "prefill",
+      "dense_macs": 859110912,
+      "weight_only_uncached_bytes": 109398528,
+      "matrix_commands": 2408,
+      "weight_bytes_by_format": {
+        "0": 109398528
+      },
+      "program_json_sha256": {
+        "0": "429c954f6c50c0ca8cbbc7cfa4870b9bc1b0cb062844b2ac6699d4ad5edc9d85"
+      }
+    },
+    {
+      "kernel": 1,
+      "phase": "prefill",
+      "dense_macs": 860216832,
+      "weight_only_uncached_bytes": 109767168,
+      "matrix_commands": 2408,
+      "weight_bytes_by_format": {
+        "0": 109767168
+      },
+      "program_json_sha256": {
+        "0": "a6084db9857d1ef9299eb2eefd7274f37094070ca5326845665c42776f6d64b4"
+      }
+    },
+    {
+      "kernel": 2,
+      "phase": "prefill",
+      "dense_macs": 861322752,
+      "weight_only_uncached_bytes": 110135808,
+      "matrix_commands": 2408,
+      "weight_bytes_by_format": {
+        "0": 110135808
+      },
+      "program_json_sha256": {
+        "0": "400be29edf2f5c2fa4b470a7188b39cae8a691f35a61ac8d23143e71e0328675"
+      }
+    },
+    {
+      "kernel": 3,
+      "phase": "prefill",
+      "dense_macs": 862428672,
+      "weight_only_uncached_bytes": 110504448,
+      "matrix_commands": 2408,
+      "weight_bytes_by_format": {
+        "0": 110504448
+      },
+      "program_json_sha256": {
+        "0": "ff08dad9e798d32445daf4fb0a56b4570650218e3457e1d300787b32647c4c9a"
+      }
+    },
+    {
+      "kernel": 4,
+      "phase": "prefill",
+      "dense_macs": 863534592,
+      "weight_only_uncached_bytes": 110873088,
+      "matrix_commands": 2408,
+      "weight_bytes_by_format": {
+        "0": 110873088
+      },
+      "program_json_sha256": {
+        "0": "44974a0352c0525baface3562a075d43b915d41f33a12655cf22597aec210fd9"
+      }
+    },
+    {
+      "kernel": 5,
+      "phase": "prefill",
+      "dense_macs": 864640512,
+      "weight_only_uncached_bytes": 111241728,
+      "matrix_commands": 2408,
+      "weight_bytes_by_format": {
+        "0": 111241728
+      },
+      "program_json_sha256": {
+        "0": "761e53cbb04d14eecc255212c3a7b97f7bb8ebc68d57f879e4f42f2c2275e11b"
+      }
+    },
+    {
+      "kernel": 6,
+      "phase": "prefill",
+      "dense_macs": 865746432,
+      "weight_only_uncached_bytes": 111610368,
+      "matrix_commands": 2408,
+      "weight_bytes_by_format": {
+        "0": 111610368
+      },
+      "program_json_sha256": {
+        "0": "b6459b672e6af745cde46f9043ad8d5233f3cfa1edc476284615c791677410d1"
+      }
+    },
+    {
+      "kernel": 7,
+      "phase": "prefill",
+      "dense_macs": 866852352,
+      "weight_only_uncached_bytes": 111979008,
+      "matrix_commands": 2408,
+      "weight_bytes_by_format": {
+        "0": 111979008
+      },
+      "program_json_sha256": {
+        "0": "baa378cbd5a4acfc42cc99597218ca4ffbc5062e70a9fecf0feba6a9f36fa46e"
+      }
+    },
+    {
+      "kernel": 8,
+      "phase": "prefill",
+      "dense_macs": 876805632,
+      "weight_only_uncached_bytes": 115296768,
+      "matrix_commands": 2408,
+      "weight_bytes_by_format": {
+        "0": 115296768
+      },
+      "program_json_sha256": {
+        "0": "aff015f94c5133ecffa5f692f4d77822e0b50294bc6ed5d1432bb92aaf605c69"
+      }
+    },
+    {
+      "kernel": 9,
+      "phase": "prefill",
+      "dense_macs": 877911552,
+      "weight_only_uncached_bytes": 115665408,
+      "matrix_commands": 2408,
+      "weight_bytes_by_format": {
+        "0": 115665408
+      },
+      "program_json_sha256": {
+        "0": "221d7caf50526a2d683aa6d72ef3498f4945c3e673649c18ac619582500e0f26"
+      }
+    },
+    {
+      "kernel": 10,
+      "phase": "prefill",
+      "dense_macs": 879017472,
+      "weight_only_uncached_bytes": 116034048,
+      "matrix_commands": 2408,
+      "weight_bytes_by_format": {
+        "0": 116034048
+      },
+      "program_json_sha256": {
+        "0": "c5da9df9efe666d197e134e2b0bafa41c1ae455020b3018a8684034d3362aff8"
+      }
+    },
+    {
+      "kernel": 11,
+      "phase": "prefill",
+      "dense_macs": 880123392,
+      "weight_only_uncached_bytes": 116402688,
+      "matrix_commands": 2408,
+      "weight_bytes_by_format": {
+        "0": 116402688
+      },
+      "program_json_sha256": {
+        "0": "601b547873e47fc13d7b9bf4fa6f372fec49a977831359abfc86c8585221eb48"
+      }
+    },
+    {
+      "kernel": 12,
+      "phase": "prefill",
+      "dense_macs": 881229312,
+      "weight_only_uncached_bytes": 116771328,
+      "matrix_commands": 2408,
+      "weight_bytes_by_format": {
+        "0": 116771328
+      },
+      "program_json_sha256": {
+        "0": "21b7d4bb34c6d7ab060030504ea9126ceec94dd8772d4994bf76927c092e9441"
+      }
+    },
+    {
+      "kernel": 13,
+      "phase": "prefill",
+      "dense_macs": 882335232,
+      "weight_only_uncached_bytes": 117139968,
+      "matrix_commands": 2408,
+      "weight_bytes_by_format": {
+        "0": 117139968
+      },
+      "program_json_sha256": {
+        "0": "2ca327c227863a42c184a25b9412357ce2e670c62de995a0253cbf037bf8cc78"
+      }
+    },
+    {
+      "kernel": 14,
+      "phase": "prefill",
+      "dense_macs": 883441152,
+      "weight_only_uncached_bytes": 117508608,
+      "matrix_commands": 2408,
+      "weight_bytes_by_format": {
+        "0": 117508608
+      },
+      "program_json_sha256": {
+        "0": "b9819c38aabb96a9285daca7f383d2ab3b11a31c8d3c7cdad414d6031750e5e9"
+      }
+    },
+    {
+      "kernel": 15,
+      "phase": "prefill",
+      "dense_macs": 912858624,
+      "weight_only_uncached_bytes": 146188800,
+      "matrix_commands": 2414,
+      "weight_bytes_by_format": {
+        "0": 146188800
+      },
+      "program_json_sha256": {
+        "0": "bad8787a97c383ba9a2f9cc484e2eba547657dbaec9411f0976630998e6f9520"
+      }
+    },
+    {
+      "kernel": 16,
+      "phase": "decode",
+      "dense_macs": 140063616,
+      "weight_only_uncached_bytes": 136338048,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136338048
+      },
+      "program_json_sha256": {
+        "0": "d0cfcb995eb454885223567974802c72acd44e03c0bf0d730424a74ec55d781a"
+      }
+    },
+    {
+      "kernel": 17,
+      "phase": "decode",
+      "dense_macs": 140080896,
+      "weight_only_uncached_bytes": 136343808,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136343808
+      },
+      "program_json_sha256": {
+        "0": "1e5785ad7b1ece2d2f47d148a4c8bb89ae1579e9f87c9642cbeb4001afdcf67d"
+      }
+    },
+    {
+      "kernel": 18,
+      "phase": "decode",
+      "dense_macs": 140098176,
+      "weight_only_uncached_bytes": 136349568,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136349568
+      },
+      "program_json_sha256": {
+        "0": "b16a32f75bb4907cd282788f7059b161dc5166024397d1ef68743b04afd972c0"
+      }
+    },
+    {
+      "kernel": 19,
+      "phase": "decode",
+      "dense_macs": 140115456,
+      "weight_only_uncached_bytes": 136355328,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136355328
+      },
+      "program_json_sha256": {
+        "0": "9ca1a8652388764f4ca895f9d47fb38425b90b0201dd5265c3a179acdc2cac9a"
+      }
+    },
+    {
+      "kernel": 20,
+      "phase": "decode",
+      "dense_macs": 140132736,
+      "weight_only_uncached_bytes": 136361088,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136361088
+      },
+      "program_json_sha256": {
+        "0": "7ec74d80abaff6a30c3e7d99cfb7d895baa9fb9465a51b9aba15c29bc3731536"
+      }
+    },
+    {
+      "kernel": 21,
+      "phase": "decode",
+      "dense_macs": 140150016,
+      "weight_only_uncached_bytes": 136366848,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136366848
+      },
+      "program_json_sha256": {
+        "0": "73aa4bcd3ec48b4f1d05c1c5d166ddef9490ae05bf941e3c6e83eee83d686cef"
+      }
+    },
+    {
+      "kernel": 22,
+      "phase": "decode",
+      "dense_macs": 140167296,
+      "weight_only_uncached_bytes": 136372608,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136372608
+      },
+      "program_json_sha256": {
+        "0": "c934fbffd910f5c78437807d76eee9016106235e91f184c076e3c7951553beb6"
+      }
+    },
+    {
+      "kernel": 23,
+      "phase": "decode",
+      "dense_macs": 140184576,
+      "weight_only_uncached_bytes": 136378368,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136378368
+      },
+      "program_json_sha256": {
+        "0": "e619fb1a42d28bc94d506e17fb5152ed51c35738a8270481c16db3a2878af87d"
+      }
+    },
+    {
+      "kernel": 24,
+      "phase": "decode",
+      "dense_macs": 140201856,
+      "weight_only_uncached_bytes": 136384128,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136384128
+      },
+      "program_json_sha256": {
+        "0": "933cb18e7c952c321f294d120c1c5e367177ad23485b2ee231e306166d05de2a"
+      }
+    },
+    {
+      "kernel": 25,
+      "phase": "decode",
+      "dense_macs": 140219136,
+      "weight_only_uncached_bytes": 136389888,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136389888
+      },
+      "program_json_sha256": {
+        "0": "cd56bb45bc56e81045c94e3ca500fcace7443b5a45c6f80f01ab26b40ce8cf87"
+      }
+    },
+    {
+      "kernel": 26,
+      "phase": "decode",
+      "dense_macs": 140236416,
+      "weight_only_uncached_bytes": 136395648,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136395648
+      },
+      "program_json_sha256": {
+        "0": "baf91c88e04dcf12bb55cb3b4b0391de12631a627986cb1b4b95efeec41552a4"
+      }
+    },
+    {
+      "kernel": 27,
+      "phase": "decode",
+      "dense_macs": 140253696,
+      "weight_only_uncached_bytes": 136401408,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136401408
+      },
+      "program_json_sha256": {
+        "0": "e1d035f4259dc6a8eeaad48a8cb4411a73b2bbc79bdc447e0a9e704cf3ab9fb5"
+      }
+    },
+    {
+      "kernel": 28,
+      "phase": "decode",
+      "dense_macs": 140270976,
+      "weight_only_uncached_bytes": 136407168,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136407168
+      },
+      "program_json_sha256": {
+        "0": "706254449f061ce2e23eb42413306323caae55f4267c84441f8d702242a6320c"
+      }
+    },
+    {
+      "kernel": 29,
+      "phase": "decode",
+      "dense_macs": 140288256,
+      "weight_only_uncached_bytes": 136412928,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136412928
+      },
+      "program_json_sha256": {
+        "0": "6f69c39216c3313d0c1ee370643ce1153949b884c1b65d56b1c62e91a66e76af"
+      }
+    },
+    {
+      "kernel": 30,
+      "phase": "decode",
+      "dense_macs": 140305536,
+      "weight_only_uncached_bytes": 136418688,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136418688
+      },
+      "program_json_sha256": {
+        "0": "59c04b45df703921c4e727371ef200cffb1b836bf4ce184a23155114ee4aaa10"
+      }
+    },
+    {
+      "kernel": 31,
+      "phase": "decode",
+      "dense_macs": 140322816,
+      "weight_only_uncached_bytes": 136424448,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136424448
+      },
+      "program_json_sha256": {
+        "0": "69d04209e43e945f3a19cda099844cb693dbbb94241a3bbbdee9f4ab1fad418c"
+      }
+    },
+    {
+      "kernel": 32,
+      "phase": "decode",
+      "dense_macs": 140340096,
+      "weight_only_uncached_bytes": 136430208,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136430208
+      },
+      "program_json_sha256": {
+        "0": "cbbd7528ff72de2251d0c8212c777e8075291debd27301b3b3c71f5d96b3da12"
+      }
+    },
+    {
+      "kernel": 33,
+      "phase": "decode",
+      "dense_macs": 140357376,
+      "weight_only_uncached_bytes": 136435968,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136435968
+      },
+      "program_json_sha256": {
+        "0": "5e730237a17b3297da435353ebf4251477ff32b11f9a90fd52eb4a8a4db91d05"
+      }
+    },
+    {
+      "kernel": 34,
+      "phase": "decode",
+      "dense_macs": 140374656,
+      "weight_only_uncached_bytes": 136441728,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136441728
+      },
+      "program_json_sha256": {
+        "0": "79060395f5998485e4d7ccf223fed5785d85af2b3a727ef870972b4b9cbdabad"
+      }
+    },
+    {
+      "kernel": 35,
+      "phase": "decode",
+      "dense_macs": 140391936,
+      "weight_only_uncached_bytes": 136447488,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136447488
+      },
+      "program_json_sha256": {
+        "0": "9aba8dc8ee91210a6f9e4f376494351001ed40d77190d4a7516731cc8583ceb4"
+      }
+    },
+    {
+      "kernel": 36,
+      "phase": "decode",
+      "dense_macs": 140409216,
+      "weight_only_uncached_bytes": 136453248,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136453248
+      },
+      "program_json_sha256": {
+        "0": "e53cb4f7d7716f4e73dadd27ebc5817a246e94440d9f0f0ef7442533dc14b6b0"
+      }
+    },
+    {
+      "kernel": 37,
+      "phase": "decode",
+      "dense_macs": 140426496,
+      "weight_only_uncached_bytes": 136459008,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136459008
+      },
+      "program_json_sha256": {
+        "0": "5edeabb7c1d7dea3c432b52e1426590ebbf3e067bc528314a3c16eddb50fc476"
+      }
+    },
+    {
+      "kernel": 38,
+      "phase": "decode",
+      "dense_macs": 140443776,
+      "weight_only_uncached_bytes": 136464768,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136464768
+      },
+      "program_json_sha256": {
+        "0": "cfb946fafb5880d4ed632257a9f0f2e31af5ee07c1348f8a1e3ac26f450a8781"
+      }
+    },
+    {
+      "kernel": 39,
+      "phase": "decode",
+      "dense_macs": 140461056,
+      "weight_only_uncached_bytes": 136470528,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136470528
+      },
+      "program_json_sha256": {
+        "0": "d5aa8a1af2ab886fe94f24550f609a8c00771ab703dc9f130b3f995e405fce8e"
+      }
+    },
+    {
+      "kernel": 40,
+      "phase": "decode",
+      "dense_macs": 140478336,
+      "weight_only_uncached_bytes": 136476288,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136476288
+      },
+      "program_json_sha256": {
+        "0": "18e6b31515d798efdb73175e04b254985896f3ccb81e2ae1e11bd0514de44d79"
+      }
+    },
+    {
+      "kernel": 41,
+      "phase": "decode",
+      "dense_macs": 140495616,
+      "weight_only_uncached_bytes": 136482048,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136482048
+      },
+      "program_json_sha256": {
+        "0": "f5d300a3bb51143e54612370a76b0ab6f52ae947918e68dcb6b6425cea780aaf"
+      }
+    },
+    {
+      "kernel": 42,
+      "phase": "decode",
+      "dense_macs": 140512896,
+      "weight_only_uncached_bytes": 136487808,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136487808
+      },
+      "program_json_sha256": {
+        "0": "d3a87d8cad724b8c0e7de66aecb7695d2da42772c4d0e7630481b8c714adb58b"
+      }
+    },
+    {
+      "kernel": 43,
+      "phase": "decode",
+      "dense_macs": 140530176,
+      "weight_only_uncached_bytes": 136493568,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136493568
+      },
+      "program_json_sha256": {
+        "0": "6cd8bb206eb8a2d8bd60676163f666d31f270fcfc9b16dda2d1ad9992bdb1c0c"
+      }
+    },
+    {
+      "kernel": 44,
+      "phase": "decode",
+      "dense_macs": 140547456,
+      "weight_only_uncached_bytes": 136499328,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136499328
+      },
+      "program_json_sha256": {
+        "0": "9267c8c8bbe687c57a25c2f56623fc947de73304bfadbefa6e59bbe8344c7ad5"
+      }
+    },
+    {
+      "kernel": 45,
+      "phase": "decode",
+      "dense_macs": 140564736,
+      "weight_only_uncached_bytes": 136505088,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136505088
+      },
+      "program_json_sha256": {
+        "0": "61e1d83c0100e17f7559b14830e6cfa6b2676a64ef8d429d2af4df2ba8b7ad97"
+      }
+    },
+    {
+      "kernel": 46,
+      "phase": "decode",
+      "dense_macs": 140582016,
+      "weight_only_uncached_bytes": 136510848,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136510848
+      },
+      "program_json_sha256": {
+        "0": "d06d272cd8b7ef0b47b708109c4faf5df8e1a228dc029e9e913a39548b4bf681"
+      }
+    },
+    {
+      "kernel": 47,
+      "phase": "decode",
+      "dense_macs": 140599296,
+      "weight_only_uncached_bytes": 136516608,
+      "matrix_commands": 1102,
+      "weight_bytes_by_format": {
+        "0": 136516608
+      },
+      "program_json_sha256": {
+        "0": "e04f762594473b91fa70dab8e958bd1a1ae7b352ade48c564dfe612d42d46a91"
+      }
+    }
+  ],
+  "reference_report_sha256": "f037e875e73760f7c3d70b6851d0ce4f01bbdd9f0c62ef27ccd75ba5659f07fe",
+  "source_sha256": {
+    "/home/ubuntu/LPNDialect-fpga-timeline/examples/opentpu/roofline.py": "c9bff3e08acfcd6575054a203936d1c7d30d48a4ccd8dc0e949a50d93031a01f",
+    "/home/ubuntu/LPNDialect-fpga-timeline/examples/opentpu/shape_workload.py": "d0f1db9e2bba7f3b1b1b119e9483b7ebc7ce17823d343ac135b26e5e51b91169",
+    "/home/ubuntu/LPNDialect-fpga-timeline/examples/opentpu/retained_inputs.py": "50111fb14a2678b615b34f8b726fd6d4b804b3ef76a116a4d139a00086d18b59",
+    "/home/ubuntu/LPNDialect-fpga-timeline/examples/opentpu/workload.py": "1381a9859c9da158bc3675398cfa3edc4432672998927fa3e69b6cf05fa6a2fc"
+  },
+  "original_rtl_cycles": 132828263,
+  "target_cycles": 1328282.63,
+  "dense_macs": 18468182016,
+  "weight_only_uncached_bytes": 6212192256,
+  "mac_lanes": 8678,
+  "bytes_per_cycle": 2816,
+  "assumed_clock_mhz": 200,
+  "dense_compute_floor_cycles": 2128162,
+  "uncached_weight_only_floor_cycles": 2206035,
+  "dense_compute_speedup_ceiling": 62.41457146758499,
+  "uncached_weight_only_speedup_ceiling": 60.211334935220655,
+  "minimum_mac_lanes_for_100x": 13904,
+  "minimum_uncached_weight_bytes_per_cycle_for_100x": 4676.860267306213,
+  "minimum_uncached_weight_gbs_for_100x": 935.3720534612427,
+  "numerical_arithmetic_executed": false,
+  "hardware_implemented": false,
+  "limitations": [
+    "Necessary budgets only; costs overlap and are not added",
+    "No proof of realizable Fmax, DSP packing, utilization or memory efficiency",
+    "Uncached traffic bound changes if a coherent cache or lossless memory compression is implemented"
+  ]
+}

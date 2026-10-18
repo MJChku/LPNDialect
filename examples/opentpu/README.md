@@ -37,6 +37,9 @@ The [wider reciprocal proposal](WIDE_RECIP.md) budgets independent lookup ports
 and table replicas explicitly before selecting further FPGA RTL work.
 It forecasts at most 16.669x; the [equal-DSP matrix geometry sweep](FPGA_GEOMETRY.md)
 also finds no complete-workload benefit from wider fixed column counts.
+The [resource profile and necessary budgets](FPGA_PROFILE.md) identify an
+uncached-weight bandwidth ceiling near 60x under the current FPGA assumptions;
+100x requires reducing physical traffic as well as improving compute efficiency.
 
 **Inference workload correction:** earlier `e2e.py`, `replay_e2e.py` and
 weight-free FPGA sequence results used a custom token-by-token prompt loop.

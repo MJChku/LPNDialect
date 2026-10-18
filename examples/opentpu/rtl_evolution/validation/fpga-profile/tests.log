@@ -1,0 +1,6 @@
+test_streaming_and_vector_observation_preserves_simulation (__main__.TimelineTest.test_streaming_and_vector_observation_preserves_simulation) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.705s
+
+OK
