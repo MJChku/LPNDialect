@@ -1,0 +1,7 @@
+test_overlapped_integer_work_has_ordered_serial_epilogues (__main__.MatrixRetirementTest.test_overlapped_integer_work_has_ordered_serial_epilogues) ... ok
+test_streaming_multiple_batches_and_accumulation_keep_slots_bounded (__main__.MatrixRetirementTest.test_streaming_multiple_batches_and_accumulation_keep_slots_bounded) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 1.454s
+
+OK

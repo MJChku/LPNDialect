@@ -1,0 +1,108 @@
+{
+  "status": "complete",
+  "records": [
+    {
+      "kernel": 0,
+      "queue_depth": 0,
+      "matrix_retirement": false,
+      "lpn_cycles": 308932.0,
+      "rtl_cycles": 314414,
+      "error": -0.017435610373583876
+    },
+    {
+      "kernel": 0,
+      "queue_depth": 2,
+      "matrix_retirement": false,
+      "lpn_cycles": 302004.0,
+      "rtl_cycles": 314414,
+      "error": -0.03947025259689452
+    },
+    {
+      "kernel": 0,
+      "queue_depth": 2,
+      "matrix_retirement": true,
+      "lpn_cycles": 302421.0,
+      "rtl_cycles": 314414,
+      "error": -0.03814397577716
+    },
+    {
+      "kernel": 15,
+      "queue_depth": 0,
+      "matrix_retirement": false,
+      "lpn_cycles": 341080.0,
+      "rtl_cycles": 345005,
+      "error": -0.011376646715264949
+    },
+    {
+      "kernel": 15,
+      "queue_depth": 2,
+      "matrix_retirement": false,
+      "lpn_cycles": 333946.0,
+      "rtl_cycles": 345005,
+      "error": -0.03205460790423331
+    },
+    {
+      "kernel": 15,
+      "queue_depth": 2,
+      "matrix_retirement": true,
+      "lpn_cycles": 334365.0,
+      "rtl_cycles": 345005,
+      "error": -0.03084013275169928
+    },
+    {
+      "kernel": 16,
+      "queue_depth": 0,
+      "matrix_retirement": false,
+      "lpn_cycles": 94640.0,
+      "rtl_cycles": 109349,
+      "error": -0.1345142616759184
+    },
+    {
+      "kernel": 16,
+      "queue_depth": 2,
+      "matrix_retirement": false,
+      "lpn_cycles": 95626.0,
+      "rtl_cycles": 109349,
+      "error": -0.12549726106320136
+    },
+    {
+      "kernel": 16,
+      "queue_depth": 2,
+      "matrix_retirement": true,
+      "lpn_cycles": 96435.0,
+      "rtl_cycles": 109349,
+      "error": -0.11809893094587054
+    },
+    {
+      "kernel": 47,
+      "queue_depth": 0,
+      "matrix_retirement": false,
+      "lpn_cycles": 94940.0,
+      "rtl_cycles": 109618,
+      "error": -0.13390136656388552
+    },
+    {
+      "kernel": 47,
+      "queue_depth": 2,
+      "matrix_retirement": false,
+      "lpn_cycles": 95926.0,
+      "rtl_cycles": 109618,
+      "error": -0.12490649345910343
+    },
+    {
+      "kernel": 47,
+      "queue_depth": 2,
+      "matrix_retirement": true,
+      "lpn_cycles": 96735.0,
+      "rtl_cycles": 109618,
+      "error": -0.1175263186702914
+    }
+  ],
+  "source_sha256": {
+    "/home/ubuntu/LPNDialect-matrix-retirement/examples/opentpu/model.py": "7165f07014caa1b4cca5ba2381a0fa3123f6ca402a2e55588e3a18e2e969ef6f",
+    "/home/ubuntu/LPNDialect-matrix-retirement/examples/opentpu/components.py": "63a6349c96fd34549d857c462214f9d278fee6d9049fc0a809d03fd60bc04d29",
+    "/home/ubuntu/LPNDialect-matrix-retirement/examples/opentpu/compact.py": "06782c09bf050c616ce004de035331a7185f87bbdec93530df302884a6fa7b6a",
+    "/home/ubuntu/LPNDialect-matrix-retirement/examples/opentpu/native_timing.py": "b48b2bded7b7c112f5d837572002472904bad80478315524fb1d13563c3a3989"
+  },
+  "rtl_report_sha256": "f1ab5250c107e7e984620e9c4e0b0102d34e130a2c2991f9c8c0ae1c465adfc5"
+}

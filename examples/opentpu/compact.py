@@ -8,7 +8,7 @@ from bisect import bisect_left
 from math import ceil, gcd
 from lpnlang_mlir import InputArray
 
-from .model import OpenTPU, DRAM, bank_write_cycles, matrix_batch_rows, vector_rank, VECTOR_DRAIN_RANK
+from .model import OpenTPU, DRAM, bank_write_cycles, matrix_batch_rows, matrix_scale_requests, vector_rank, VECTOR_DRAIN_RANK
 from .components import CommandInterface, CommandTiming, ExecutionUnit, MatrixEngine
 
 
@@ -185,6 +185,8 @@ class CompactOpenTPU(OpenTPU):
     kinds,latencies,services,port_ids,ranks = [],[],[],[],[]
     batches,chunkses,scale_flags,kbs,ns,row_services,tails = [],[],[],[],[],[],[]
     scale_bytes = []
+    retire_cycles=[]
+    physical_scale_offsets,physical_scale_prefix=[],[0]
     write_full,write_tail = [],[]
     barriers,dispatch_delays,pipeline_delays = [],[],[]
     last_register = nsig
@@ -208,10 +210,11 @@ class CompactOpenTPU(OpenTPU):
       port_ids.append(ports.index(port) if port is not None else -1)
       services.append(service)
       batch,chunks,scaled,kb,n,row_service,tail = 1,1,0,1,1,1,0
+      retire=0
       if ins.op==I.MM:
         n,kb,m = w[3]&65535,(w[3]>>16)&255,(w[5]>>16)&255
         wf,pair = (ins.flags>>I.WF_SHIFT)&3,bool(ins.flags&I.F_PAIR)
-        if activation is not None: pair=False # parallel RTL consumes packed halves serially
+        if activation is not None or t.physical_scale_lines: pair=False # parallel RTL consumes packed halves serially
         chunks = kb if wf==I.W8 else ceil(kb/2)
         if chunks>t.fifo_chunks:
           raise ValueError("one matrix row must fit the prefetch FIFO")
@@ -221,7 +224,18 @@ class CompactOpenTPU(OpenTPU):
         row_service = max((chunks if pair else kb)*ceil(m/cfg.MCOLS),drain)
         tail = min(cfg.D//8,t.chain_length)+cfg.MCOLS+5+(5+2*t.fp_mul_latency)+(
             t.fp_mul_latency+t.fp_add_latency if ins.flags&I.F_ACC else 0)+drain
+        if t.matrix_retirement:
+          # LLAT (registered pick, i2f48, Sw/Sa multiplies), then the
+          # registered head switch. ACC also traverses rA, r0 and r1.
+          extra=2+(3 if ins.flags&I.F_ACC else 0)
+          tail+=extra
+          retire=5+2*t.fp_mul_latency+drain+extra+(
+              t.fp_mul_latency+t.fp_add_latency if ins.flags&I.F_ACC else 0)
         self.matrix_batch_sizes.append(batch)
+      physical_scale_offsets.append(len(physical_scale_prefix));physical_scale_prefix.append(0)
+      if ins.op==I.MM and t.physical_scale_lines:
+        for row in range(n):
+          physical_scale_prefix.append(physical_scale_prefix[-1]+32*matrix_scale_requests(ins,I,row,t.matrix_row_lanes))
       batches.append(batch)
       chunkses.append(chunks)
       scale_flags.append(scaled)
@@ -229,10 +243,11 @@ class CompactOpenTPU(OpenTPU):
       ns.append(n)
       row_services.append(row_service)
       tails.append(tail)
+      retire_cycles.append(retire)
       scale_bytes.append(max(4,w[6]) if ins.op==I.MM and scaled else 0)
       write_full.append(bank_write_cycles(batch,m,w[5]&65535,cfg.LANES) if ins.op==I.MM else 0)
       write_tail.append(bank_write_cycles(n%batch or batch,m,w[5]&65535,cfg.LANES) if ins.op==I.MM else 0)
-    parameter_values = [latencies,services,port_ids,batches,chunkses,scale_flags,kbs,ns,row_services,tails,scale_bytes,write_full,write_tail,cache_offsets,cache_prefix]
+    parameter_values = [latencies,services,port_ids,batches,chunkses,scale_flags,kbs,ns,row_services,tails,scale_bytes,write_full,write_tail,cache_offsets,cache_prefix,retire_cycles,physical_scale_offsets,physical_scale_prefix]
     parameters = CommandTiming(*(self._table(prefix+"_"+name,values)
         for name,values in zip(CommandTiming.__dataclass_fields__,parameter_values)))
     metadata = self._table(prefix+"_metadata",[ncommands])

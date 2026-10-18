@@ -19,6 +19,23 @@ def bank_write_cycles(width,columns,stride,lanes):
   return max(banks,default=0)
 
 
+def matrix_scale_requests(ins,I,row,parallel_rows):
+  """Physical 32-byte A requests for one parallel core's logical weight row.
+
+  Parallel cores clear PAIR and walk rows p, p+parallel_rows, ... . The
+  issuer requests a line per advance, even when adjacent scales share it.
+  """
+  if ins.flags&I.F_UNIT:return 0
+  w=ins.w;kb=(w[3]>>16)&255;k0=w[3]>>24;wf=(ins.flags>>I.WF_SHIFT)&3
+  if ins.flags&I.F_RSC:return kb if wf==I.W8 else ceil(kb/2)
+  offset,step=(4+k0,1) if wf==I.W8 else ((16+8*k0,8) if wf==I.WNV else (8+4*k0,4))
+  address=w[1]+row*w[6]
+  first=(address+offset)//32
+  previous=(w[1]+(row-parallel_rows)*w[6]+offset+(kb-1)*step)//32 if row>=parallel_rows else -1
+  extra=int(address//32!=first and address//32!=previous)
+  return kb+extra
+
+
 def matrix_batch_rows(rows,chunks,timing):
   """Group whole parallel waves; aggregation must not serialize row engines."""
   parallel=timing.matrix_row_lanes
@@ -119,6 +136,8 @@ class Timing:
   cache_read_bytes_per_cycle: int = 8192
   vector_row_contexts: int = 1
   vector_command_queue: int = 0
+  matrix_retirement: bool = False
+  physical_scale_lines: bool = False
   vector_engines: int = 1
   vector_result_chunks: int = 0
   vector_compatible_issue: bool = False
@@ -184,7 +203,7 @@ class DRAM:
 class SystolicArray:
   def __init__(self,net,prefix,timing):
     self.compute = net.place(prefix+"_compute",initial_tokens=1)
-    self.commands = net.place(prefix+"_commands",initial_tokens=2)
+    self.commands = commands = net.place(prefix+"_commands",initial_tokens=0 if timing.matrix_retirement else 2)
     self.buffers = buffers = net.place(prefix+"_buffers",initial_tokens=1)
     initialize = net.place(prefix+"_initialize_buffers",initial_tokens=1)
     capacity = timing.fifo_chunks
@@ -196,6 +215,9 @@ class SystolicArray:
       take(initialize)
       token = take(buffers)
       emit(buffers,token.set('free',capacity))
+      if timing.matrix_retirement:
+        emit(commands,create().set('retire_slot',0))
+        emit(commands,create().set('retire_slot',1))
     self.spec = timing
 
 
@@ -271,6 +293,8 @@ class OpenTPU:
       raise ValueError('vector pools require CompactOpenTPU')
     self.matrix_batch_sizes = []
     cfg,t = workload.config,self.timing
+    if (t.matrix_retirement or t.physical_scale_lines) and (not self.supports_multiple_matrix_engines or cfg.MCOLS!=1):
+      raise ValueError('matrix diagnostics require CompactOpenTPU single-column cores')
     if (t.fp_mul_latency,t.fp_add_latency)!=(2,4) and cfg.LANES!=64:
       raise ValueError('experimental FP partition timing requires the 64-lane architecture')
     if t.activation_streaming and (cfg.MCOLS!=1 or cfg.LANES!=cfg.D):

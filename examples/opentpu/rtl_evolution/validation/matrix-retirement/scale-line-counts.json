@@ -1,0 +1,23 @@
+{
+  "status": "complete",
+  "scope": "Check physical matrix scale-line requests against a complete RTL trace.",
+  "kernel": 16,
+  "parallel_rows": 128,
+  "matrix_commands": 1102,
+  "predicted_A_requests": 2113002,
+  "rtl_A_requests": 2113002,
+  "rtl_sw_only_requests": 0,
+  "physical_scale_line_bytes": 67616064,
+  "old_compact_storage_byte_proxy": 4151208,
+  "all_requests_match": true,
+  "all_full_dram_and_tmem_bit_exact": true,
+  "numerical_arithmetic_executed": false,
+  "program_json_sha256": "d0cfcb995eb454885223567974802c72acd44e03c0bf0d730424a74ec55d781a",
+  "rtl_trace_sha256": "381b04a3f2c393ac74a28ed6285e368ac8fc8ca6de565575fea245cdd5637f2c",
+  "simulator_sha256": "acb7e9e9f5b0ee1ef459e26411649760dca2facbee497138afd19a1c426d254b",
+  "replay_report_sha256": "f1ab5250c107e7e984620e9c4e0b0102d34e130a2c2991f9c8c0ae1c465adfc5",
+  "source_sha256": {
+    "/home/ubuntu/LPNDialect-matrix-scale-lines/examples/opentpu/check_scale_lines.py": "a198daf7828a4177adcec1660d25cca0370974085e9fa92b7e7279ee2e55452c",
+    "/home/ubuntu/LPNDialect-matrix-scale-lines/examples/opentpu/model.py": "12962304bfd2d04a93f0d5bfd58bf9fc5ddfeaa9c5c9063ef084574cfef6ed7f"
+  }
+}

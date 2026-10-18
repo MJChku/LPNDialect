@@ -1,0 +1,120 @@
+{
+  "status": "complete",
+  "records": [
+    {
+      "kernel": 0,
+      "queue_depth": 0,
+      "matrix_retirement": false,
+      "physical_scale_lines": false,
+      "lpn_cycles": 308932.0,
+      "rtl_cycles": 314414,
+      "error": -0.017435610373583876
+    },
+    {
+      "kernel": 0,
+      "queue_depth": 2,
+      "matrix_retirement": true,
+      "physical_scale_lines": false,
+      "lpn_cycles": 302421.0,
+      "rtl_cycles": 314414,
+      "error": -0.03814397577716
+    },
+    {
+      "kernel": 0,
+      "queue_depth": 2,
+      "matrix_retirement": true,
+      "physical_scale_lines": true,
+      "lpn_cycles": 302421.0,
+      "rtl_cycles": 314414,
+      "error": -0.03814397577716
+    },
+    {
+      "kernel": 15,
+      "queue_depth": 0,
+      "matrix_retirement": false,
+      "physical_scale_lines": false,
+      "lpn_cycles": 341080.0,
+      "rtl_cycles": 345005,
+      "error": -0.011376646715264949
+    },
+    {
+      "kernel": 15,
+      "queue_depth": 2,
+      "matrix_retirement": true,
+      "physical_scale_lines": false,
+      "lpn_cycles": 334365.0,
+      "rtl_cycles": 345005,
+      "error": -0.03084013275169928
+    },
+    {
+      "kernel": 15,
+      "queue_depth": 2,
+      "matrix_retirement": true,
+      "physical_scale_lines": true,
+      "lpn_cycles": 339175.0,
+      "rtl_cycles": 345005,
+      "error": -0.016898305821654747
+    },
+    {
+      "kernel": 16,
+      "queue_depth": 0,
+      "matrix_retirement": false,
+      "physical_scale_lines": false,
+      "lpn_cycles": 94640.0,
+      "rtl_cycles": 109349,
+      "error": -0.1345142616759184
+    },
+    {
+      "kernel": 16,
+      "queue_depth": 2,
+      "matrix_retirement": true,
+      "physical_scale_lines": false,
+      "lpn_cycles": 96435.0,
+      "rtl_cycles": 109349,
+      "error": -0.11809893094587054
+    },
+    {
+      "kernel": 16,
+      "queue_depth": 2,
+      "matrix_retirement": true,
+      "physical_scale_lines": true,
+      "lpn_cycles": 108415.0,
+      "rtl_cycles": 109349,
+      "error": -0.008541458998253315
+    },
+    {
+      "kernel": 47,
+      "queue_depth": 0,
+      "matrix_retirement": false,
+      "physical_scale_lines": false,
+      "lpn_cycles": 94940.0,
+      "rtl_cycles": 109618,
+      "error": -0.13390136656388552
+    },
+    {
+      "kernel": 47,
+      "queue_depth": 2,
+      "matrix_retirement": true,
+      "physical_scale_lines": false,
+      "lpn_cycles": 96735.0,
+      "rtl_cycles": 109618,
+      "error": -0.1175263186702914
+    },
+    {
+      "kernel": 47,
+      "queue_depth": 2,
+      "matrix_retirement": true,
+      "physical_scale_lines": true,
+      "lpn_cycles": 108715.0,
+      "rtl_cycles": 109618,
+      "error": -0.008237698188253706
+    }
+  ],
+  "source_sha256": {
+    "/home/ubuntu/LPNDialect-matrix-scale-lines/examples/opentpu/model.py": "12962304bfd2d04a93f0d5bfd58bf9fc5ddfeaa9c5c9063ef084574cfef6ed7f",
+    "/home/ubuntu/LPNDialect-matrix-scale-lines/examples/opentpu/components.py": "2a2c684193855cf947d7a21f2aff71cc631c6ae648be0e4a29bc14180e65996b",
+    "/home/ubuntu/LPNDialect-matrix-scale-lines/examples/opentpu/compact.py": "9435d6e770c5e049739824190f718d8a7a1f5c943b06b8126098eb4f29b37e0d",
+    "/home/ubuntu/LPNDialect-matrix-scale-lines/examples/opentpu/native_timing.py": "b48b2bded7b7c112f5d837572002472904bad80478315524fb1d13563c3a3989"
+  },
+  "rtl_report_sha256": "f1ab5250c107e7e984620e9c4e0b0102d34e130a2c2991f9c8c0ae1c465adfc5"
+}

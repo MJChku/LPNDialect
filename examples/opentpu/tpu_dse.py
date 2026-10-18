@@ -38,10 +38,17 @@ class Architecture:
     activation_streaming: bool = False
     fp_mul_latency: int = 2
     fp_add_latency: int = 4
+    vector_command_queue: int = 0
+    matrix_retirement: bool = False
+    physical_scale_lines: bool = False
 
 
 def architectures():
     return [
+        Architecture('physical_128x1_add2',128,1,2816,buffered_quant=True,
+                     vector_row_contexts=4,activation_streaming=True,quant_scale_lookup=True,
+                     scalar_recip_lookup=True,fp_add_latency=2,vector_command_queue=2,
+                     matrix_retirement=True,physical_scale_lines=True),
         *[Architecture(f'proposal_pinned{mib}m_128x1_add2',128,1,2816,buffered_quant=True,
                        vector_row_contexts=4,activation_streaming=True,quant_scale_lookup=True,
                        scalar_recip_lookup=True,fp_add_latency=2,pinned_cache_bytes=mib<<20) for mib in (24,48)],
@@ -210,7 +217,8 @@ def run_kernel(task):
         unified_dram=True, scalar_store_bytes=256, epilogue_lanes=max(1, point.columns // 2),
         quant_row_banks=8 if point.buffered_quant else 0,quant_store_buffered=point.buffered_quant,quant_scale_lookup=point.quant_scale_lookup,scalar_recip_lookup=point.scalar_recip_lookup,reciprocal_lookup_lanes=point.reciprocal_lookup_lanes,pinned_cache_bytes=point.pinned_cache_bytes,cache_read_bytes_per_cycle=point.cache_read_bytes_per_cycle,
         vector_row_contexts=point.vector_row_contexts,
-        fp_mul_latency=point.fp_mul_latency,fp_add_latency=point.fp_add_latency,activation_streaming=point.activation_streaming,vector_engines=point.vector_engines,vector_result_chunks=point.vector_result_chunks,vector_compatible_issue=point.vector_compatible_issue)
+        fp_mul_latency=point.fp_mul_latency,fp_add_latency=point.fp_add_latency,activation_streaming=point.activation_streaming,vector_engines=point.vector_engines,vector_result_chunks=point.vector_result_chunks,vector_compatible_issue=point.vector_compatible_issue,
+        vector_command_queue=point.vector_command_queue,matrix_retirement=point.matrix_retirement,physical_scale_lines=point.physical_scale_lines)
     profile=None;profile_hash=None
     if point.pinned_cache_bytes:
         root=Path(task['memory_profile_root']);manifest=json.loads((root/'manifest.json').read_text())

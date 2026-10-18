@@ -22,6 +22,8 @@ def main():
     p.add_argument('--indices',default='0,15,16,47',help='Kernel indices or all')
     p.add_argument('--workers',type=int,default=8)
     p.add_argument('--rtl-timeout',type=float,default=7200)
+    p.add_argument('--reuse-rtl',type=Path,
+        help='Recheck completed identical-hardware RTL outputs with new LPN timing details')
     p.add_argument('--matrix-rows',type=int,choices=(32,128),default=128)
     p.add_argument('--activation-streaming',action='store_true')
     p.add_argument('--lookup-scale',action='store_true')
@@ -29,6 +31,9 @@ def main():
     p.add_argument('--recip-table',type=Path)
     p.add_argument('--fp-mul-latency',type=int,choices=(1,2),default=2)
     p.add_argument('--fp-add-latency',type=int,choices=(1,2,3,4),default=4)
+    p.add_argument('--vector-command-queue',type=int,choices=(0,2),default=0)
+    p.add_argument('--matrix-retirement',action='store_true')
+    p.add_argument('--physical-scale-lines',action='store_true')
     a=p.parse_args()
     if (a.lookup_scale or a.scalar_recip_lookup) and a.recip_table is None:p.error('lookup hardware requires --recip-table')
     from examples.opentpu.e2e import atomic_json,digest
@@ -56,6 +61,17 @@ def main():
         table_files,_,_=reciprocal_inputs(a.recip_table)
         sources += table_files+[a.recip_table.resolve()/'report.json',Path(__file__).with_name('rom_inputs.py')]
     hashes={str(s):digest(s) for s in sources}
+    if a.reuse_rtl:
+        retained=json.loads((a.reuse_rtl/'report.json').read_text())
+        if (retained['status']!='complete' or
+            retained['reference_report_sha256']!=digest(case/'report.json') or
+            not set(indices)<=set(retained['indices'])):
+            raise ValueError('RTL reuse requires a completed replay of the same selected inputs')
+        rtl_files=[rtlsim.RTL/name for name in rtlsim.RTL_SOURCES]+[rtlsim.TB/'tb_top.sv',rtlsim.TB/'lpn_wall.cpp']
+        if any(retained['rtl_and_model_source_sha256'].get(str(s))!=digest(s) for s in rtl_files):
+            raise ValueError('retained RTL source files differ')
+        if any(not (a.reuse_rtl/'kernels'/f'{i:04d}'/'rtl-result.json').exists() for i in indices):
+            raise ValueError('retained RTL kernel result is missing')
     uarch=dict(reference['uarch'],MXU_ROWS=a.matrix_rows)
     if a.activation_streaming:uarch['ACT_STREAMING']=1
     if a.lookup_scale:uarch['QUANT_LOOKUP']=1
@@ -63,7 +79,8 @@ def main():
     timing=Timing(batch_rows=a.matrix_rows,matrix_row_lanes=a.matrix_rows,dram_bytes_per_cycle=2816,dram_port_bytes=2816,
         dram_latency=8,fifo_chunks=128*a.matrix_rows,scale_lanes=a.matrix_rows,unified_dram=True,scalar_store_bytes=256,
         epilogue_lanes=1,quant_row_banks=8,quant_store_buffered=True,vector_row_contexts=4,
-        fp_mul_latency=a.fp_mul_latency,fp_add_latency=a.fp_add_latency,activation_streaming=a.activation_streaming,quant_scale_lookup=a.lookup_scale,scalar_recip_lookup=a.scalar_recip_lookup)
+        fp_mul_latency=a.fp_mul_latency,fp_add_latency=a.fp_add_latency,activation_streaming=a.activation_streaming,quant_scale_lookup=a.lookup_scale,scalar_recip_lookup=a.scalar_recip_lookup,
+        vector_command_queue=a.vector_command_queue,matrix_retirement=a.matrix_retirement,physical_scale_lines=a.physical_scale_lines)
     records=[];failures=[];started=time.perf_counter()
     def save(status):
         result=dict(status=status,pid=os.getpid(),scope=__doc__,case=str(case),
@@ -74,6 +91,9 @@ def main():
             upstream_schedule_unchanged=True,all_dram_and_tmem_bit_exact=bool(records) and
                 all(r['all_dram_and_tmem_bit_exact'] for r in records),
             numerical_prepass_repeated=False)
+        if a.reuse_rtl:
+            result.update(retained_rtl_report=str(a.reuse_rtl.resolve()/'report.json'),
+                retained_rtl_report_sha256=digest(a.reuse_rtl/'report.json'))
         if len(records)==len(indices):
             rtl=sum(r['rtl_cycles'] for r in records);predicted=sum(r['lpn_cycles'] for r in records)
             result.update(selected_rtl_cycles=rtl,selected_lpn_cycles=predicted,
@@ -105,7 +125,8 @@ def main():
             opentpu_root=str(a.opentpu_root.resolve()),baseline=str(a.baseline.resolve()),baseline_job=None,
             compiler=str(a.compiler.resolve()),cache=str(output/'timing-cache'),timing=asdict(timing),
             instructions=record['instructions'],args=record['args'],input_sha256=record['input_sha256'],
-            rtl_timeout=a.rtl_timeout,reuse_directory=None,recip_table=str(a.recip_table.resolve()) if a.lookup_scale or a.scalar_recip_lookup else None)
+            rtl_timeout=a.rtl_timeout,reuse_directory=str(a.reuse_rtl.resolve()/'kernels') if a.reuse_rtl else None,
+            recip_table=str(a.recip_table.resolve()) if a.lookup_scale or a.scalar_recip_lookup else None)
         tasks.append(task)
     save('running')
     with ProcessPoolExecutor(max_workers=a.workers,mp_context=multiprocessing.get_context('spawn')) as pool:

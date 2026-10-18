@@ -1,0 +1,7 @@
+test_physical_reads_consume_shared_link_and_native_agrees (__main__.ScaleLineTest.test_physical_reads_consume_shared_link_and_native_agrees) ... ok
+test_rsc_repeated_lines_and_sw_only_requests (__main__.ScaleLineTest.test_rsc_repeated_lines_and_sw_only_requests) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.807s
+
+OK

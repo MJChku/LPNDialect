@@ -42,6 +42,9 @@ class CommandTiming:
   write_tail: list
   cache_offsets: list
   cached_prefix: list
+  retire_cycles: list
+  physical_scale_offsets: list
+  physical_scale_prefix: list
 
 
 class ExecutionUnit:
@@ -128,6 +131,40 @@ class ExecutionUnit:
       emit(window,token,delay=latency)
 
 
+class MatrixRetirement:
+  """Two admitted commands, with one head draining through the FP epilogue."""
+  def __init__(self,net,prefix,commands,window,publish,cycles):
+    self.order=order=net.place(prefix+'_order')
+    self.arrivals=arrivals=net.place(prefix+'_arrivals')
+    slots=[net.place(prefix+f'_slot_{i}',initial_tokens=1) for i in range(2)]
+    resource=net.place(prefix+'_resource',initial_tokens=1)
+
+    @net.transition(prefix+'_mark_ready')
+    def mark_ready():
+      guard(count(arrivals)>0)
+      token=take(arrivals)
+      place=array(slots)[token.get('retire_slot')]
+      state=take(place)
+      emit(place,state.set('ready',1))
+
+    @net.transition(prefix+'_drain')
+    def drain():
+      guard(count(order)>0)
+      guard(count(resource)>0)
+      place=array(slots)[peek(order).get('retire_slot')]
+      guard(peek(place).get('ready')==1)
+      token=take(order)
+      state=take(place)
+      emit(place,state.set('ready',0))
+      credit=take(resource)
+      idx=token.get('id')
+      latency=sitofp(array(cycles)[idx])
+      emit(resource,credit,delay=latency)
+      publish(idx,latency)
+      emit(commands,create().set('retire_slot',token.get('retire_slot')),delay=latency)
+      emit(window,token,delay=latency)
+
+
 class MatrixEngine:
   """An independently pipelined engine accepting the existing MM commands.
 
@@ -152,6 +189,10 @@ class MatrixEngine:
     write_full,write_tail = parameters.write_full,parameters.write_tail
     row_services,tails = parameters.row_services,parameters.tails
     cache_offsets,cached_prefix=parameters.cache_offsets,parameters.cached_prefix
+    retire_cycles=parameters.retire_cycles
+    physical_scale_offsets,physical_scale_prefix=parameters.physical_scale_offsets,parameters.physical_scale_prefix
+    self.retirement=retirement=(MatrixRetirement(net,prefix+'_retirement',resources.commands,
+        window,publish,retire_cycles) if t.matrix_retirement else None)
 
     @net.transition(prefix+"_start")
     def start():
@@ -164,8 +205,11 @@ class MatrixEngine:
       token = take(place)
       take(pending)
       emit(place,create())
-      take(resources.commands)
+      command=take(resources.commands)
       take(prefetch_credit)
+      if t.matrix_retirement:
+        token=token.set('retire_slot',command.get('retire_slot'))
+        emit(retirement.order,token)
       emit(request,token.set("row",0))
 
     @net.transition(prefix+"_prefetch")
@@ -180,12 +224,16 @@ class MatrixEngine:
       width = select(row+batch<n,batch,n-row)
       needed = muli(width,chunk)
       guard(peek(resources.buffers).get('free')>=needed)
+      metadata=muli(width,array(scale_bytes)[idx])
+      if t.physical_scale_lines:
+        scale_begin=array(physical_scale_offsets)[idx]+row
+        metadata=array(physical_scale_prefix)[scale_begin+width]-array(physical_scale_prefix)[scale_begin]
       cached=const_i64(0)
       if t.pinned_cache_bytes:
         begin=array(cache_offsets)[idx]+row
         cached=array(cached_prefix)[begin+width]-array(cached_prefix)[begin]
         miss=muli(needed,cfg.D)-cached
-        if t.unified_dram:miss=miss+muli(width,array(scale_bytes)[idx])
+        if t.unified_dram:miss=miss+metadata
         guard(select(miss>0,count(memory.b)>0,True,typ='i1'))
         guard(select(cached>0,count(memory.cache)>0,True,typ='i1'))
       needs_scale = array(scaled)[idx]
@@ -193,10 +241,9 @@ class MatrixEngine:
       token = take(request)
       capacity = take(resources.buffers)
       emit(resources.buffers,capacity.set('free',capacity.get('free')-needed))
-      bytes_per_row = muli(chunk,cfg.D)
-      if t.unified_dram:
-        bytes_per_row = addi(bytes_per_row,array(scale_bytes)[idx])
-      transfer_cycles = divi(muli(width,bytes_per_row)+t.dram_bytes_per_cycle-1,t.dram_bytes_per_cycle)
+      transferred=muli(needed,cfg.D)
+      if t.unified_dram:transferred=transferred+metadata
+      transfer_cycles = divi(transferred+t.dram_bytes_per_cycle-1,t.dram_bytes_per_cycle)
       cache_cycles=const_i64(0)
       if t.pinned_cache_bytes:
         transfer_cycles=divi(miss+t.dram_bytes_per_cycle-1,t.dram_bytes_per_cycle)
@@ -211,6 +258,8 @@ class MatrixEngine:
         bus=take(memory.b)
         emit(memory.b,bus,delay=sitofp(transfer_cycles))
       scale_cycles = divi(muli(muli(width,array(kbs)[idx]),needs_scale)+t.scale_lanes-1,t.scale_lanes)
+      if t.physical_scale_lines:
+        scale_cycles=divi(divi(metadata,32)+t.scale_lanes-1,t.scale_lanes)
       service = sitofp(transfer_cycles)
       if needs_scale>0:
         scale_port = take(memory.a)
@@ -252,9 +301,12 @@ class MatrixEngine:
            muli(token.get('width'),array(chunks)[idx])))
       if token.get("row")+array(batches)[idx]>=array(rows)[idx]:
         latency = service+sitofp(array(tails)[idx])
-        publish(idx,latency)
-        emit(resources.commands,create(),delay=latency)
-        emit(window,token,delay=latency)
+        if t.matrix_retirement:
+          emit(retirement.arrivals,token,delay=latency-sitofp(array(retire_cycles)[idx]))
+        else:
+          publish(idx,latency)
+          emit(resources.commands,create(),delay=latency)
+          emit(window,token,delay=latency)
 
 
   def _stream_compute(self,net,prefix,cfg,t,interface,parameters,resources,ready,publish,window,is_done):
@@ -263,6 +315,7 @@ class MatrixEngine:
     can_read=interface.activation.can_read
     batches,rows,chunks=parameters.batches,parameters.rows,parameters.chunks
     kbs,tails=parameters.kb,parameters.tails
+    retirement,retire_cycles=self.retirement,parameters.retire_cycles
     write_full,write_tail=parameters.write_full,parameters.write_tail
     self.active_rows=active=net.place(prefix+'_active_rows')
     self.returned_chunks=returned=net.place(prefix+'_returned_chunks')
@@ -301,9 +354,12 @@ class MatrixEngine:
         emit(returned,create().set('chunks',muli(token.get('width'),array(chunks)[idx])),delay=service)
         if token.get('row')+array(batches)[idx]>=array(rows)[idx]:
           latency=service+sitofp(array(tails)[idx])
-          publish(idx,latency)
-          emit(resources.commands,create(),delay=latency)
-          emit(window,token,delay=latency)
+          if t.matrix_retirement:
+            emit(retirement.arrivals,token,delay=latency-sitofp(array(retire_cycles)[idx]))
+          else:
+            publish(idx,latency)
+            emit(resources.commands,create(),delay=latency)
+            emit(window,token,delay=latency)
       else:
         emit(active,token.set('group',group+1),delay=service)
 

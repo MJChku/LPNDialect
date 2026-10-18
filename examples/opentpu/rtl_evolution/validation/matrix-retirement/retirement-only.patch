@@ -1,0 +1,197 @@
+--- a/examples/opentpu/model.py
++++ b/examples/opentpu/model.py
+@@ -119,6 +119,7 @@
+   cache_read_bytes_per_cycle: int = 8192
+   vector_row_contexts: int = 1
+   vector_command_queue: int = 0
++  matrix_retirement: bool = False
+   vector_engines: int = 1
+   vector_result_chunks: int = 0
+   vector_compatible_issue: bool = False
+@@ -184,7 +185,7 @@
+ class SystolicArray:
+   def __init__(self,net,prefix,timing):
+     self.compute = net.place(prefix+"_compute",initial_tokens=1)
+-    self.commands = net.place(prefix+"_commands",initial_tokens=2)
++    self.commands = commands = net.place(prefix+"_commands",initial_tokens=0 if timing.matrix_retirement else 2)
+     self.buffers = buffers = net.place(prefix+"_buffers",initial_tokens=1)
+     initialize = net.place(prefix+"_initialize_buffers",initial_tokens=1)
+     capacity = timing.fifo_chunks
+@@ -196,6 +197,9 @@
+       take(initialize)
+       token = take(buffers)
+       emit(buffers,token.set('free',capacity))
++      if timing.matrix_retirement:
++        emit(commands,create().set('retire_slot',0))
++        emit(commands,create().set('retire_slot',1))
+     self.spec = timing
+ 
+ 
+@@ -271,6 +275,8 @@
+       raise ValueError('vector pools require CompactOpenTPU')
+     self.matrix_batch_sizes = []
+     cfg,t = workload.config,self.timing
++    if t.matrix_retirement and (not self.supports_multiple_matrix_engines or cfg.MCOLS!=1):
++      raise ValueError('matrix retirement diagnostic requires CompactOpenTPU single-column cores')
+     if (t.fp_mul_latency,t.fp_add_latency)!=(2,4) and cfg.LANES!=64:
+       raise ValueError('experimental FP partition timing requires the 64-lane architecture')
+     if t.activation_streaming and (cfg.MCOLS!=1 or cfg.LANES!=cfg.D):
+--- a/examples/opentpu/components.py
++++ b/examples/opentpu/components.py
+@@ -42,6 +42,7 @@
+   write_tail: list
+   cache_offsets: list
+   cached_prefix: list
++  retire_cycles: list
+ 
+ 
+ class ExecutionUnit:
+@@ -128,6 +129,40 @@
+       emit(window,token,delay=latency)
+ 
+ 
++class MatrixRetirement:
++  """Two admitted commands, with one head draining through the FP epilogue."""
++  def __init__(self,net,prefix,commands,window,publish,cycles):
++    self.order=order=net.place(prefix+'_order')
++    self.arrivals=arrivals=net.place(prefix+'_arrivals')
++    slots=[net.place(prefix+f'_slot_{i}',initial_tokens=1) for i in range(2)]
++    resource=net.place(prefix+'_resource',initial_tokens=1)
++
++    @net.transition(prefix+'_mark_ready')
++    def mark_ready():
++      guard(count(arrivals)>0)
++      token=take(arrivals)
++      place=array(slots)[token.get('retire_slot')]
++      state=take(place)
++      emit(place,state.set('ready',1))
++
++    @net.transition(prefix+'_drain')
++    def drain():
++      guard(count(order)>0)
++      guard(count(resource)>0)
++      place=array(slots)[peek(order).get('retire_slot')]
++      guard(peek(place).get('ready')==1)
++      token=take(order)
++      state=take(place)
++      emit(place,state.set('ready',0))
++      credit=take(resource)
++      idx=token.get('id')
++      latency=sitofp(array(cycles)[idx])
++      emit(resource,credit,delay=latency)
++      publish(idx,latency)
++      emit(commands,create().set('retire_slot',token.get('retire_slot')),delay=latency)
++      emit(window,token,delay=latency)
++
++
+ class MatrixEngine:
+   """An independently pipelined engine accepting the existing MM commands.
+ 
+@@ -152,6 +187,9 @@
+     write_full,write_tail = parameters.write_full,parameters.write_tail
+     row_services,tails = parameters.row_services,parameters.tails
+     cache_offsets,cached_prefix=parameters.cache_offsets,parameters.cached_prefix
++    retire_cycles=parameters.retire_cycles
++    self.retirement=retirement=(MatrixRetirement(net,prefix+'_retirement',resources.commands,
++        window,publish,retire_cycles) if t.matrix_retirement else None)
+ 
+     @net.transition(prefix+"_start")
+     def start():
+@@ -164,8 +202,11 @@
+       token = take(place)
+       take(pending)
+       emit(place,create())
+-      take(resources.commands)
++      command=take(resources.commands)
+       take(prefetch_credit)
++      if t.matrix_retirement:
++        token=token.set('retire_slot',command.get('retire_slot'))
++        emit(retirement.order,token)
+       emit(request,token.set("row",0))
+ 
+     @net.transition(prefix+"_prefetch")
+@@ -252,9 +293,12 @@
+            muli(token.get('width'),array(chunks)[idx])))
+       if token.get("row")+array(batches)[idx]>=array(rows)[idx]:
+         latency = service+sitofp(array(tails)[idx])
+-        publish(idx,latency)
+-        emit(resources.commands,create(),delay=latency)
+-        emit(window,token,delay=latency)
++        if t.matrix_retirement:
++          emit(retirement.arrivals,token,delay=latency-sitofp(array(retire_cycles)[idx]))
++        else:
++          publish(idx,latency)
++          emit(resources.commands,create(),delay=latency)
++          emit(window,token,delay=latency)
+ 
+ 
+   def _stream_compute(self,net,prefix,cfg,t,interface,parameters,resources,ready,publish,window,is_done):
+@@ -263,6 +307,7 @@
+     can_read=interface.activation.can_read
+     batches,rows,chunks=parameters.batches,parameters.rows,parameters.chunks
+     kbs,tails=parameters.kb,parameters.tails
++    retirement,retire_cycles=self.retirement,parameters.retire_cycles
+     write_full,write_tail=parameters.write_full,parameters.write_tail
+     self.active_rows=active=net.place(prefix+'_active_rows')
+     self.returned_chunks=returned=net.place(prefix+'_returned_chunks')
+@@ -301,9 +346,12 @@
+         emit(returned,create().set('chunks',muli(token.get('width'),array(chunks)[idx])),delay=service)
+         if token.get('row')+array(batches)[idx]>=array(rows)[idx]:
+           latency=service+sitofp(array(tails)[idx])
+-          publish(idx,latency)
+-          emit(resources.commands,create(),delay=latency)
+-          emit(window,token,delay=latency)
++          if t.matrix_retirement:
++            emit(retirement.arrivals,token,delay=latency-sitofp(array(retire_cycles)[idx]))
++          else:
++            publish(idx,latency)
++            emit(resources.commands,create(),delay=latency)
++            emit(window,token,delay=latency)
+       else:
+         emit(active,token.set('group',group+1),delay=service)
+ 
+--- a/examples/opentpu/compact.py
++++ b/examples/opentpu/compact.py
+@@ -185,6 +185,7 @@
+     kinds,latencies,services,port_ids,ranks = [],[],[],[],[]
+     batches,chunkses,scale_flags,kbs,ns,row_services,tails = [],[],[],[],[],[],[]
+     scale_bytes = []
++    retire_cycles=[]
+     write_full,write_tail = [],[]
+     barriers,dispatch_delays,pipeline_delays = [],[],[]
+     last_register = nsig
+@@ -208,6 +209,7 @@
+       port_ids.append(ports.index(port) if port is not None else -1)
+       services.append(service)
+       batch,chunks,scaled,kb,n,row_service,tail = 1,1,0,1,1,1,0
++      retire=0
+       if ins.op==I.MM:
+         n,kb,m = w[3]&65535,(w[3]>>16)&255,(w[5]>>16)&255
+         wf,pair = (ins.flags>>I.WF_SHIFT)&3,bool(ins.flags&I.F_PAIR)
+@@ -221,6 +223,13 @@
+         row_service = max((chunks if pair else kb)*ceil(m/cfg.MCOLS),drain)
+         tail = min(cfg.D//8,t.chain_length)+cfg.MCOLS+5+(5+2*t.fp_mul_latency)+(
+             t.fp_mul_latency+t.fp_add_latency if ins.flags&I.F_ACC else 0)+drain
++        if t.matrix_retirement:
++          # LLAT (registered pick, i2f48, Sw/Sa multiplies), then the
++          # registered head switch. ACC also traverses rA, r0 and r1.
++          extra=2+(3 if ins.flags&I.F_ACC else 0)
++          tail+=extra
++          retire=5+2*t.fp_mul_latency+drain+extra+(
++              t.fp_mul_latency+t.fp_add_latency if ins.flags&I.F_ACC else 0)
+         self.matrix_batch_sizes.append(batch)
+       batches.append(batch)
+       chunkses.append(chunks)
+@@ -229,10 +238,11 @@
+       ns.append(n)
+       row_services.append(row_service)
+       tails.append(tail)
++      retire_cycles.append(retire)
+       scale_bytes.append(max(4,w[6]) if ins.op==I.MM and scaled else 0)
+       write_full.append(bank_write_cycles(batch,m,w[5]&65535,cfg.LANES) if ins.op==I.MM else 0)
+       write_tail.append(bank_write_cycles(n%batch or batch,m,w[5]&65535,cfg.LANES) if ins.op==I.MM else 0)
+-    parameter_values = [latencies,services,port_ids,batches,chunkses,scale_flags,kbs,ns,row_services,tails,scale_bytes,write_full,write_tail,cache_offsets,cache_prefix]
++    parameter_values = [latencies,services,port_ids,batches,chunkses,scale_flags,kbs,ns,row_services,tails,scale_bytes,write_full,write_tail,cache_offsets,cache_prefix,retire_cycles]
+     parameters = CommandTiming(*(self._table(prefix+"_"+name,values)
+         for name,values in zip(CommandTiming.__dataclass_fields__,parameter_values)))
+     metadata = self._table(prefix+"_metadata",[ncommands])
