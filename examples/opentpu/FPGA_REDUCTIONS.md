@@ -1,10 +1,30 @@
 # Shared-bank matrix engines and interleaved reductions
 
-The FPGA-first candidate predicts **10,165,357 cycles**, or **13.0668x fewer
-cycles than the original RTL**, on all 48 unchanged SmolLM2-135M 128-input /
-32-output kernels. This is an LPN prediction. The latest fully audited
-inference RTL result remains [8.6615x](TPU_EXPLORATION.md), using 32 engines
-and the buffered quantizer. The 100x objective remains unfulfilled.
+The 128-engine implementation completes all 48 unchanged SmolLM2-135M
+128-input / 32-output kernels in **10,400,210 RTL cycles**, versus 132,828,263
+for original RTL: **12.7717x fewer cycles** at an assumed common clock. Every
+full DRAM and scratchpad state is bit-exact against independent ISA execution.
+Generated IDs are preserved by full output equivalence. The 100x objective is
+still unfulfilled; FPGA resource fit, clock and vendor HBM remain unverified.
+
+LPN predicts 10,165,357 cycles: **−2.258% aggregate error**, with **6.243% worst
+kernel error**. All kernels meet the accepted 10% timing tolerance. The earlier
+13.0668x prediction is retained as a prediction, not substituted for the actual
+12.7717x result. The 32-engine quantizer predecessor takes 15,335,479 cycles
+([8.6615x](TPU_EXPLORATION.md)).
+
+A fresh audit rereads all canonical program/DRAM inputs, decoded instruction
+JSON, simulator/source hashes, cycle/instruction logs and complete memory
+outputs. It also checks raw native timing/completion logs. The original
+upstream `Engine.generate()` schedule and compiled inputs are unchanged.
+
+| Phase | Original RTL | New RTL |
+| --- | ---: | ---: |
+| Prefill | 62,013,323 | 6,284,346 |
+| Decode | 70,814,940 | 4,115,864 |
+| Total | 132,828,263 | 10,400,210 |
+
+Reports are `validation/fpga-reductions/full-inference-{rtl,audit}.json`.
 
 ## Bounded row contexts
 

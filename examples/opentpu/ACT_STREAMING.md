@@ -1,7 +1,7 @@
 # FPGA experiment: stream quantized activation rows
 
-The last audited full inference result remains **8.6615x fewer RTL cycles**
-for the buffered-quantizer 32-engine implementation. ACT streaming is a new,
+The latest audited full inference result is **12.7717x fewer RTL cycles**
+for the [128-engine shared-bank implementation](FPGA_REDUCTIONS.md). ACT streaming is a new,
 default-off hardware and LPN experiment. It has not established a new full
 inference RTL result, FPGA fit, or operating clock. The 100x target is open.
 

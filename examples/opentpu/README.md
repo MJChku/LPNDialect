@@ -1,21 +1,21 @@
 # FeSens/openTPU LPN model
 
-The implemented parallel RTL completes SmolLM2-135M with 128 prompt tokens and
-32 generated tokens in 15,435,996 cycles, versus 132,828,263 for original RTL
-(**8.605x at a common clock**), with identical inputs and bit-exact full device
-memory. Corrected LPN total error is +0.622% / +1.793% for original/evolved RTL.
-See [RTL implementation, reproduction and audited evidence](rtl_evolution/README.md).
-FPGA resource fit, Fmax and a vendor HBM controller are not established.
-The buffered-quantizer follow-up completes the same full inference in
-15,335,479 RTL cycles (**8.662x**), with bit-exact memory and LPN total error
--0.649% (worst kernel 2.958%). See its
-[report and fresh audit](TPU_EXPLORATION.md#implemented-quantizer-change).
-The current [FPGA-first architecture exploration](TPU_EXPLORATION.md) retains
-this verified baseline and reports new predictions separately from fresh RTL
-validation. Its 100x cycle-reduction target has not yet been achieved.
-The next [shared-bank and interleaved-reduction candidate](FPGA_REDUCTIONS.md)
-predicts 13.067x and has passed numerical component gates; full inference RTL
-validation is still required.
+The 128-engine shared-bank RTL completes the unchanged SmolLM2-135M workload
+(128 input / 32 generated tokens) in **10,400,210 cycles**, versus 132,828,263
+for original RTL: **12.7717x fewer cycles at a common clock**. All 48 kernels
+are bit-exact against independent ISA memory states. A fresh audit verifies
+canonical input words, source/binary hashes, raw logs and complete memory dumps.
+LPN predicts 10,165,357 cycles: **−2.258% total error**, **6.243% worst kernel**.
+See [implementation, budgets and full evidence](FPGA_REDUCTIONS.md).
+FPGA resource fit, operating clock and a vendor HBM controller remain unproven.
+The 100x cycle-reduction target has not yet been achieved.
+
+Earlier measured implementations are retained as controls: the parallel
+32-engine design takes 15,435,996 cycles (8.605x), and its buffered-quantizer
+follow-up takes 15,335,479 cycles (8.662x). See
+[RTL reproduction](rtl_evolution/README.md) and
+[quantizer audit](TPU_EXPLORATION.md#implemented-quantizer-change).
+
 The separate [arithmetic partition experiment](LOWLAT_FP.md) checks shorter
 FP32 pipelines bit-exactly and predicts 15.108x for a two-clock-adder candidate.
 Its four-kernel real-workload pilot is bit-exact and saves 1.080x cycles against
@@ -29,8 +29,10 @@ The next [bounded-vector proposal study](VECTOR_PROPOSALS.md) finds diminishing
 returns from extra VPUs and larger windows. A standalone [exact reciprocal
 ROM primitive](RECIP_ROM.md) passes exhaustive normalized arithmetic checks;
 its [QACT/QST integration](LOOKUP_SCALE.md) passes numerical component gates
-and predicts 13.617x / 15.720x for the 128-engine candidates. Full-inference RTL
-validation and FPGA synthesis remain pending.
+and a four-kernel real-workload RTL pilot. It predicts 13.617x / 15.720x for the
+128-engine candidates. A [single-lane small-row reciprocal](SMALL_RECIP.md)
+passes numerical gates and predicts 14.209x / 16.286x. These full-inference
+forecasts and FPGA synthesis remain pending validation.
 
 **Inference workload correction:** earlier `e2e.py`, `replay_e2e.py` and
 weight-free FPGA sequence results used a custom token-by-token prompt loop.

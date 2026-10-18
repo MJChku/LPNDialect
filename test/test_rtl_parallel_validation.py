@@ -6,7 +6,7 @@ from examples.opentpu.rtl_evolution.parallel_inference import configure_rtlsim,v
 
 class WorkerConfigurationTest(unittest.TestCase):
     def test_hardware_and_model_feature_mismatches_are_rejected(self):
-        for field,parameter in (('activation_streaming','ACT_STREAMING'),('quant_scale_lookup','QUANT_LOOKUP')):
+        for field,parameter in (('activation_streaming','ACT_STREAMING'),('quant_scale_lookup','QUANT_LOOKUP'),('scalar_recip_lookup','VPU_SCALAR_RECIP')):
             with self.subTest(field=field):
                 validate_variant({field:True},{parameter:1})
                 with self.assertRaises(ValueError):validate_variant({field:True},{})

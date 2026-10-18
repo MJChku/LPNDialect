@@ -2,10 +2,10 @@
 
 The objective is 100x fewer hardware cycles on the **same upstream SmolLM2-135M
 128-input/32-output inference**, compared with the original 132,828,263-cycle
-RTL run. **100x has not been achieved.** The existing fully audited RTL result
-was [8.605x](rtl_evolution/README.md); the buffered-quantizer follow-up is
-**8.662x**, as measured below. A successful capacity screen is not FPGA
-synthesis, placement, routing or Fmax proof.
+RTL run. **100x has not been achieved.** The latest audited full-run result is
+[12.7717x with 128 shared-bank engines](FPGA_REDUCTIONS.md). Earlier controls
+are 8.605x and the 8.662x buffered-quantizer follow-up measured below. A
+successful capacity screen is not FPGA synthesis, placement, routing or Fmax proof.
 
 LPN consumes the original compiled commands. Upstream `Engine.generate()` owns
 prefill batching, tiling, decode and EOS. Independent HALT-drained kernels may
@@ -94,9 +94,9 @@ the unit gains above do not translate directly to full inference.
 
 LPN predicts 15,236,007 cycles: **-0.649% total error**, with **2.958% worst
 kernel error**, inside the accepted 10% target for every kernel. This remains a
-32-engine implementation; the larger geometry predictions are separate. The
-current fixed-lane matrix wrapper requires two scratchpad lanes per engine, so
-the 128-engine prediction needs shared-bank routing before it can be validated.
+32-engine control. The later [shared-bank implementation](FPGA_REDUCTIONS.md)
+removes the fixed two-lanes-per-engine limitation and is now validated on all
+48 kernels at 128 engines.
 
 The [completed report](rtl_evolution/validation/tpu-100x/quant-full-rtl.json) and
 [fresh audit](rtl_evolution/validation/tpu-100x/quant-full-audit.json) retain the

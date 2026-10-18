@@ -1,0 +1,16 @@
+{
+  "status": "complete",
+  "base_revision": "f237dab2f196855a59a083b1454786df8f01291f",
+  "patch_order": [
+    "parallel-rtl",
+    "buffered-quant",
+    "interleaved-reductions",
+    "shared-matrix-banks",
+    "portable-tree",
+    "lowlat-fp",
+    "act-streaming",
+    "lookup-scale",
+    "small-recip"
+  ],
+  "matching_rtl_and_harness_files": 54
+}

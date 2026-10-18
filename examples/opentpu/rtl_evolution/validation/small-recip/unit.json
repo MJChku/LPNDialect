@@ -1,0 +1,223 @@
+{
+  "status": "complete",
+  "scope": "Check scalar reciprocal fast taps, bulk fallback and mixed VPU retirement.",
+  "lookup": true,
+  "pipeline": false,
+  "stall": 0,
+  "write_buffer": 0,
+  "fp_mul_latency": 2,
+  "fp_add_latency": 4,
+  "accepted_and_completed_commands": 38,
+  "total_clocks": 2358,
+  "records": [
+    {
+      "name": "recip_1x1_stride1",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 14
+    },
+    {
+      "name": "recip_1x1_stride5",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 14
+    },
+    {
+      "name": "recip_2x1_stride1",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 15
+    },
+    {
+      "name": "recip_2x1_stride5",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 15
+    },
+    {
+      "name": "recip_8x1_stride1",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 21
+    },
+    {
+      "name": "recip_8x1_stride5",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 21
+    },
+    {
+      "name": "recip_17x1_stride1",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 30
+    },
+    {
+      "name": "recip_17x1_stride5",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 30
+    },
+    {
+      "name": "recip_63x1_stride1",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 76
+    },
+    {
+      "name": "recip_63x1_stride5",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 76
+    },
+    {
+      "name": "recip_128x1_stride1",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 141
+    },
+    {
+      "name": "recip_128x1_stride5",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 141
+    },
+    {
+      "name": "recip_1x2",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 15
+    },
+    {
+      "name": "recip_1x3",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 16
+    },
+    {
+      "name": "recip_1x4",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 17
+    },
+    {
+      "name": "recip_1x5",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 52
+    },
+    {
+      "name": "recip_8x2",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 29
+    },
+    {
+      "name": "recip_8x3",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 37
+    },
+    {
+      "name": "recip_8x4",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 45
+    },
+    {
+      "name": "recip_128x2",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 179
+    },
+    {
+      "name": "recip_8x63",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 83
+    },
+    {
+      "name": "recip_8x64",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 83
+    },
+    {
+      "name": "recip_8x65",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 91
+    },
+    {
+      "name": "recip_1x193",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 64
+    },
+    {
+      "name": "recip_8x193",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 155
+    },
+    {
+      "name": "recip_38x2",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 89
+    },
+    {
+      "name": "recip_39x2",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 90
+    },
+    {
+      "name": "recip_19x3",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 70
+    },
+    {
+      "name": "recip_20x3",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 71
+    },
+    {
+      "name": "recip_12x4",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 61
+    },
+    {
+      "name": "recip_13x4",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 64
+    },
+    {
+      "name": "recip_in_place",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 141
+    },
+    {
+      "name": "copy_after_recip",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 14
+    },
+    {
+      "name": "add_after_recip",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 21
+    },
+    {
+      "name": "mul_after_recip",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 21
+    },
+    {
+      "name": "exp2_after_recip",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 80
+    },
+    {
+      "name": "rsqrt_after_recip",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 87
+    },
+    {
+      "name": "rssq_after_recip",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 44
+    }
+  ],
+  "source_and_table_sha256": {
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/vpu/otpu_fp.sv": "b476c83913d88ef5b4bcbc8cc07378ade8b2aeaaf7642b20976bd1fce33cd416",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/vpu/otpu_fpipe.sv": "6f9feaf92b539bb989e90dd77d8c066c92ae01c1b9c826f335e6b45231c45bd0",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/top/otpu_pkg.sv": "ca41c32141fdf224d24481842b182063ce5692a976176eca82c4c78d4d7ad3c6",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/vpu/otpu_vtree.sv": "3a4ff0df2398fc7162043dea22ea2937d5f38f61894255fda48d6312b3b10842",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/vpu/otpu_se_comp.sv": "71e0c047e122094076697a15bb027e1208137ec6df75ed681002a45e930faf0f",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/vpu/otpu_se_tail.sv": "a76c0fa830d0a70cbbf6f0dc5ace9526061c5634e3377d156b5459e4c8d724af",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/vpu/otpu_recip_rom.sv": "e253c9b4d1a1f7c2ed834d42e7389dc523f20efd530545c072e1a7289e97efc4",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/vpu/otpu_vpu.sv": "2b92c483a28641c2ed1b7790683438d2e64a489844050c61992a1003c1fdc282",
+    "/home/ubuntu/LPNDialect-scalar-recip/examples/opentpu/rtl_evolution/tb_scalar_recip.sv": "de32a0f3df9233b64d4e77045784c4200c7361df7f00b4cbed7f9c5bf125ccf8",
+    "/home/ubuntu/lpn-runs/tpu-100x/recip-two-bit-table/coeff.hex": "2ed322e9987b727d73cb592a2b886b85c138095f4b7babfee27224477b3ee9a3",
+    "/home/ubuntu/lpn-runs/tpu-100x/recip-two-bit-table/correction.hex": "1d868c04b7226b703f299f2c3df4016fe3caf4be7b0c7af7a46a4fb7153fbf10"
+  },
+  "simulator": "/home/ubuntu/FeSens-openTPU-scalar-recip/build/verilator/tb_scalar_recip_967a1761ebd9/Vtb_scalar_recip",
+  "simulator_sha256": "24dc4db082e5b69a8be541656bcc5bb3330c8770a6d799ff2f7efafeaab0816a",
+  "lookup_table_sha256": {
+    "coeff.hex": "2ed322e9987b727d73cb592a2b886b85c138095f4b7babfee27224477b3ee9a3",
+    "correction.hex": "1d868c04b7226b703f299f2c3df4016fe3caf4be7b0c7af7a46a4fb7153fbf10"
+  }
+}

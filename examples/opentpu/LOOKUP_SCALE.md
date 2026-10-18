@@ -2,8 +2,8 @@
 
 The reciprocal ROM is now connected to QACT/QST in a default-off RTL variant.
 The table replaces the normalized Newton sequence without changing quantized
-bytes or scale records. The VPU still uses its original arithmetic. Full
-inference RTL validation and FPGA synthesis/frequency remain pending.
+bytes or scale records. This variant leaves VPU arithmetic unchanged. Four real-inference kernels have
+passed RTL validation; full inference and FPGA synthesis/frequency remain pending.
 
 ## Measured components and complete-workload forecasts
 
@@ -39,9 +39,26 @@ All 48 retained normal-inference kernels were evaluated in LPN:
 | 128 engines, two-stage adder | 8,449,670 | 15.720x |
 
 These are forecasts, not measured full inference results. The 100x target is
-still open. The original audited 8.6615x result remains the verified full-run
-baseline. Timing consumes the original compiled instruction words; neither
+still open. The audited [128-engine 12.7717x result](FPGA_REDUCTIONS.md) is the latest
+verified full-run result. Timing consumes the original compiled instruction words; neither
 this model nor the ROM generator chooses an inference schedule.
+
+## Completed real-workload pilot
+
+Original kernels 0, 15, 16 and 47 were replayed with 32 matrix engines, original
+2/4 FP stages and ACT streaming. All canonical inputs and full DRAM/TMEM outputs
+match the retained upstream inference. The fresh audit verifies raw logs,
+instruction counts, executables, sources and ROM tables.
+
+| Candidate | Selected RTL cycles | LPN total error | Worst kernel error |
+| --- | ---: | ---: | ---: |
+| ACT streaming control | 1,583,564 | −0.0365% | 2.31% |
+| ACT streaming + lookup scale | 1,560,162 | +0.2052% | 3.12% |
+
+This is **1.0150× fewer cycles** than the matching control, or 8.0537× relative
+to original RTL on these four kernels. It is a selected-kernel result, not a
+complete inference measurement. Reports are `inference-pilot.json` and
+`inference-pilot-audit.json` under the validation directory.
 
 ## Storage, initialization and input identity
 

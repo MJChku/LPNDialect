@@ -13,6 +13,7 @@ def main():
     ap.add_argument('--output',type=Path,required=True)
     ap.add_argument('--stream-act',action='store_true')
     ap.add_argument('--lookup-scale',action='store_true')
+    ap.add_argument('--scalar-recip-lookup',action='store_true')
     ap.add_argument('--recip-table',type=Path)
     ap.add_argument('--rows',type=int,default=32)
     ap.add_argument('--vector-lanes',type=int,default=64)
@@ -24,7 +25,7 @@ def main():
     ap.add_argument('--fp-mul-latency',type=int,choices=(1,2),default=2)
     ap.add_argument('--fp-add-latency',type=int,choices=(1,2,3,4),default=4)
     a=ap.parse_args()
-    if a.lookup_scale and a.recip_table is None:ap.error('--lookup-scale requires --recip-table')
+    if (a.lookup_scale or a.scalar_recip_lookup) and a.recip_table is None:ap.error('lookup hardware requires --recip-table')
     sys.path.insert(0,str(a.opentpu_root.resolve()))
     import numpy as np
     from opentpu import Config,isa as I,quant as Q,rtlsim
@@ -35,10 +36,11 @@ def main():
     ua=dict(MXU_ROWS=a.rows,VPU_LANES=a.vector_lanes,QST_LANES=a.stores)
     if a.stream_act: ua["ACT_STREAMING"]=1
     lookup_hashes={};lookup_args=[]
-    if a.lookup_scale:
+    if a.lookup_scale or a.scalar_recip_lookup:
         from .rom_inputs import reciprocal_inputs
         _,lookup_hashes,lookup_args=reciprocal_inputs(a.recip_table)
-        ua['QUANT_LOOKUP']=1
+    if a.lookup_scale:ua['QUANT_LOOKUP']=1
+    if a.scalar_recip_lookup:ua['VPU_SCALAR_RECIP']=1
     a.output.mkdir(parents=True,exist_ok=True)
     rtlsim.VFLAGS[rtlsim.VFLAGS.index('-j')+1]='12'
     rtlsim.VFLAGS+=['-CFLAGS','-O'+a.host_opt]

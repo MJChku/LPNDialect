@@ -1,0 +1,72 @@
+{
+  "status": "complete",
+  "report_sha256": "d26a8fa62991ceee3ecaf01dffc4dfe6a30ca8d5a6e58379399a169c7ec3600e",
+  "script_sha256": "ed5ebbec69d5e188cbf0724496547368ff507651863b7798353b369d4cc3515d",
+  "full_inference": false,
+  "kernel_indices": [
+    0,
+    15,
+    16,
+    47
+  ],
+  "selected_rtl_cycles": 1560162,
+  "original_rtl_cycles": 12565079,
+  "lpn_cycles": 1563364.0,
+  "cycle_speedup": 8.05370147459046,
+  "relative_cycle_error": 0.0020523509738090695,
+  "worst_kernel_error": 0.03119139653258829,
+  "all_inputs_and_simulator_hashes_verified": true,
+  "all_program_json_matches_canonical_hex": true,
+  "all_full_dram_and_tmem_bit_exact": true,
+  "all_raw_rtl_logs_and_instruction_counts_verified": true,
+  "all_model_and_rtl_source_hashes_verified": true,
+  "schedule": "Retained unmodified upstream Engine.generate, 128 input and 32 output tokens",
+  "generated_ids_preserved_by_full_output_equivalence": false,
+  "simulator_sha256": {
+    "/home/ubuntu/FeSens-openTPU-fast-scale/build/verilator/tb_top_499aa9336332/Vtb_top": "7c050baeb4ce9e3eff878988a403cda995b7be70f8a3c50631979a8237f7c57e"
+  },
+  "phases": {
+    "prefill": {
+      "rtl_cycles": 1298602,
+      "original_rtl_cycles": 8139089
+    },
+    "decode": {
+      "rtl_cycles": 261560,
+      "original_rtl_cycles": 4425990
+    }
+  },
+  "records": [
+    {
+      "step": 0,
+      "phase": "prefill",
+      "rtl_cycles": 632181,
+      "original_rtl_cycles": 3780756,
+      "lpn_cycles": 637072.0,
+      "relative_cycle_error": 0.007736708316131047
+    },
+    {
+      "step": 15,
+      "phase": "prefill",
+      "rtl_cycles": 666421,
+      "original_rtl_cycles": 4358333,
+      "lpn_cycles": 672882.0,
+      "relative_cycle_error": 0.009695072634265722
+    },
+    {
+      "step": 16,
+      "phase": "decode",
+      "rtl_cycles": 130645,
+      "original_rtl_cycles": 2211225,
+      "lpn_cycles": 126570.0,
+      "relative_cycle_error": -0.03119139653258829
+    },
+    {
+      "step": 47,
+      "phase": "decode",
+      "rtl_cycles": 130915,
+      "original_rtl_cycles": 2214765,
+      "lpn_cycles": 126840.0,
+      "relative_cycle_error": -0.031127067180995338
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+test_native_matches_compact_timing_for_mixed_functions (__main__.ScalarReciprocalTest.test_native_matches_compact_timing_for_mixed_functions) ... ok
+test_rank_tracks_real_tap_and_bulk_fallback (__main__.ScalarReciprocalTest.test_rank_tracks_real_tap_and_bulk_fallback) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.543s
+
+OK

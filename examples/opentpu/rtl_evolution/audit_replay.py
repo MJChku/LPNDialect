@@ -43,7 +43,9 @@ def main():
             raise RuntimeError('RTL streaming parameter differs from model timing')
         if 'rtl_top_parameters' in record and bool(record['rtl_top_parameters'].get('QUANT_LOOKUP',0))!=bool(record['timing'].get('quant_scale_lookup',False)):
             raise RuntimeError('RTL lookup scale parameter differs from model timing')
-        if record['timing'].get('quant_scale_lookup',False):
+        if 'rtl_top_parameters' in record and bool(record['rtl_top_parameters'].get('VPU_SCALAR_RECIP',0))!=bool(record['timing'].get('scalar_recip_lookup',False)):
+            raise RuntimeError('RTL reciprocal lookup parameter differs from model timing')
+        if record['timing'].get('quant_scale_lookup',False) or record['timing'].get('scalar_recip_lookup',False):
             expected_tables={Path(n).name:h for n,h in report['rtl_and_model_source_sha256'].items()
                              if Path(n).name in ('coeff.hex','correction.hex')}
             if len(expected_tables)!=2 or record.get('lookup_table_sha256')!=expected_tables:

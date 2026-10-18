@@ -175,7 +175,7 @@ class CompactOpenTPU(OpenTPU):
       if activation is not None and ins.op==I.QACT and 0<(w[1]>>16)<=t.quant_buffer_chunks and (w[1]&255)>0:
         latency+=2 # completion includes the final ACT RAM landing
       latencies.append(latency)
-      rank=vector_rank(ins,I) if ins.op==I.VOP else 0
+      rank=vector_rank(ins,I,t) if ins.op==I.VOP else 0
       ranks.append(rank)
       if ins.op==I.VOP:
         service=self._vector_interval(ins,I) if rank<VECTOR_DRAIN_RANK else latency

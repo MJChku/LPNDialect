@@ -1,0 +1,38 @@
+{
+  "status": "complete",
+  "scope": "Check scalar reciprocal fast taps, bulk fallback and mixed VPU retirement.",
+  "lookup": true,
+  "pipeline": true,
+  "stall": 2,
+  "write_buffer": 1,
+  "fp_mul_latency": 2,
+  "fp_add_latency": 4,
+  "accepted_and_completed_commands": 48,
+  "total_clocks": 1921,
+  "records": [
+    {
+      "name": "mixed_pipeline",
+      "all_tmem_bit_exact": true,
+      "rtl_cycles": 1921
+    }
+  ],
+  "source_and_table_sha256": {
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/vpu/otpu_fp.sv": "b476c83913d88ef5b4bcbc8cc07378ade8b2aeaaf7642b20976bd1fce33cd416",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/vpu/otpu_fpipe.sv": "6f9feaf92b539bb989e90dd77d8c066c92ae01c1b9c826f335e6b45231c45bd0",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/top/otpu_pkg.sv": "ca41c32141fdf224d24481842b182063ce5692a976176eca82c4c78d4d7ad3c6",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/vpu/otpu_vtree.sv": "3a4ff0df2398fc7162043dea22ea2937d5f38f61894255fda48d6312b3b10842",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/vpu/otpu_se_comp.sv": "71e0c047e122094076697a15bb027e1208137ec6df75ed681002a45e930faf0f",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/vpu/otpu_se_tail.sv": "a76c0fa830d0a70cbbf6f0dc5ace9526061c5634e3377d156b5459e4c8d724af",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/vpu/otpu_recip_rom.sv": "e253c9b4d1a1f7c2ed834d42e7389dc523f20efd530545c072e1a7289e97efc4",
+    "/home/ubuntu/FeSens-openTPU-scalar-recip/rtl/vpu/otpu_vpu.sv": "2b92c483a28641c2ed1b7790683438d2e64a489844050c61992a1003c1fdc282",
+    "/home/ubuntu/LPNDialect-scalar-recip/examples/opentpu/rtl_evolution/tb_scalar_recip.sv": "de32a0f3df9233b64d4e77045784c4200c7361df7f00b4cbed7f9c5bf125ccf8",
+    "/home/ubuntu/lpn-runs/tpu-100x/recip-two-bit-table/coeff.hex": "2ed322e9987b727d73cb592a2b886b85c138095f4b7babfee27224477b3ee9a3",
+    "/home/ubuntu/lpn-runs/tpu-100x/recip-two-bit-table/correction.hex": "1d868c04b7226b703f299f2c3df4016fe3caf4be7b0c7af7a46a4fb7153fbf10"
+  },
+  "simulator": "/home/ubuntu/FeSens-openTPU-scalar-recip/build/verilator/tb_scalar_recip_08f4d763f223/Vtb_scalar_recip",
+  "simulator_sha256": "8b89ef3b84c59263c582baf918dc9f01e50a554282a6b75e113a7b3402c8ab85",
+  "lookup_table_sha256": {
+    "coeff.hex": "2ed322e9987b727d73cb592a2b886b85c138095f4b7babfee27224477b3ee9a3",
+    "correction.hex": "1d868c04b7226b703f299f2c3df4016fe3caf4be7b0c7af7a46a4fb7153fbf10"
+  }
+}

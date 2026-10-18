@@ -45,7 +45,7 @@ def configure_rtlsim(rtlsim,fp_mul_latency=2,fp_add_latency=4):
 
 
 def validate_variant(timing,uarch):
-    for field,parameter in (('activation_streaming','ACT_STREAMING'),('quant_scale_lookup','QUANT_LOOKUP')):
+    for field,parameter in (('activation_streaming','ACT_STREAMING'),('quant_scale_lookup','QUANT_LOOKUP'),('scalar_recip_lookup','VPU_SCALAR_RECIP')):
         if bool(uarch.get(parameter,0))!=bool(timing.get(field,False)):
             raise ValueError(f'RTL {parameter} setting differs from LPN timing')
 
@@ -81,7 +81,7 @@ def check_kernel(task):
         requested=task.get('timing') or {}
         validate_variant(requested,task['uarch'])
         lookup_hashes={};lookup_args=[]
-        if requested.get('quant_scale_lookup',False):
+        if requested.get('quant_scale_lookup',False) or requested.get('scalar_recip_lookup',False):
             from .rom_inputs import reciprocal_inputs
             _,lookup_hashes,lookup_args=reciprocal_inputs(task['recip_table'])
         configure_rtlsim(rtlsim,requested.get('fp_mul_latency',2),requested.get('fp_add_latency',4))

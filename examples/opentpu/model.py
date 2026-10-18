@@ -113,6 +113,7 @@ class Timing:
   quant_row_banks: int = 0
   quant_store_buffered: bool = False
   quant_scale_lookup: bool = False
+  scalar_recip_lookup: bool = False
   vector_row_contexts: int = 1
   vector_engines: int = 1
   vector_result_chunks: int = 0
@@ -185,11 +186,21 @@ class SystolicArray:
 VECTOR_DRAIN_RANK=100
 
 
-def vector_rank(ins,I):
+def scalar_recip_eligible(ins,I,timing):
+  rows,cols=ins.w[3]&65535,ins.w[3]>>16
+  slot=1+timing.fp_mul_latency+timing.fp_add_latency
+  tap=1 if slot>=4 else 2
+  return (timing.scalar_recip_lookup and (ins.w[5]>>16)&255==I.V_RECIP and 1<=cols<=4
+          and rows*(cols-1)<=(6-tap)*slot+3-(3 if tap>1 else 0))
+
+
+def vector_rank(ins,I,timing=None):
   """RTL n_slots ordering; reductions additionally require an empty pipeline."""
   function=(ins.w[5]>>16)&255
   if function in I.REDUCE:
     return VECTOR_DRAIN_RANK
+  if timing is not None and scalar_recip_eligible(ins,I,timing):
+    return 1 if 1+timing.fp_mul_latency+timing.fp_add_latency>=4 else 2
   return {I.V_ADD:1,I.V_SUB:1,I.V_RSUB:1,I.V_MUL:1,I.V_OUTER:1,
           I.V_EXP2:9,I.V_EXP2SUB:9,I.V_RECIP:6,I.V_RSQRT:10,I.V_LOG2:10}.get(function,0)
 
@@ -218,6 +229,8 @@ class OpenTPU:
       raise ValueError("multiple matrix engines require CompactOpenTPU")
     if self.timing.activation_streaming and not self.supports_multiple_matrix_engines:
       raise ValueError('ACT streaming requires CompactOpenTPU')
+    if self.timing.scalar_recip_lookup and not self.supports_multiple_matrix_engines:
+      raise ValueError('lookup reciprocal requires CompactOpenTPU command selection')
     if self.timing.vector_compatible_issue and not self.supports_multiple_matrix_engines:
       raise ValueError('compatible vector selection requires CompactOpenTPU')
     if self.timing.vector_result_chunks and not self.supports_multiple_matrix_engines:
@@ -228,6 +241,8 @@ class OpenTPU:
       raise ValueError('experimental FP partition timing requires the 64-lane architecture')
     if t.activation_streaming and (cfg.MCOLS!=1 or cfg.LANES!=cfg.D):
       raise ValueError('ACT streaming requires single-column engines and one full block per quantizer write')
+    if t.scalar_recip_lookup and cfg.LANES!=64:
+      raise ValueError('scalar reciprocal lookup timing requires the 64-lane VPU')
     if cfg.SEQ_WC:
       raise ValueError("the timing model currently requires the range-scoreboard sequencer")
     if t.dram_bytes_per_cycle>(t.dram_port_bytes or cfg.D):
@@ -373,6 +388,9 @@ class OpenTPU:
         slot_one=function in (I.V_ADD,I.V_SUB,I.V_RSUB,I.V_MUL,I.V_OUTER)
         ordinary=12-((2-t.fp_mul_latency)+(4-t.fp_add_latency) if slot_one else 0)
         latency = rows*ceil(cols/lanes)+((1+t.fp_mul_latency+t.fp_add_latency)*slots+8 if composite else ordinary)
+      if scalar_recip_eligible(ins,I,t):
+        slot=vector_rank(ins,I,t)
+        latency=rows*cols+slot*(1+t.fp_mul_latency+t.fp_add_latency)+(3 if slot>1 else 0)+5
       if function==I.V_OUTER:
         latency += max(2,ceil(cols/cfg.LANES))
       if function in I.REDUCE:
@@ -417,13 +435,15 @@ class OpenTPU:
     rows,cols=ins.w[3]&65535,ins.w[3]>>16
     function=(ins.w[5]>>16)&255
     lanes=self.workload.config.LANES
-    if lanes==8 and vector_rank(ins,I)>1:
+    if scalar_recip_eligible(ins,I,self.timing):
+      return rows*cols+2
+    if lanes==8 and vector_rank(ins,I,self.timing)>1:
       # COMP8 has three shared stages and a 25-cycle recirculation loop.
       # This is its aggregate issue bandwidth; return-slot collisions are
       # approximated rather than advancing one simulator event per clock.
       passes={I.V_EXP2:3,I.V_EXP2SUB:3,I.V_RECIP:2,I.V_RSQRT:4,I.V_LOG2:4}[function]
       return rows*ceil(cols/lanes)*passes+2
-    if vector_rank(ins,I)>1:
+    if vector_rank(ins,I,self.timing)>1:
       lanes=max(1,lanes//4)
     return rows*ceil(cols/lanes)+2+(max(2,ceil(cols/self.workload.config.LANES))
         if function==I.V_OUTER else 0)
@@ -431,7 +451,7 @@ class OpenTPU:
   def _simple(self,prefix,idx,ins,trigger,result,window,unit,memory,deps,I,vector=None):
     net = self.net
     latency,port,service = self._simple_timing(ins,memory,I)
-    rank=vector_rank(ins,I) if vector is not None else 0
+    rank=vector_rank(ins,I,self.timing) if vector is not None else 0
     interval=(self._vector_interval(ins,I) if vector is not None and rank<VECTOR_DRAIN_RANK else latency)
 
     @net.transition(prefix+f"_execute_{idx}")

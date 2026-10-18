@@ -1,0 +1,283 @@
+--- a/rtl/vpu/otpu_vpu.sv
++++ b/rtl/vpu/otpu_vpu.sv
+@@ -72,6 +72,8 @@
+ #(
+   parameter int LANES = 8,
+   parameter int CL    = (LANES >= 8) ? LANES / 4 : 1,   // lanes with the composite functions
++  parameter bit RECIP_SCALAR_LOOKUP = 0,
++  parameter string RECIP_COEFF_FILE="", RECIP_CORRECTION_FILE="",
+   parameter int SID   = 0,
+   parameter int RED_ROWS = 4, // 1: original row order; 4: interleave disjoint wide sums
+   // WBUF: the TMEM grant only takes writes from a two-entry write buffer, and the pipeline
+@@ -123,6 +125,12 @@
+ );
+   localparam int LM = FP_PIPE_MUL, LA = FP_PIPE_ADD;
+   localparam int SL = 1 + LM + LA;          // cycles per slot
++  // Pad the four-clock lookup to an existing result tap. One normal slot
++  // suffices at FPGA partitions; the shortest partition needs tap two.
++  localparam int FAST_RC_TAP = SL >= 4 ? 1 : 2;
++  localparam int FAST_RC_LAT = FAST_RC_TAP*SL + (FAST_RC_TAP>1 ? 3 : 0);
++  initial if (RECIP_SCALAR_LOOKUP && LANES!=64)
++    $fatal(1,"scalar reciprocal lookup requires the validated 64-lane VPU");
+   localparam int NSLOT = 10;
+   localparam int NP = 64;                    // RSUM/RSSQ partials (isum_64)
+   localparam int RL = NP / LANES;            // partial loop length in chunks
+@@ -177,6 +185,7 @@
+   logic [15:0] nfill;
+   logic [AW-1:0] oc_a, od_a;
+   logic        od_sc, od_one;
++  logic recip_fast;                         // accepted scalar reciprocal command
+   logic [3:0]  nslots;                         // slots of this function
+   logic [7:0]  tag;                            // instruction tag
+   // cycles an instruction was frozen by the TMEM grant, for the profiler: the condition is
+@@ -196,13 +205,32 @@
+     endcase
+   endfunction
+ 
++  // One lookup lane also handles short rows. Serialize their few columns
++  // only when the extra issues cost no more than the removed five slots.
++  function automatic logic fast_recip_cmd(input logic [7:0] f,
++      input logic [15:0] nr,input logic [15:0] nc);
++    logic [31:0] extra;
++    case (nc)
++      1: extra=0;
++      2: extra=32'(nr);
++      3: extra=32'(nr)<<1;
++      4: extra=32'(nr)+(32'(nr)<<1);
++      default: extra=32'hffffffff;
++    endcase
++    return RECIP_SCALAR_LOOKUP && f==V_RECIP && extra<=32'((6-FAST_RC_TAP)*SL+3-(FAST_RC_TAP>1 ? 3 : 0));
++  endfunction
++  function automatic logic [3:0] cmd_slots(input logic [7:0] f,
++      input logic [15:0] nr,input logic [15:0] nc);
++    return fast_recip_cmd(f,nr,nc) ? 4'(FAST_RC_TAP) : n_slots(f);
++  endfunction
++
+   function automatic logic comp_f(input logic [7:0] f);
+     return n_slots(f) > 1;
+   endfunction
+ 
+   // the classes of functions the lane taps after slot 0 tell apart (slot 0 reads m0's func)
+   localparam logic [2:0] C_OTH = 3'd0, C_ONE = 3'd1, C_EXP = 3'd2, C_RCP = 3'd3, C_RSQ = 3'd4,
+-                         C_LOG = 3'd5;
++                         C_LOG = 3'd5, C_FAST_RCP = 3'd6;
+   function automatic logic [2:0] f_cls(input logic [7:0] f);
+     case (f)
+       V_ADD, V_SUB, V_RSUB, V_MUL, V_OUTER: return C_ONE;
+@@ -243,7 +271,7 @@
+ `else
+   assign cwid = 16'(NCL);
+ `endif
+-  wire [15:0] iwid = comp_f(func) ? cwid : 16'(LANES);   // columns issued per cycle
++  wire [15:0] iwid = recip_fast ? 16'd1 : comp_f(func) ? cwid : 16'(LANES);   // columns issued per cycle
+ 
+   // C8: otpu_se_comp, whose stages are slot 0 (s = 0) and the tail's U (1) and Q (2). A
+   // composite chunk is not issued while comp says slot 0 is taken when it would get there
+@@ -349,7 +377,7 @@
+   wire  h_empty = (hc.w4[15:0] == 0) || (hc.w4[31:16] == 0);
+   wire  can_begin = (cq_n != 0) && !issuing && !red_act &&
+                     ((red_f(hf) || h_empty) ? (ew_n == 0) :
+-                                              (ew_n == 0 || n_slots(hf) >= last_tap));
++                                              (ew_n == 0 || cmd_slots(hf,hc.w4[15:0],hc.w4[31:16]) >= last_tap));
+   wire  busy = issuing || red_act || ew_n != 0;
+ 
+ 
+@@ -446,6 +474,7 @@
+     logic [1:0]       red_ctx;   // independent row partials in the wide sum datapath
+     logic             sq;        // func == V_RSSQ (the squarer's operand select, from a flip-flop)
+     logic             dot;       // func == V_RDOT (the product's B operand, from a flip-flop)
++    logic             fast_rcp;  // scalar reciprocal has a dedicated exact lookup
+     logic             fill;      // an OUTER fill chunk (not written): into the column buffers
+     logic [CBW-1:0]   cb;        // OUTER: the column-buffer word of the chunk (chunk in row)
+     logic [15:0]      col;       // the chunk's first column (ARGMAX's index)
+@@ -476,23 +505,23 @@
+   function automatic logic [NVF-1:0] foh(input logic [7:0] f);
+     return NVF'(1) << f;
+   endfunction
+-  function automatic fdec_t fdec(input logic [7:0] f);
++  function automatic fdec_t fdec(input logic [7:0] f,input logic fast_rcp);
+     fdec_t d;
+     d.fh = foh(f);
+     d.s0 = !red_f(f) && n_slots(f) == 4'd0;
+     d.cf = comp_f(f);
+     d.cc = f_cc(f);
+-    d.cls = f_cls(f);
++    d.cls = fast_rcp ? C_FAST_RCP : f_cls(f);
+     return d;
+   endfunction
+   fdec_t m0d;
+   always_ff @(posedge clk)
+     if (rst) begin
+       m0 <= '0;
+-      m0d <= fdec(8'd0);
++      m0d <= fdec(8'd0,1'b0);
+     end else if (en) begin
+       m0 <= (SE && ss_act) ? M_SS : mi2;
+-      m0d <= fdec((SE && ss_act) ? M_SS.func : mi2.func);
++      m0d <= fdec((SE && ss_act) ? M_SS.func : mi2.func,(SE && ss_act) ? 1'b0 : mi2.fast_rcp);
+       xa <= ta_data;
+       xb <= tb_data;
+     end
+@@ -501,7 +530,7 @@
+   initial rst_seen = 1'b0;
+   always @(posedge clk)
+     if (rst) rst_seen <= 1'b1;
+-    else if (rst_seen && m0d != fdec(m0.func)) $fatal(1, "otpu_vpu: m0d is not m0's func");
++    else if (rst_seen && m0d != fdec(m0.func,m0.fast_rcp)) $fatal(1, "otpu_vpu: m0d is not m0's func");
+ `endif
+   // OUTER's column buffers (LUT RAM): written from the fill chunks' data at m0, read with the
+   // main chunks' data (mi.cb) -- the fill runs >= 2 chunks ahead, so a word is written first
+@@ -625,7 +654,7 @@
+   localparam int T_EW = n_slots(V_ADD), T_RC = n_slots(V_RECIP), T_EX = n_slots(V_EXP2),
+                  T_RS = n_slots(V_RSQRT);
+   function automatic logic end_tap(input int s);
+-    return s == 0 || s == T_EW || s == T_RC || s == T_EX || s == T_RS;
++    return s == 0 || s == T_EW || s == T_RC || s == T_EX || s == T_RS || (RECIP_SCALAR_LOOKUP && s==FAST_RC_TAP);
+   endfunction
+ 
+   // which boundary holds an entry at its function's last slot (at most one: see header); each
+@@ -638,11 +667,35 @@
+     mo = '0;
+     for (int s = 0; s <= NSX; s++) begin
+       if (s == 0) hit[s] = mtap[s].v && m0d.s0;
+-      else        hit[s] = end_tap(s) && mtap[s].v && n_slots(cls_f(mtap[s].cls)) == 4'(s);
++      else        hit[s] = end_tap(s) && mtap[s].v &&
++          ((mtap[s].cls==C_FAST_RCP) ? s==FAST_RC_TAP : n_slots(cls_f(mtap[s].cls)) == 4'(s));
+       if (hit[s]) mo = mtap[s];
+     end
+     if (C8 && c_ov) mo = '{v: 1'b1, cls: C_OTH, mask: c_om, waddr: c_ometa[AW:1],
+                            all_last: c_ometa[0]};
++  end
++
++  f32_t fast_reciprocal;
++  logic fast_reciprocal_valid;
++  if (RECIP_SCALAR_LOOKUP) begin : g_scalar_reciprocal
++    f32_t lookup_result;
++    logic lookup_valid;
++    otpu_recip_lookup #(.PORTS(1),.TW(1),.COEFF_FILE(RECIP_COEFF_FILE),
++        .CORRECTION_FILE(RECIP_CORRECTION_FILE)) u_lookup (
++      .clk,.rst,.en,.iv(m0.v && m0.fast_rcp),.x(xa[0]),.itag(1'b0),
++      .ov(lookup_valid),.value(lookup_result),.otag());
++    otpu_delay #(.W(33),.N(FAST_RC_LAT-4)) u_align (
++      .clk,.en,.d({lookup_valid,lookup_result}),.q({fast_reciprocal_valid,fast_reciprocal}));
++`ifndef SYNTHESIS
++    always @(posedge clk) if (!rst && en) begin
++      if (m0.v && m0.fast_rcp && m0.mask!=LANES'(1))
++        $fatal(1,"scalar reciprocal activated more than lane zero");
++      if (hit[FAST_RC_TAP] && mtap[FAST_RC_TAP].cls==C_FAST_RCP && !fast_reciprocal_valid)
++        $fatal(1,"scalar reciprocal result is not aligned with its metadata tap");
++    end
++`endif
++  end else begin : g_no_scalar_reciprocal
++    assign fast_reciprocal='0;assign fast_reciprocal_valid=1'b0;
+   end
+ 
+   // long lanes: all functions
+@@ -878,7 +931,8 @@
+     assign rc_r = tc.f[0] ? F_ZERO : tc.f[1] ? {tc.f[2], 31'd0} : (tc.f[2] ? fneg(rc_y) : rc_y);
+     assign rs_r = ts.f[0] ? F_ZERO : rs_y;
+     assign lg_r = ts.f[0] ? F_NINF : ts.f[2] ? F_NAN : ts.f[1] ? F_INF : ts.v;
+-    assign lres[l] = hit[T_EX] ? ex_r : hit[T_RC] ? rc_r :
++    assign lres[l] = (l==0 && RECIP_SCALAR_LOOKUP && hit[FAST_RC_TAP] &&
++        mtap[FAST_RC_TAP].cls==C_FAST_RCP) ? fast_reciprocal : hit[T_EX] ? ex_r : hit[T_RC] ? rc_r :
+                      hit[T_RS] ? ((mtap[T_RS].cls == C_LOG) ? lg_r : rs_r) :
+                      hit[0] ? st[0].v : st[T_EW].v;
+     assign lmm[l] = 1'b0;
+@@ -1510,13 +1564,15 @@
+           drs <= hc.w5[15:0]; ars <= hc.w5[31:16];
+           brs <= hc.w6[15:0]; func <= hf; bmode <= hc.w6[25:24];
+           imm <= hc.w7;
+-          nslots <= n_slots(hf);
++          nslots <= cmd_slots(hf,hc.w4[15:0],hc.w4[31:16]);
++          recip_fast <= fast_recip_cmd(hf,hc.w4[15:0],hc.w4[31:16]);
+           c16 = hc.w4[31:16];
+ `ifndef SYNTHESIS
+           nchunks = comp_f(hf) ? (c16 + cwid - 1) / cwid : (c16 + 16'(LANES) - 1) >> LW;
+ `else
+           nchunks = comp_f(hf) ? (c16 + 16'(NCL) - 1) >> CLW : (c16 + 16'(LANES) - 1) >> LW;
+ `endif
++          if (fast_recip_cmd(hf,hc.w4[15:0],c16)) nchunks=c16;
+           if (hf == V_RSUM || hf == V_RSSQ || hf == V_RDOT)
+             nchunks = ((nchunks + 16'(RL) - 1) / 16'(RL)) * 16'(RL);
+           nch <= nchunks;
+@@ -1541,7 +1597,7 @@
+             mx_have <= 1'b0;
+           end else begin
+             ewn = ewn + 1;
+-            last_tap <= n_slots(hf);
++            last_tap <= cmd_slots(hf,hc.w4[15:0],hc.w4[31:16]);
+           end
+         end
+       end
+@@ -1562,6 +1618,7 @@
+           mi.v <= 1'b1;
+           mi.tag <= tag;
+           mi.func <= func;
++          mi.fast_rcp <= recip_fast;
+           mi.bmode <= bmode;
+           mi.imm <= imm;
+           mi.mask <= imask;
+--- a/rtl/top/otpu_slice.sv
++++ b/rtl/top/otpu_slice.sv
+@@ -55,6 +55,9 @@
+   parameter int MXU_E      = 0,       // MXU epilogue lanes (0: MCOLS / 2; otpu_mxu E)
+   parameter string QUANT_COEFF_FILE="",
+   parameter string QUANT_CORRECTION_FILE="",
++  parameter bit VPU_SCALAR_RECIP=0,
++  parameter string VPU_RECIP_COEFF_FILE=QUANT_COEFF_FILE,
++  parameter string VPU_RECIP_CORRECTION_FILE=QUANT_CORRECTION_FILE,
+   parameter bit QUANT_LOOKUP = 0,
+   parameter int QUANT_XD   = 1024,    // quantizer row buffer chunks (0: two passes over TMEM; otpu_quant XD)
+   parameter int VPU_CL     = (LANES >= 8) ? LANES / 4 : 1,  // VPU lanes with the composite functions
+@@ -578,7 +581,8 @@
+     .v_req(qv_req), .v_addr(qv_addr), .v_data(qv_data), .v_be(qv_be),
+     .pf_u(q_u), .pf_frz(q_frz));
+ 
+-  otpu_vpu #(.LANES(VPU_LANES), .CL(VPU_CL), .SID(SID), .WBUF(ARB_MASK), .HAS_SE(HAS_SS)) u_vpu (
++  otpu_vpu #(.LANES(VPU_LANES), .CL(VPU_CL), .SID(SID), .WBUF(ARB_MASK), .HAS_SE(HAS_SS), .RECIP_SCALAR_LOOKUP(VPU_SCALAR_RECIP),
++      .RECIP_COEFF_FILE(VPU_RECIP_COEFF_FILE), .RECIP_CORRECTION_FILE(VPU_RECIP_CORRECTION_FILE)) u_vpu (
+     .clk, .rst(rst_vpu), .start(ustart[U_VPU]), .cmd(ucmd[U_VPU]), .rdy(r_vpu), .done(d_vpu),
+     .gnt(gnt[G_VPU]), .ren(v_ren), .rhold(tm_lost[P_VA] || tm_lost[P_VB]),
+     .ta_en(va_ren), .ta_addr(va_raddr), .ta_data(r_data[P_VA][VPU_LANES-1:0]),
+--- a/rtl/top/otpu_top.sv
++++ b/rtl/top/otpu_top.sv
+@@ -32,6 +32,9 @@
+   parameter int MXU_E      = 0,       // MXU epilogue lanes (0: MCOLS / 2; otpu_mxu E)
+   parameter string QUANT_COEFF_FILE="",
+   parameter string QUANT_CORRECTION_FILE="",
++  parameter bit VPU_SCALAR_RECIP=0,
++  parameter string VPU_RECIP_COEFF_FILE=QUANT_COEFF_FILE,
++  parameter string VPU_RECIP_CORRECTION_FILE=QUANT_CORRECTION_FILE,
+   parameter bit QUANT_LOOKUP = 0,
+   parameter int QUANT_XD   = 1024,    // quantizer row buffer chunks (0: two passes over TMEM; otpu_quant XD)
+   parameter int VPU_CL     = (LANES >= 8) ? LANES / 4 : 1,
+@@ -173,7 +176,7 @@
+     otpu_slice #(.SID(s), .S(S), .D(D), .MCOLS(MCOLS), .ACT_BLOCKS(ACT_BLOCKS), .ACT_ROWS(ACT_ROWS),
+                  .TMEM_WORDS(TMEM_WORDS), .IMEM_WORDS(IMEM_WORDS),
+                  .FIFO_DEPTH(FIFO_DEPTH), .LANES(LANES), .WIN(WIN), .RPB(RPB),
+-                 .WPB(WPB), .QST_LANES(QST_LANES), .MXU_ROWS(MXU_ROWS), .ACT_STREAMING(ACT_STREAMING), .VPU_LANES(VPU_LANES), .MXU_IMPL(MXU_IMPL), .MXU_CL(MXU_CL), .MXU_E(MXU_E), .QUANT_XD(QUANT_XD), .QUANT_LOOKUP(QUANT_LOOKUP), .QUANT_COEFF_FILE(QUANT_COEFF_FILE), .QUANT_CORRECTION_FILE(QUANT_CORRECTION_FILE), .VPU_CL(VPU_CL), .ULANES(ULANES),
++                 .WPB(WPB), .QST_LANES(QST_LANES), .MXU_ROWS(MXU_ROWS), .ACT_STREAMING(ACT_STREAMING), .VPU_LANES(VPU_LANES), .MXU_IMPL(MXU_IMPL), .MXU_CL(MXU_CL), .MXU_E(MXU_E), .QUANT_XD(QUANT_XD), .QUANT_LOOKUP(QUANT_LOOKUP), .VPU_SCALAR_RECIP(VPU_SCALAR_RECIP), .VPU_RECIP_COEFF_FILE(VPU_RECIP_COEFF_FILE), .VPU_RECIP_CORRECTION_FILE(VPU_RECIP_CORRECTION_FILE), .QUANT_COEFF_FILE(QUANT_COEFF_FILE), .QUANT_CORRECTION_FILE(QUANT_CORRECTION_FILE), .VPU_CL(VPU_CL), .ULANES(ULANES),
+                  .TMEM_IMPL(TMEM_IMPL), .TMEM_RQ(TMEM_RQ), .TMEM_NCP(TMEM_NCP),
+                  .TMEM_NSB(TMEM_NSB), .TMEM_SBP(TMEM_SBP), .TMEM_SBH(TMEM_SBH),
+                  .TMEM_RPL(TMEM_RPL), .TMEM_TDP(TMEM_TDP), .TMEM_GST(TMEM_GST),
+--- a/sim/verilator/tb_top.sv
++++ b/sim/verilator/tb_top.sv
+@@ -30,6 +30,9 @@
+   parameter int MXU_E      = 0;       // MXU epilogue lanes (0: MCOLS / 2)
+   parameter string QUANT_COEFF_FILE="";
+   parameter string QUANT_CORRECTION_FILE="";
++  parameter bit VPU_SCALAR_RECIP=0;
++  parameter string VPU_RECIP_COEFF_FILE=QUANT_COEFF_FILE;
++  parameter string VPU_RECIP_CORRECTION_FILE=QUANT_CORRECTION_FILE;
+   parameter bit QUANT_LOOKUP = 0;
+   parameter int QUANT_XD   = 1024;    // quantizer row buffer chunks (0: two passes over TMEM)
+   parameter int VPU_CL     = (LANES >= 8) ? LANES / 4 : 1;
+@@ -63,7 +66,7 @@
+ 
+   otpu_top #(.S(S), .D(D), .MCOLS(MCOLS), .ACT_BLOCKS(ACT_BLOCKS), .ACT_ROWS(ACT_ROWS), .TMEM_WORDS(TMEM_WORDS),
+              .IMEM_WORDS(IMEM_WORDS), .DRAM_WORDS(DRAM_WORDS), .DRAM_LAT(DRAM_LAT),
+-             .LANES(LANES), .WIN(WIN), .RPB(RPB), .WPB(WPB), .QST_LANES(QST_LANES), .MXU_ROWS(MXU_ROWS), .ACT_STREAMING(ACT_STREAMING), .VPU_LANES(VPU_LANES), .MXU_IMPL(MXU_IMPL), .MXU_CL(MXU_CL), .MXU_E(MXU_E), .QUANT_XD(QUANT_XD), .QUANT_LOOKUP(QUANT_LOOKUP), .QUANT_COEFF_FILE(QUANT_COEFF_FILE), .QUANT_CORRECTION_FILE(QUANT_CORRECTION_FILE), .VPU_CL(VPU_CL), .ULANES(ULANES), .MEM_BYTES(MEM_BYTES), .AXI(AXI), .FIFO_DEPTH(FIFO_DEPTH),
++             .LANES(LANES), .WIN(WIN), .RPB(RPB), .WPB(WPB), .QST_LANES(QST_LANES), .MXU_ROWS(MXU_ROWS), .ACT_STREAMING(ACT_STREAMING), .VPU_LANES(VPU_LANES), .MXU_IMPL(MXU_IMPL), .MXU_CL(MXU_CL), .MXU_E(MXU_E), .QUANT_XD(QUANT_XD), .QUANT_LOOKUP(QUANT_LOOKUP), .VPU_SCALAR_RECIP(VPU_SCALAR_RECIP), .VPU_RECIP_COEFF_FILE(VPU_RECIP_COEFF_FILE), .VPU_RECIP_CORRECTION_FILE(VPU_RECIP_CORRECTION_FILE), .QUANT_COEFF_FILE(QUANT_COEFF_FILE), .QUANT_CORRECTION_FILE(QUANT_CORRECTION_FILE), .VPU_CL(VPU_CL), .ULANES(ULANES), .MEM_BYTES(MEM_BYTES), .AXI(AXI), .FIFO_DEPTH(FIFO_DEPTH),
+              .TMEM_IMPL(TMEM_IMPL), .TMEM_RQ(TMEM_RQ), .TMEM_NCP(TMEM_NCP),
+              .TMEM_NSB(TMEM_NSB), .TMEM_SBP(TMEM_SBP), .TMEM_SBH(TMEM_SBH),
+              .TMEM_RPL(TMEM_RPL), .TMEM_TDP(TMEM_TDP), .TMEM_GST(TMEM_GST),
