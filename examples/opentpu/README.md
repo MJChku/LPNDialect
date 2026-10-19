@@ -1,53 +1,48 @@
 # FeSens/openTPU LPN model
 
-The 128-engine shared-bank RTL completes the unchanged SmolLM2-135M workload
-(128 input / 32 generated tokens) in **10,400,210 cycles**, versus 132,828,263
-for original RTL: **12.7717x fewer cycles at a common clock**. All 48 kernels
-are bit-exact against independent ISA memory states. A fresh audit verifies
-canonical input words, source/binary hashes, raw logs and complete memory dumps.
-LPN predicts 10,165,357 cycles: **−2.258% total error**, **6.243% worst kernel**.
-See [implementation, budgets and full evidence](FPGA_REDUCTIONS.md).
-FPGA resource fit, operating clock and a vendor HBM controller remain unproven.
+The paired 96-row, two-column RTL completes the unchanged SmolLM2-135M
+workload (128 input / 32 generated tokens) in **8,602,523 cycles**, versus
+132,828,263 for original RTL: **15.4406x fewer hardware cycles at a common
+clock**. All 48 complete DRAM/TMEM states and generated IDs match the
+independent reference. Native LPN predicts 8,341,033 cycles: **−3.0397% total
+error**, **5.3560% worst kernel**. See the
+[full replay and fresh audit](rtl_evolution/validation/packed-mxu/README.md).
+FPGA resource fit, operating clock and vendor HBM integration remain unproven.
 The 100x cycle-reduction target has not yet been achieved.
 
-Earlier measured implementations are retained as controls: the parallel
-32-engine design takes 15,435,996 cycles (8.605x), and its buffered-quantizer
-follow-up takes 15,335,479 cycles (8.662x). See
-[RTL reproduction](rtl_evolution/README.md) and
-[quantizer audit](TPU_EXPLORATION.md#implemented-quantizer-change).
+A small [integrated DSP48E2 vendor-model gate](rtl_evolution/validation/vendor-mxu/README.md)
+passes eleven matrix/store/queue cases with identical complete outputs and
+cycles versus behavioral packed RTL. This strengthens the paired arithmetic
+proof; it does not prove DSP58 mapping or full vendor-primitive inference.
 
-The separate [arithmetic partition experiment](LOWLAT_FP.md) checks shorter
-FP32 pipelines bit-exactly and predicts 15.108x for a two-clock-adder candidate.
-Its four-kernel real-workload pilot is bit-exact and saves 1.080x cycles against
-its matching arithmetic control; operating clock and full-inference RTL timing
-remain unvalidated.
-[ACT row streaming](ACT_STREAMING.md) adds a guarded quantizer-to-matrix handoff
-using the existing buffers. It predicts 13.268x / 15.349x for the 128-engine
-original-adder / shorter-adder candidates; these remain LPN forecasts.
+The [cache-aware LPN predictor](rtl_evolution/validation/cache-aware-timing/README.md)
+models sixteen-entry private scale caches, pending hits, replacement pacing
+and shared HBM traffic. Four real retained kernels pass fresh numerical,
+source/binary and request-count audits, with worst timing error 3.8012%.
+Asynchronous invalidation timing and exact miss counts remain approximate.
+The combined cache-enabled 96x2 full LPN control predicts 8,001,603 cycles,
+16.6002x; this is a prediction, not a new complete RTL measurement.
 
-The next [bounded-vector proposal study](VECTOR_PROPOSALS.md) finds diminishing
-returns from extra VPUs and larger windows. A standalone [exact reciprocal
-ROM primitive](RECIP_ROM.md) passes exhaustive normalized arithmetic checks;
-its [QACT/QST integration](LOOKUP_SCALE.md) passes numerical component gates
-and a four-kernel real-workload RTL pilot. It predicts 13.617x / 15.720x for the
-128-engine candidates. A [single-lane small-row reciprocal](SMALL_RECIP.md)
-passes numerical gates and predicts 14.209x / 16.286x. These full-inference
-forecasts and FPGA synthesis remain pending validation.
-The [wider reciprocal proposal](WIDE_RECIP.md) budgets independent lookup ports
-and table replicas explicitly before selecting further FPGA RTL work.
-It forecasts at most 16.669x; the [equal-DSP matrix geometry sweep](FPGA_GEOMETRY.md)
-also finds no complete-workload benefit from wider fixed column counts.
-The [resource profile and necessary budgets](FPGA_PROFILE.md) identify an
-uncached-weight bandwidth ceiling near 60x under the current FPGA assumptions;
-100x requires reducing physical traffic as well as improving compute efficiency.
-The [real-weight storage study](WEIGHT_STORAGE.md) finds only modest lossless
-compression. The [pinned-cache timing proposal](PINNED_CACHE.md) evaluates cold,
-coherent persistent regions with separately bounded SRAM and HBM ports.
-Those bandwidth-only cache forecasts show no cycle benefit. The 128-engine
-shorter-adder RTL pilot also exposes 13.4% timing underprediction on its completed
-decode kernels; that configuration is being diagnosed and is not validated.
-The [explicit VPU acceptance FIFO](VPU_QUEUE.md) explains part of that error;
-matrix drain and retirement timing are the next diagnostic.
+A [wider elementwise proposal](rtl_evolution/validation/wide-elementwise/README.md)
+keeps ordered reductions at 64 lanes and predicts **18.2620x / 19.2595x**
+for 128/256 elementwise lanes across all 48 unchanged kernels. It explicitly
+requires wider scratchpad read/write throughput and more FP units. The wider
+RTL and physical banking/mapping are not implemented. All 30 general
+integration tests, four cache regressions and three new issue-width tests pass.
+The event-driven scheduler, automatic guard synthesis and heartbeat cache
+are unchanged.
+
+Earlier controls and investigations remain reproducible in
+[RTL validation](rtl_evolution/README.md), [FPGA reductions](FPGA_REDUCTIONS.md),
+[arithmetic partitioning](LOWLAT_FP.md), [ACT streaming](ACT_STREAMING.md),
+[bounded vector pools](VECTOR_PROPOSALS.md), [quantizer lookup](LOOKUP_SCALE.md),
+[small reciprocal lookup](SMALL_RECIP.md), [wider reciprocal proposals](WIDE_RECIP.md),
+[resource bounds](FPGA_PROFILE.md), [weight storage](WEIGHT_STORAGE.md),
+[pinned-cache timing](PINNED_CACHE.md) and [VPU acceptance queues](VPU_QUEUE.md).
+Those documents retain historical forecasts and diagnoses; use the latest
+full audit above for the current measured result. The uncached-weight
+bandwidth ceiling is near 60x under the current assumptions, so 100x also
+requires reducing physical traffic and improving compute efficiency.
 
 **Inference workload correction:** earlier `e2e.py`, `replay_e2e.py` and
 weight-free FPGA sequence results used a custom token-by-token prompt loop.

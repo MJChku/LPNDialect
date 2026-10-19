@@ -1,18 +1,21 @@
 # RTL architecture validation
 
-**Latest complete validated result:** the 128-engine, two-cycle-adder RTL runs
-the unchanged SmolLM2-135M 128-input/32-output inference in **8,708,822 cycles**,
-versus **132,828,263** originally: **15.2522x fewer hardware cycles**. All 48
+**Latest complete validated result:** the paired 96-row, two-column RTL runs
+the unchanged SmolLM2-135M 128-input/32-output inference in **8,602,523 cycles**,
+versus **132,828,263** originally: **15.4406x fewer hardware cycles**. All 48
 complete numerical states and generated IDs are preserved. Corrected LPN is
-2.6649% low overall, with 4.8019% worst kernel error. See the
-[full replay and fresh audit](validation/matrix-retirement/README.md#complete-inference-validation).
+3.0397% low overall, with 5.3560% worst kernel error. See the
+[full replay and fresh audit](validation/packed-mxu/README.md).
 This is a cycle result; FPGA fit, board integration and clock remain unverified.
 The older measurements below retain their original reproduction details.
 
-Recent FPGA work: [physical scale traffic and ordered matrix retirement](validation/matrix-retirement/README.md)
-correct the newest timing forecast, and the [scale-line buffer prototype](validation/scale-cache/README.md)
-reduces repeated memory reads with bounded on-chip data storage. Their reports
-distinguish completed numerical gates from pending full-workload measurements.
+Recent work: the [integrated vendor DSP48E2 gate](validation/vendor-mxu/README.md)
+passes eleven matrix cases with matching complete outputs/cycles and worst
+LPN error 7.7922%. The [cache-aware predictor](validation/cache-aware-timing/README.md)
+passes four real-kernel audits. A [wider elementwise proposal](validation/wide-elementwise/README.md)
+predicts 18.2620x / 19.2595x over all 48 kernels at 128/256 lanes, with explicit
+scratchpad bandwidth and arithmetic-site counts. Wider vector RTL is not
+implemented; these predictions do not supersede the measured result or meet 100x.
 
 The implemented RTL runs the complete **SmolLM2-135M, 128-input/32-output**
 workload in **15,435,996 cycles**, versus **132,828,263 cycles** for the original
