@@ -230,6 +230,12 @@ def resources(point, config, clock_mhz):
     vector_results=point.vector_engines*point.vector_result_chunks*64*4
     # Two private input copies for each extra engine, propagated by every write.
     vector_read_copies=2*max(0,point.vector_engines-1)*4*config['TMEM_WORDS']
+    # Default TMEM_IMPL=0 has eight read ports, with Q3 and COLL sharing
+    # DMA's copy (otpu_slice SH_MASK): six complete data copies, not one.
+    tmem_copies=6
+    tmem_data=tmem_copies*4*config['TMEM_WORDS']
+    instruction_data=4*config['IMEM_WORDS']
+    quant_buffer_data=1024*64*4 if point.buffered_quant else 0
     lookup_bytes=(1<<21)+4096*51//8 if point.quant_scale_lookup else 0
     scalar_lookup_bytes=point.vector_engines*((1<<21)+4096*51//8) if point.scalar_recip_lookup else 0
     # Two independently addressed ports share each ROM instance and enable.
@@ -240,7 +246,7 @@ def resources(point, config, clock_mhz):
     if point.scale_cache_entries:
         refs=point.latency.bit_length();index=(point.scale_cache_entries-1).bit_length()
         scale_control=point.matrix_engines*point.rows*((point.scale_cache_entries*(30+refs)+256+point.latency*(2+index)+7)//8)
-    sram = activation + fifo + 4 * config['TMEM_WORDS']+vector_results+vector_read_copies+lookup_bytes+scalar_lookup_bytes+wide_lookup_bytes+point.pinned_cache_bytes+cache_valid_bytes+scale_data+scale_control
+    sram = activation + fifo + tmem_data+instruction_data+quant_buffer_data+vector_results+vector_read_copies+lookup_bytes+scalar_lookup_bytes+wide_lookup_bytes+point.pinned_cache_bytes+cache_valid_bytes+scale_data+scale_control
     limits = dict(matrix_mac_lanes=20000, onchip_bytes=64 << 20, memory_bytes_per_cycle=2816)
     # Board is an illustrative reference, not a user-selected target. Reserve
     # 20% of DSPs and half of embedded memory for shell/other units and mapping.
@@ -272,6 +278,9 @@ def resources(point, config, clock_mhz):
         reciprocal_predictor_integer_multipliers=(int(point.quant_scale_lookup)+point.vector_engines*
             (int(point.scalar_recip_lookup)+point.reciprocal_lookup_lanes)),
         vector_engines=point.vector_engines,vector_result_bytes=vector_results,
+        base_tmem_read_copies=tmem_copies,base_tmem_data_bytes=tmem_data,
+        instruction_memory_data_bytes=instruction_data,quant_buffer_data_bytes=quant_buffer_data,
+        storage_accounting_scope='Default replicated TMEM_IMPL=0 data included; bank granularity, multiwrite mapping, pipeline/control storage and Fmax unproven',
         additional_private_vector_read_copy_bytes=vector_read_copies,
         vector_fp32_multiply_sites=272*point.vector_engines*point.vector_issue_groups,
         vector_issue_groups=point.vector_issue_groups,
@@ -437,7 +446,7 @@ def main():
         atomic_json(output / 'report.json', dict(status=status, pid=os.getpid(), scope=__doc__,
             reference_report_sha256=digest(case / 'report.json'), source_sha256=sources,
             project_revision=subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=project, text=True).strip(),
-            reference_cycles=reference['baseline_rtl_cycles'], target_cycles=reference['baseline_rtl_cycles'] / 100,
+            config=reference['config'],reference_cycles=reference['baseline_rtl_cycles'], target_cycles=reference['baseline_rtl_cycles'] / 100,
             indices=indices, clock_mhz=args.clock_mhz, seconds=time.perf_counter() - started,
             numerical_arithmetic_executed=False, modified_rtl_validated=False, points=reports, failures=failures))
 

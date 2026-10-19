@@ -15,6 +15,12 @@ changes. It lists 1088 vector FP multiply sites versus 272 in the control,
 conservatively including replicated functions that reductions do not use.
 These are sites rather than mapped DSP totals; source-level storage bounds
 omit bank-granularity waste, new pipeline state and physical routing.
+The [corrected resource bill](corrected-resources.json) counts all six
+default scratchpad read copies, instruction memory and the quantizer FIFO.
+Each point has a 10,204,096-byte data-storage lower bound before physical
+bank waste and the extra pipeline/control costs. The archived original DSE
+report counted one scratchpad copy; this correction adds 1,703,936 bytes and
+changes no timing evidence. Multiple writes per bank also need physical proof.
 
 Three focused tests verify elementwise issue/tails, unchanged reduction
 latency, dependency chains, Python/native equality and rejection as existing

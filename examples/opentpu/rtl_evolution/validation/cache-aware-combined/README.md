@@ -8,11 +8,17 @@ nor RTL validation of these combined variants.
 
 | Proposed configuration | Extrapolated cycle speedup | Counted SRAM lower bound |
 | --- | ---: | ---: |
-| 128x1, sixteen-entry scale cache | 16.5802x | 15,073,536 B |
-| Compact ACT/FIFO 128x1, scale cache | 16.5717x | 9,830,656 B |
-| Paired 96x2, scale cache | 16.9376x | 8,500,160 B |
-| Paired 96x2, scale cache and 28 MiB weight cache | 17.1165x | 37,917,632 B |
-| Compact 128x1 control, no cache | 15.9150x | 9,751,552 B |
+| 128x1, sixteen-entry scale cache | 16.5802x | 16,777,472 B |
+| Compact ACT/FIFO 128x1, scale cache | 16.5717x | 11,534,592 B |
+| Paired 96x2, scale cache | 16.9376x | 10,204,096 B |
+| Paired 96x2, scale cache and 28 MiB weight cache | 17.1165x | 39,621,568 B |
+| Compact 128x1 control, no cache | 15.9150x | 11,455,488 B |
+
+Storage uses [the corrected resource bill](corrected-resources.json), which
+adds five previously omitted TMEM read copies, instruction memory and the
+quantizer FIFO: 1,703,936 bytes per point. The original timing report remains
+unchanged. Bank-granularity waste, multiwrite implementation and pipeline/
+control storage still need mapping; this is a capacity lower bound.
 
 The weight-cache proposal consumes verified coherent prepass profiles; scale
 misses are reconstructed from original instructions, with the documented
