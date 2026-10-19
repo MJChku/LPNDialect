@@ -13,6 +13,8 @@ def main():
     p.add_argument('--rows', type=int, default=2)
     p.add_argument('--columns', type=int, choices=(2,4,8), default=2)
     a = p.parse_args()
+    for name in ('opentpu_root','unisim_root','compiler','output'):
+        setattr(a,name,getattr(a,name).resolve())
     from examples.opentpu.e2e import atomic_json, digest
     if a.rows < 2: p.error('parallel MXU requires at least two rows')
     a.output.mkdir(parents=True, exist_ok=False)
@@ -58,4 +60,13 @@ def main():
     print(json.dumps(result),flush=True)
 
 
-if __name__ == '__main__': main()
+if __name__ == '__main__':
+    try: main()
+    except Exception as error:
+        if '--output' in sys.argv:
+            output=Path(sys.argv[sys.argv.index('--output')+1])
+            if output.is_dir():
+                from examples.opentpu.e2e import atomic_json
+                atomic_json(output/'failure.json',dict(status='failed',
+                    error_type=type(error).__name__,error=str(error)))
+        raise
