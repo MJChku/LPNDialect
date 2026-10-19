@@ -45,6 +45,8 @@ def configure_rtlsim(rtlsim,fp_mul_latency=2,fp_add_latency=4):
 
 
 def validate_variant(timing,uarch):
+    if timing.get('act_versions_unbounded',False):
+        raise ValueError('unbounded ACT versioning screen has no matching RTL implementation')
     if timing.get('scale_cache_entries',0)!=uarch.get('SCALE_CACHE_ENTRIES',0):
         raise ValueError('scale-cache timing differs from RTL')
     if timing.get('matrix_engines',1)!=1:

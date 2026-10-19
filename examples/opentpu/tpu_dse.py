@@ -48,10 +48,19 @@ class Architecture:
     precise_tmem: bool = False
     scale_cache_entries: int = 0
     paired_dsp: bool = False
+    act_versions_unbounded: bool = False
 
 
 def architectures():
     return [
+        *[Architecture(f'screen_unbounded_act_{rows}x{cols}_scale16_add2',rows,cols,2816,
+                       act_versions_unbounded=True,ceiling_only=True,
+                       scale_cache_entries=16,paired_dsp=cols>1,
+                       buffered_quant=True,vector_row_contexts=4,activation_streaming=True,
+                       quant_scale_lookup=True,scalar_recip_lookup=True,fp_add_latency=2,
+                       vector_command_queue=2,matrix_retirement=True,physical_scale_lines=True,
+                       act_rows=8,fifo_per_core=64,act_blocks=64)
+          for rows,cols in [(128,1),(96,2)]],
         *[Architecture(name,rows,cols,2816,scale_cache_entries=16,paired_dsp=cols>1,
                        buffered_quant=True,vector_row_contexts=4,activation_streaming=True,
                        quant_scale_lookup=True,scalar_recip_lookup=True,fp_add_latency=2,
@@ -211,6 +220,8 @@ def architectures():
 
 
 def resources(point, config, clock_mhz):
+    if point.act_versions_unbounded and not point.ceiling_only:
+        raise ValueError('unbounded ACT storage must be labeled screening only')
     # Lower bounds, not placement, routing, DSP-packing or SRAM-port proof.
     macs = config['D'] * point.rows * point.columns * point.matrix_engines
     if point.paired_dsp and (point.columns<2 or point.columns%2):raise ValueError('paired dot cells require even columns')
@@ -243,9 +254,11 @@ def resources(point, config, clock_mhz):
         matrix_dsp_fraction=.8,onchip_memory_fraction=.5,hbm_efficiency=.7,macs_per_dsp=1)
     v80_limits=dict(matrix_mac_lanes=int(v80['dsp_slices']*.8),
         onchip_bytes=int(673e6/8*.5),memory_gbs=810*.7)
-    conservative=(matrix_cells<=v80_limits['matrix_mac_lanes'] and sram<=v80_limits['onchip_bytes'] and
+    conservative=(not point.act_versions_unbounded and matrix_cells<=v80_limits['matrix_mac_lanes'] and sram<=v80_limits['onchip_bytes'] and
                   point.bandwidth*clock_mhz/1000<=v80_limits['memory_gbs'])
-    return dict(precise_tmem_scoreboard_rtl_implemented=False if point.precise_tmem else None,
+    return dict(act_version_storage_bounded=not point.act_versions_unbounded,
+        act_version_scope='Optimistic unlimited versions; allocation, physical capacity and port cost not modeled' if point.act_versions_unbounded else None,
+        precise_tmem_scoreboard_rtl_implemented=False if point.precise_tmem else None,
         matrix_engines=point.matrix_engines,matrix_cluster_rtl_implemented=False if point.matrix_engines>1 else None,
         matrix_write_ports=1,matrix_write_service_scope='Aggregate bank service reserved at batch compute start; output-wave arbitration not validated.',
         matrix_mac_lanes=macs,integer_dot_dsp_cells=dot_cells,column_end_dsp_cells=column_end_cells,
@@ -257,7 +270,7 @@ def resources(point, config, clock_mhz):
         pinned_cache_data_bytes=point.pinned_cache_bytes,pinned_cache_valid_bytes=cache_valid_bytes,
         pinned_cache_read_bytes_per_cycle=point.cache_read_bytes_per_cycle if point.pinned_cache_bytes else 0,
         pinned_cache_rtl_implemented=False,
-        passes_v80_80pct_sram_capacity_screen=(matrix_cells<=v80_limits['matrix_mac_lanes'] and
+        passes_v80_80pct_sram_capacity_screen=(not point.act_versions_unbounded and matrix_cells<=v80_limits['matrix_mac_lanes'] and
             sram<=673e6/8*.8 and point.bandwidth*clock_mhz/1000<=v80_limits['memory_gbs']),
         quant_scale_lookup_bytes=lookup_bytes,scalar_reciprocal_lookup_bytes=scalar_lookup_bytes,
         wide_reciprocal_lookup_bytes=wide_lookup_bytes,wide_reciprocal_rtl_implemented=False,
@@ -272,11 +285,11 @@ def resources(point, config, clock_mhz):
         memory_bytes_per_cycle=point.bandwidth, memory_gbs=point.bandwidth * clock_mhz / 1000,
         provisional_v80_reference=v80,provisional_v80_limits=v80_limits,
         passes_conservative_v80_capacity_screen=conservative,
-        passes_two_macs_per_dsp_capacity_screen=(macs<=2*v80_limits['matrix_mac_lanes'] and
+        passes_two_macs_per_dsp_capacity_screen=(not point.act_versions_unbounded and macs<=2*v80_limits['matrix_mac_lanes'] and
             sram<=v80_limits['onchip_bytes'] and point.bandwidth*clock_mhz/1000<=v80_limits['memory_gbs']),
         two_macs_per_dsp_status='Hypothetical all-dot packing screen only; use explicit integer cell counts. Column ends and FP sites do not halve.',
         illustrative_fpga_screen_limits=limits,
-        passes_illustrative_fpga_screen=macs <= limits['matrix_mac_lanes'] and
+        passes_illustrative_fpga_screen=not point.act_versions_unbounded and macs <= limits['matrix_mac_lanes'] and
             sram <= limits['onchip_bytes'] and point.bandwidth <= limits['memory_bytes_per_cycle'],
         scope='Explicit capacity/throughput assumptions; VPU, non-MXU DSPs, banking, routing and Fmax need implementation.')
 
@@ -324,7 +337,7 @@ def run_kernel(task):
         quant_row_banks=8 if point.buffered_quant else 0,quant_store_buffered=point.buffered_quant,quant_scale_lookup=point.quant_scale_lookup,scalar_recip_lookup=point.scalar_recip_lookup,reciprocal_lookup_lanes=point.reciprocal_lookup_lanes,pinned_cache_bytes=point.pinned_cache_bytes,cache_read_bytes_per_cycle=point.cache_read_bytes_per_cycle,
         vector_row_contexts=point.vector_row_contexts,
         fp_mul_latency=point.fp_mul_latency,fp_add_latency=point.fp_add_latency,activation_streaming=point.activation_streaming,vector_engines=point.vector_engines,vector_result_chunks=point.vector_result_chunks,vector_compatible_issue=point.vector_compatible_issue,
-        scale_cache_entries=point.scale_cache_entries,vector_command_queue=point.vector_command_queue,matrix_retirement=point.matrix_retirement,physical_scale_lines=point.physical_scale_lines)
+        act_versions_unbounded=point.act_versions_unbounded,scale_cache_entries=point.scale_cache_entries,vector_command_queue=point.vector_command_queue,matrix_retirement=point.matrix_retirement,physical_scale_lines=point.physical_scale_lines)
     profile=None;profile_hash=None
     if point.pinned_cache_bytes:
         root=Path(task['memory_profile_root']);manifest=json.loads((root/'manifest.json').read_text())
@@ -394,7 +407,7 @@ def main():
     output.mkdir(parents=True, exist_ok=False)
     project = Path(__file__).resolve().parent
     files = [project / name for name in ('tpu_dse.py', 'model.py', 'compact.py', 'components.py',
-                                       'workload.py', 'shape_workload.py', 'native_timing.py', 'benchmark.py','activation_stream.py','vector_pool.py','vector_select.py','retained_inputs.py','storage_envelope.py','precise_tmem.py','scale_cache_timing.py')]
+                                       'workload.py', 'shape_workload.py', 'native_timing.py', 'benchmark.py','activation_stream.py','vector_pool.py','vector_select.py','retained_inputs.py','storage_envelope.py','precise_tmem.py','scale_cache_timing.py','act_versions.py')]
     if args.memory_profile_root:files.append(args.memory_profile_root.resolve()/'manifest.json')
     sources = {str(p): digest(p) for p in files}
     observations = {p.name: [] for p in points}

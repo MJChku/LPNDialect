@@ -185,7 +185,11 @@ class CompactOpenTPU(OpenTPU):
       producers=stream_producers(commands,I,W,t)
       activation=ActivationStream(net,prefix+'_act',commands,I,t,self._table,is_done)
       producer_table=self._table(prefix+'_act_producers',producers)
-    deps,dram_deps = dependencies(commands,I,W,t.matrix_engines,
+    dependency_commands=commands
+    if t.act_versions_unbounded:
+      from .act_versions import renamed_commands
+      dependency_commands=renamed_commands(commands,cfg,I,W)
+    deps,dram_deps = dependencies(dependency_commands,I,W,t.matrix_engines,
                                 producers if activation is not None else None)
     kinds,latencies,services,port_ids,ranks = [],[],[],[],[]
     batches,chunkses,scale_flags,kbs,ns,row_services,tails = [],[],[],[],[],[],[]

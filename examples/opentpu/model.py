@@ -143,10 +143,13 @@ class Timing:
   vector_result_chunks: int = 0
   vector_compatible_issue: bool = False
   activation_streaming: bool = False
+  act_versions_unbounded: bool = False # optimistic storage-renaming screen only
   fp_mul_latency: int = 2
   fp_add_latency: int = 4
 
   def __post_init__(self):
+    if type(self.act_versions_unbounded) is not bool:
+      raise ValueError('ACT versioning screen must be a boolean')
     if type(self.scale_cache_entries) is not int or self.scale_cache_entries not in (0,16):
       raise ValueError('scale cache entries must be zero or sixteen')
     if self.scale_cache_entries and (not self.physical_scale_lines or not self.unified_dram or
@@ -283,6 +286,8 @@ class OpenTPU:
   def __init__(self,workload,timing=None):
     from opentpu import isa as I, waits as W
     self.workload,self.timing = workload,timing or Timing()
+    if self.timing.act_versions_unbounded and not self.supports_multiple_matrix_engines:
+      raise ValueError('ACT versioning screen requires CompactOpenTPU')
     if self.timing.scale_cache_entries and not self.supports_multiple_matrix_engines:
       raise ValueError('scale-cache timing requires CompactOpenTPU')
     if self.timing.pinned_cache_bytes and not self.supports_multiple_matrix_engines:
