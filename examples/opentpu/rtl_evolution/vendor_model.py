@@ -30,7 +30,10 @@ def install(rtlsim, root):
     text = harness.read_text()
     if text.count('module tb_top;') != 1:
         raise ValueError('unexpected top harness declaration')
-    overlay_text = text.replace('module tb_top;', 'module tb_top;\n  glbl glbl();')
+    # glbl's startup pulse is 100 ns. The original harness has no timescale;
+    # inheriting the vendor's 1 ps unit would run the whole short gate under
+    # global reset. Use the same 10 ns clock as the standalone vendor proof.
+    overlay_text = '`timescale 1ns/1ps\n'+text.replace('module tb_top;', 'module tb_top;\n  glbl glbl();')
     identity = hashlib.sha256((overlay_text+digest(original_tb/'lpn_wall.cpp')).encode()).hexdigest()
     overlay = rtlsim.BUILD/'lpn_vendor_harness'/identity
     overlay.mkdir(parents=True, exist_ok=True)
@@ -45,6 +48,6 @@ def install(rtlsim, root):
     return dict(root=str(root), revision=revision,
         binary_driven_pins_only=True, floating_input_tests_replaced=count,
         arithmetic_and_register_logic_unchanged=True,
-        harness_scope='Original top plus official global-reset instance only',
+        harness_scope='Original top plus official global-reset instance and explicit 1ns/1ps timescale',
         source_sha256={str(p): digest(p) for p in [vendor, *sources, harness,
             original_tb/'lpn_wall.cpp',overlay/'tb_top.sv',overlay/'lpn_wall.cpp',Path(__file__)]})
