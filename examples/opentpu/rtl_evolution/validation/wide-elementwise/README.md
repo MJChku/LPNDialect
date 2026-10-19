@@ -18,7 +18,8 @@ omit bank-granularity waste, new pipeline state and physical routing.
 
 Three focused tests verify elementwise issue/tails, unchanged reduction
 latency, dependency chains, Python/native equality and rejection as existing
-RTL. Four scale-cache regression tests pass with the default issue width.
+RTL. Four scale-cache regression tests and all 30 general integration tests
+pass with the default issue width (`cache-regression.log`, `general-regression.log`).
 
 The real-kernel pilot (`pilot.json`, kernels 0/15/16/47) predicts the following
 cycle speedups for paired 96x2 with a sixteen-entry scale cache:
@@ -33,3 +34,17 @@ cycle speedups for paired 96x2 with a sixteen-entry scale cache:
 Intermediate attention positions are extrapolated. These do not supersede
 the full validated 15.4406x RTL result, establish FPGA fit or meet 100x.
 The small benefit from 512 lanes does not justify prioritizing it.
+
+The **complete 48-kernel** native prediction (`full-prediction.json`) is now
+finished with identical canonical programs and upstream inference order:
+
+| Elementwise lanes | Predicted cycles | Speedup versus original RTL |
+| --- | ---: | ---: |
+| 64 control | 8,001,603 | 16.6002x |
+| 128 | 7,273,465 | 18.2620x |
+| 256 | 6,896,771 | 19.2595x |
+
+The wider proposals reduce cycles by 9.10% and 13.81% versus their own
+cache-enabled control. This is full-workload LPN evidence, still **not RTL
+validation** of a wider datapath. Every reported prediction excludes neural
+tensor arithmetic and uses the unchanged resolved instruction stream.
