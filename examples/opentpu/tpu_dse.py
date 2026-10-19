@@ -45,10 +45,33 @@ class Architecture:
     act_blocks: int = 0
     fifo_per_core: int = 128
     matrix_engines: int = 1
+    precise_tmem: bool = False
 
 
 def architectures():
     return [
+        *[Architecture(f'proposal_precise_{rows}x{cols}_v{vectors}_w{window}',rows,cols,2816,
+                       precise_tmem=True,buffered_quant=True,vector_row_contexts=4,
+                       activation_streaming=True,quant_scale_lookup=True,scalar_recip_lookup=True,
+                       fp_add_latency=2,matrix_retirement=True,physical_scale_lines=True,
+                       act_rows=8,act_blocks=64,fifo_per_core=64,window=window,
+                       vector_command_queue=2 if vectors==1 else 0,vector_engines=vectors,
+                       vector_result_chunks=1024 if vectors>1 else 0,vector_compatible_issue=vectors>1)
+          for rows,cols,vectors,window in [(128,1,1,32),(96,2,1,32),(64,1,4,128),(64,1,8,128)]],
+        *[Architecture(f'proposal_window_{window}_128x1',128,1,2816,
+                       buffered_quant=True,vector_row_contexts=4,activation_streaming=True,
+                       quant_scale_lookup=True,scalar_recip_lookup=True,fp_add_latency=2,
+                       vector_command_queue=2,matrix_retirement=True,physical_scale_lines=True,
+                       act_rows=8,act_blocks=64,fifo_per_core=64,window=window)
+          for window in (64,128,256)],
+        *[Architecture(f'proposal_asic_clusters_{engines}x128x8_v16_precise{int(precise)}',128,8,32768,
+                       matrix_engines=engines,precise_tmem=precise,buffered_quant=True,
+                       vector_row_contexts=4,activation_streaming=True,quant_scale_lookup=True,
+                       scalar_recip_lookup=True,fp_mul_latency=1,fp_add_latency=1,
+                       matrix_retirement=True,physical_scale_lines=True,act_rows=8,act_blocks=64,
+                       fifo_per_core=64,vector_engines=16,vector_result_chunks=1024,
+                       vector_compatible_issue=True,window=128)
+          for engines in (4,16) for precise in (False,True)],
         *[Architecture(f'proposal_clusters_{engines}x{128//engines}x1_add2',128//engines,1,2816,
                        matrix_engines=engines,buffered_quant=True,vector_row_contexts=4,
                        activation_streaming=True,quant_scale_lookup=True,scalar_recip_lookup=True,
@@ -201,7 +224,8 @@ def resources(point, config, clock_mhz):
         onchip_bytes=int(673e6/8*.5),memory_gbs=810*.7)
     conservative=(macs<=v80_limits['matrix_mac_lanes'] and sram<=v80_limits['onchip_bytes'] and
                   point.bandwidth*clock_mhz/1000<=v80_limits['memory_gbs'])
-    return dict(matrix_engines=point.matrix_engines,matrix_cluster_rtl_implemented=False if point.matrix_engines>1 else None,
+    return dict(precise_tmem_scoreboard_rtl_implemented=False if point.precise_tmem else None,
+        matrix_engines=point.matrix_engines,matrix_cluster_rtl_implemented=False if point.matrix_engines>1 else None,
         matrix_write_ports=1,matrix_write_service_scope='Aggregate bank service reserved at batch compute start; output-wave arbitration not validated.',
         matrix_mac_lanes=macs, onchip_bytes_lower_bound=sram,
         pinned_cache_data_bytes=point.pinned_cache_bytes,pinned_cache_valid_bytes=cache_valid_bytes,
@@ -256,6 +280,9 @@ def run_kernel(task):
         program_json_hashes[f'program_{sid}.json']=identity
     start = time.perf_counter()
     workload = resolve_static(original, programs, record['args'])
+    if point.precise_tmem:
+        from .precise_tmem import refine
+        workload=refine(workload)
     if point.act_rows or point.act_blocks:
         from .storage_envelope import command_bounds
         for items in workload.commands:
@@ -341,7 +368,7 @@ def main():
     output.mkdir(parents=True, exist_ok=False)
     project = Path(__file__).resolve().parent
     files = [project / name for name in ('tpu_dse.py', 'model.py', 'compact.py', 'components.py',
-                                       'workload.py', 'shape_workload.py', 'native_timing.py', 'benchmark.py','activation_stream.py','vector_pool.py','vector_select.py','retained_inputs.py','storage_envelope.py')]
+                                       'workload.py', 'shape_workload.py', 'native_timing.py', 'benchmark.py','activation_stream.py','vector_pool.py','vector_select.py','retained_inputs.py','storage_envelope.py','precise_tmem.py')]
     if args.memory_profile_root:files.append(args.memory_profile_root.resolve()/'manifest.json')
     sources = {str(p): digest(p) for p in files}
     observations = {p.name: [] for p in points}
