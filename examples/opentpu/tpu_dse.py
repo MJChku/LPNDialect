@@ -32,6 +32,7 @@ class Architecture:
     cache_read_bytes_per_cycle: int = 8192
     vector_row_contexts: int = 1
     vector_engines: int = 1
+    vector_issue_groups: int = 1
     vector_result_chunks: int = 0
     vector_compatible_issue: bool = False
     window: int = 32
@@ -52,6 +53,13 @@ class Architecture:
 
 def architectures():
     return [
+        *[Architecture(f'proposal_wide_elementwise_g{groups}_96x2_scale16_add2',96,2,2816,
+                       vector_issue_groups=groups,scale_cache_entries=16,paired_dsp=True,
+                       buffered_quant=True,vector_row_contexts=4,activation_streaming=True,
+                       quant_scale_lookup=True,scalar_recip_lookup=True,fp_add_latency=2,
+                       vector_command_queue=2,matrix_retirement=True,physical_scale_lines=True,
+                       act_rows=8,fifo_per_core=64,act_blocks=64)
+          for groups in (2,4,8)],
         *[Architecture(name,rows,cols,2816,scale_cache_entries=16,paired_dsp=cols>1,
                        buffered_quant=True,vector_row_contexts=4,activation_streaming=True,
                        quant_scale_lookup=True,scalar_recip_lookup=True,fp_add_latency=2,
@@ -265,7 +273,14 @@ def resources(point, config, clock_mhz):
             (int(point.scalar_recip_lookup)+point.reciprocal_lookup_lanes)),
         vector_engines=point.vector_engines,vector_result_bytes=vector_results,
         additional_private_vector_read_copy_bytes=vector_read_copies,
-        vector_fp32_multiply_sites=272*point.vector_engines,
+        vector_fp32_multiply_sites=272*point.vector_engines*point.vector_issue_groups,
+        vector_issue_groups=point.vector_issue_groups,
+        vector_elementwise_issue_lanes=64*point.vector_issue_groups,
+        vector_ordered_reduction_lanes=64,
+        vector_tmem_read_words_per_cycle=128*point.vector_issue_groups,
+        vector_tmem_write_words_per_cycle=64*point.vector_issue_groups,
+        vector_scratchpad_scope='Wide proposal requires this aggregate bank throughput and two independent read copies; bank/control mapping and write arbitration are unvalidated' if point.vector_issue_groups>1 else None,
+        wide_elementwise_rtl_implemented=False if point.vector_issue_groups>1 else None,
         vector_pool_implemented=False if point.vector_result_chunks else None,
         vector_pool_write_ports=1 if point.vector_result_chunks else None,
         vector_pool_resource_scope='Result data and private input copies included; VPU pipeline state, DSP mapping, address/control and fanout need synthesis.',
@@ -322,7 +337,7 @@ def run_kernel(task):
         dram_latency=point.latency, fifo_chunks=point.fifo_per_core * point.rows, scale_lanes=point.rows*point.matrix_engines,
         unified_dram=True, scalar_store_bytes=256, epilogue_lanes=max(1, point.columns // 2),
         quant_row_banks=8 if point.buffered_quant else 0,quant_store_buffered=point.buffered_quant,quant_scale_lookup=point.quant_scale_lookup,scalar_recip_lookup=point.scalar_recip_lookup,reciprocal_lookup_lanes=point.reciprocal_lookup_lanes,pinned_cache_bytes=point.pinned_cache_bytes,cache_read_bytes_per_cycle=point.cache_read_bytes_per_cycle,
-        vector_row_contexts=point.vector_row_contexts,
+        vector_row_contexts=point.vector_row_contexts,vector_issue_groups=point.vector_issue_groups,
         fp_mul_latency=point.fp_mul_latency,fp_add_latency=point.fp_add_latency,activation_streaming=point.activation_streaming,vector_engines=point.vector_engines,vector_result_chunks=point.vector_result_chunks,vector_compatible_issue=point.vector_compatible_issue,
         scale_cache_entries=point.scale_cache_entries,vector_command_queue=point.vector_command_queue,matrix_retirement=point.matrix_retirement,physical_scale_lines=point.physical_scale_lines)
     profile=None;profile_hash=None

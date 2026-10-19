@@ -1,0 +1,8 @@
+test_native_chain_keeps_dependencies_and_reductions (__main__.WideElementwiseTest.test_native_chain_keeps_dependencies_and_reductions) ... ok
+test_only_elementwise_issue_is_widened (__main__.WideElementwiseTest.test_only_elementwise_issue_is_widened) ... ok
+test_rtl_rejected_and_port_costs_explicit (__main__.WideElementwiseTest.test_rtl_rejected_and_port_costs_explicit) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 1.048s
+
+OK

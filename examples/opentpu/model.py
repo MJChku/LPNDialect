@@ -140,6 +140,7 @@ class Timing:
   physical_scale_lines: bool = False
   scale_cache_entries: int = 0
   vector_engines: int = 1
+  vector_issue_groups: int = 1 # proposal: parallel 64-lane elementwise issue groups
   vector_result_chunks: int = 0
   vector_compatible_issue: bool = False
   activation_streaming: bool = False
@@ -147,6 +148,10 @@ class Timing:
   fp_add_latency: int = 4
 
   def __post_init__(self):
+    if type(self.vector_issue_groups) is not int or self.vector_issue_groups not in (1,2,4,8):
+      raise ValueError('vector issue groups must be 1/2/4/8')
+    if self.vector_issue_groups>1 and (self.vector_engines!=1 or self.vector_result_chunks or self.vector_compatible_issue):
+      raise ValueError('wide elementwise issue currently requires one original VPU command path')
     if type(self.scale_cache_entries) is not int or self.scale_cache_entries not in (0,16):
       raise ValueError('scale cache entries must be zero or sixteen')
     if self.scale_cache_entries and (not self.physical_scale_lines or not self.unified_dram or
@@ -283,6 +288,8 @@ class OpenTPU:
   def __init__(self,workload,timing=None):
     from opentpu import isa as I, waits as W
     self.workload,self.timing = workload,timing or Timing()
+    if self.timing.vector_issue_groups>1 and (not self.supports_multiple_matrix_engines or workload.config.LANES!=64):
+      raise ValueError('wide elementwise proposal requires CompactOpenTPU with 64 base lanes')
     if self.timing.scale_cache_entries and not self.supports_multiple_matrix_engines:
       raise ValueError('scale-cache timing requires CompactOpenTPU')
     if self.timing.pinned_cache_bytes and not self.supports_multiple_matrix_engines:
@@ -443,13 +450,17 @@ class OpenTPU:
     elif ins.op==I.VOP:
       rows,cols = w[3]&65535,w[3]>>16
       function = (w[5]>>16)&255
+      # Independent elementwise lanes can issue several original 64-word
+      # groups together. Ordered reductions keep the original 64-partial
+      # datapath and recurrence; widening its tree would change FP results.
+      issue_lanes=cfg.LANES*(t.vector_issue_groups if function not in I.REDUCE else 1)
       composite = function in (I.V_EXP2,I.V_RECIP,I.V_RSQRT,I.V_LOG2,I.V_EXP2SUB)
       if composite and cfg.LANES==8:
         # Current RTL shares SE's three stages: 25-cycle loops on eight lanes.
         passes = {I.V_EXP2:3,I.V_EXP2SUB:3,I.V_RECIP:2,I.V_RSQRT:4,I.V_LOG2:4}[function]
         latency = rows*ceil(cols/8)*passes+25*passes+5
       else:
-        lanes = max(1,cfg.LANES//4) if composite else cfg.LANES
+        lanes = max(1,issue_lanes//4) if composite else issue_lanes
         slots = {I.V_EXP2:9,I.V_EXP2SUB:9,I.V_RECIP:6,I.V_RSQRT:10,I.V_LOG2:10}.get(function,0)
         slot_one=function in (I.V_ADD,I.V_SUB,I.V_RSUB,I.V_MUL,I.V_OUTER)
         ordinary=12-((2-t.fp_mul_latency)+(4-t.fp_add_latency) if slot_one else 0)
@@ -459,7 +470,7 @@ class OpenTPU:
         slot=vector_rank(ins,I,t)
         latency=rows*ceil(cols/lookup_width)+slot*(1+t.fp_mul_latency+t.fp_add_latency)+(3 if slot>1 else 0)+5
       if function==I.V_OUTER:
-        latency += max(2,ceil(cols/cfg.LANES))
+        latency += max(2,ceil(cols/issue_lanes))
       if function in I.REDUCE:
         if cfg.LANES>=32:
           if function in (I.V_RSUM,I.V_RSSQ,I.V_RDOT):
@@ -502,6 +513,7 @@ class OpenTPU:
     rows,cols=ins.w[3]&65535,ins.w[3]>>16
     function=(ins.w[5]>>16)&255
     lanes=self.workload.config.LANES
+    issue_lanes=lanes*(self.timing.vector_issue_groups if function not in I.REDUCE else 1)
     lookup_width=reciprocal_lookup_width(ins,I,self.timing)
     if lookup_width:
       return rows*ceil(cols/lookup_width)+2
@@ -512,8 +524,8 @@ class OpenTPU:
       passes={I.V_EXP2:3,I.V_EXP2SUB:3,I.V_RECIP:2,I.V_RSQRT:4,I.V_LOG2:4}[function]
       return rows*ceil(cols/lanes)*passes+2
     if vector_rank(ins,I,self.timing)>1:
-      lanes=max(1,lanes//4)
-    return rows*ceil(cols/lanes)+2+(max(2,ceil(cols/self.workload.config.LANES))
+      issue_lanes=max(1,issue_lanes//4)
+    return rows*ceil(cols/issue_lanes)+2+(max(2,ceil(cols/(lanes*self.timing.vector_issue_groups)))
         if function==I.V_OUTER else 0)
 
   def _simple(self,prefix,idx,ins,trigger,result,window,unit,memory,deps,I,vector=None):
