@@ -1,0 +1,9 @@
+test_disjoint_write_invalidates_and_bad_geometry_is_rejected (__main__.ScaleTimingTest.test_disjoint_write_invalidates_and_bad_geometry_is_rejected) ... ok
+test_native_matches_and_replacement_does_not_hold_hbm (__main__.ScaleTimingTest.test_native_matches_and_replacement_does_not_hold_hbm) ... ok
+test_queries_match_uncached_protocol_and_pending_hits_coalesce (__main__.ScaleTimingTest.test_queries_match_uncached_protocol_and_pending_hits_coalesce) ... ok
+test_weight_and_scale_hits_do_not_take_hbm_credit (__main__.ScaleTimingTest.test_weight_and_scale_hits_do_not_take_hbm_credit) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.905s
+
+OK
