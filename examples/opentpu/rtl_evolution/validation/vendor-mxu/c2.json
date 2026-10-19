@@ -1,0 +1,369 @@
+{
+  "status": "complete",
+  "scope": "Compare the integrated vendor-DSP MXU with behavioral RTL and independent ISA.",
+  "source_sha256": {
+    "/home/ubuntu/LPNDialect-vendor-mxu-replay-v3/examples/opentpu/rtl_evolution/check_vendor_mxu.py": "248fa797f7ff3c77e5db4f66f6409f4c84b0117f624c14e4671495c3a7fe9826",
+    "/home/ubuntu/LPNDialect-vendor-mxu-replay-v3/examples/opentpu/rtl_evolution/vendor_model.py": "237f2e61e948d9e514cf5509524f88e68561ece624a2988273f229229e5c7852",
+    "/home/ubuntu/LPNDialect-vendor-mxu-replay-v3/examples/opentpu/rtl_evolution/check_matrix.py": "73ef35915e4737b2cea4810ec9bac7b24955d6bab32753f1690358a1febd33c9",
+    "/home/ubuntu/LPNDialect-vendor-mxu-replay-v3/examples/opentpu/rtl_evolution/check_matrix_pipeline.py": "19c03d94901af2d7ac0f83b6f4b182e63dcba2d48aee57188764998cbbcaf216",
+    "/home/ubuntu/LPNDialect-vendor-mxu-replay-v3/examples/opentpu/rtl_evolution/audit_packed_mxu.py": "7974a1af3a2218d08247027065f7d6767258b59ed140e01bdf7e5d71f1848f41"
+  },
+  "audit_sha256": {
+    "behavioral-audit": "91de0097200cbe9cfdabfb0ada11b049c718150625069ea344f2c04eea595e52",
+    "vendor-audit": "fce18c2448b408539f4510b2c9a5bd47690f80a057baf4c0f411a190aebdbf64"
+  },
+  "config": {
+    "S": 1,
+    "D": 64,
+    "MCOLS": 4,
+    "ACT_BLOCKS": 64,
+    "TMEM_WORDS": 65536,
+    "DRAM_BYTES": 1048576,
+    "IMEM_WORDS": 65536,
+    "LANES": 64,
+    "PAIR": false,
+    "DSTEP": false,
+    "STREAM": false,
+    "ACT_ROWS": 16,
+    "SEQ_WC": false
+  },
+  "uarch": {
+    "MXU_ROWS": 2,
+    "VPU_LANES": 64,
+    "QST_LANES": 64,
+    "MXU_COLS": 2,
+    "MXU_PAIR_DOT": 1,
+    "MXU_PAIR_TECH": 1
+  },
+  "vendor_model": {
+    "root": "/home/ubuntu/XilinxUnisimLibrary",
+    "revision": "1c8e05fd1e9a79ceb8b996a0996674122eed086f",
+    "binary_driven_pins_only": true,
+    "floating_input_tests_replaced": 168,
+    "arithmetic_and_register_logic_unchanged": true,
+    "harness_scope": "Original top plus official global reset, explicit 1ns/1ps clock, and startup wait outside measured cycles",
+    "source_sha256": {
+      "/home/ubuntu/XilinxUnisimLibrary/verilog/src/unisims/DSP48E2.v": "d2ab5e8f0bbb6c99183d559fcab3bcdb6f49c1c2961e5896c27b054b32d10c04",
+      "/home/ubuntu/XilinxUnisimLibrary/verilog/src/glbl.v": "de59a57e3e0091f1b9162d9914dce24c469820a0c5b5a41d1d202d93fae0abdd",
+      "/home/ubuntu/FeSens-openTPU-packed-mxu/build/verilator/lpn_vendor_binary/DSP48E2_56e9ab7456964984338c96af9ef206e415186b94016a9fe0a67bf690ca9867fa.v": "56e9ab7456964984338c96af9ef206e415186b94016a9fe0a67bf690ca9867fa",
+      "/home/ubuntu/FeSens-openTPU-packed-mxu/sim/verilator/tb_top.sv": "0e85e4866aaaffb3e7b38fe1f6d8fc1ac6a230b080ec5305056b6a4022bc20f1",
+      "/home/ubuntu/FeSens-openTPU-packed-mxu/sim/verilator/lpn_wall.cpp": "8892bb27d0c38eef196487a68806e6bc69fc8698c60bdfb58fa7d21aff0fcbc4",
+      "/home/ubuntu/FeSens-openTPU-packed-mxu/build/verilator/lpn_vendor_harness/35849cfe502f542d51b45b65940c6ded208d4feb2258fcdeb54051d458e34732/tb_top.sv": "10fdda0e3059cf57b14f74ab97b9bfb7725d642ea29cb536e51737db8f38b5ad",
+      "/home/ubuntu/FeSens-openTPU-packed-mxu/build/verilator/lpn_vendor_harness/35849cfe502f542d51b45b65940c6ded208d4feb2258fcdeb54051d458e34732/lpn_wall.cpp": "8892bb27d0c38eef196487a68806e6bc69fc8698c60bdfb58fa7d21aff0fcbc4",
+      "/home/ubuntu/LPNDialect-vendor-mxu-replay-v3/examples/opentpu/rtl_evolution/vendor_model.py": "237f2e61e948d9e514cf5509524f88e68561ece624a2988273f229229e5c7852"
+    }
+  },
+  "records": [
+    {
+      "case": {
+        "name": "unit_7x8",
+        "n": 7,
+        "m": 8,
+        "kb": 3,
+        "unit": true
+      },
+      "rtl_cycles": 289,
+      "input_sha256": {
+        "prog_0.hex": "6fa6aa1504225586c13c0c0d3e57b4f436ea76ac0e70f062ed0f5a607127e775",
+        "dram_0.bin": "d814de00afb03552381dcff93714e4b4b96e712f03c401a579841a1fa84547a8"
+      },
+      "output_sha256": {
+        "dram_out_0.bin": "8d82ab5a6ff5ea6ee0f06104dc3e658bf787d44f6101acd82ea26c6473249c24",
+        "tmem_0.hex": "e087b758d22e1405c2e899e5520a601bb518353c4007bfb04b40db3aee01c5b6"
+      },
+      "raw_log_sha256": "4ca784ba6f777b5bb60e120c2b428f8ea2ff8602153b7abe460398daeed85473",
+      "historical_input_and_log_hashes_recorded": true,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "lpn_cycles": 283.0,
+      "relative_cycle_error": -0.02076124567474047
+    },
+    {
+      "case": {
+        "name": "unit_5x3",
+        "n": 5,
+        "m": 3,
+        "kb": 1,
+        "unit": true
+      },
+      "rtl_cycles": 137,
+      "input_sha256": {
+        "prog_0.hex": "c2b67b044726395116d9a380f21f95c605ffcddaebee634a3da160af70d941ee",
+        "dram_0.bin": "6890e438fb734772bcca53ad5e88c4ce947766eb6fc4599860e70f1dd3148034"
+      },
+      "output_sha256": {
+        "dram_out_0.bin": "cbd94a8111aa08362ec32d76cc00fcc60e46e928c0fd8e176bce2a17c783128d",
+        "tmem_0.hex": "31e8e5dcecddbd590b4af4c8f2db031f05ac6bac8a6a1fbf9baaa9ab33e85fb1"
+      },
+      "raw_log_sha256": "6caab8a6f5172ba957bcc2cbb1c90ef0b0de6cd2081464e3b96271db1defe1d4",
+      "historical_input_and_log_hashes_recorded": true,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "lpn_cycles": 127.0,
+      "relative_cycle_error": -0.07299270072992703
+    },
+    {
+      "case": {
+        "name": "scaled_5x8",
+        "n": 5,
+        "m": 8,
+        "kb": 5
+      },
+      "rtl_cycles": 383,
+      "input_sha256": {
+        "prog_0.hex": "51bf417c88058a56bbf05d12da1177f41eb161ee7ebd773a3a38adb553cc0c63",
+        "dram_0.bin": "cb427451e74cc83d7989529f10d0ee1fc5a73268432ed036b062ed7bb0703fcc"
+      },
+      "output_sha256": {
+        "dram_out_0.bin": "2a2ec3776936721fdaf9632144dd68c731f1556dc71b796f6e4f91684fec0f98",
+        "tmem_0.hex": "4064afc45e4e92ea6300a41d25cc3d83a9d92f7f859342005e9caab5cd319668"
+      },
+      "raw_log_sha256": "99b4f5f420d752cf558c42334532cd9f9c795070462d73f5b216b1aad0e39a5e",
+      "historical_input_and_log_hashes_recorded": true,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "lpn_cycles": 377.0,
+      "relative_cycle_error": -0.015665796344647487
+    },
+    {
+      "case": {
+        "name": "acc_ascale_rmax",
+        "n": 7,
+        "m": 3,
+        "kb": 3,
+        "unit": true,
+        "acc": true,
+        "ascale": true,
+        "rmax": true
+      },
+      "rtl_cycles": 197,
+      "input_sha256": {
+        "prog_0.hex": "7ff2e98a3c82d90e3d9600052a8f7dc1faf08a55216f3077a9d6ca36a278efd6",
+        "dram_0.bin": "0ebf29fdb7a783fca59ce02305544697b7f19c40ae883c1c2afe32d0ba812b7e"
+      },
+      "output_sha256": {
+        "dram_out_0.bin": "82cbca4cac6e742f6ed575c7003a9a3ba9888176f66b462460220f75f2c7f50d",
+        "tmem_0.hex": "adf9374e6d2fc024092526237e5fc5a140dbd305a0e78669fd338b872bea49f6"
+      },
+      "raw_log_sha256": "147b1a0663dd785f529425258aef39e48056b52aea4216b9db798216ddfc3c60",
+      "historical_input_and_log_hashes_recorded": true,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "lpn_cycles": 183.0,
+      "relative_cycle_error": -0.07106598984771573
+    },
+    {
+      "case": {
+        "name": "fp4_pair",
+        "n": 5,
+        "m": 2,
+        "kb": 3,
+        "wf": 2,
+        "pair": true
+      },
+      "rtl_cycles": 154,
+      "input_sha256": {
+        "prog_0.hex": "d804bbda4dd098c7bb9b5b21f75268687604aff63b78ae26f2e3e0819a5b7b4f",
+        "dram_0.bin": "80c33ecfd6e134c507fc5a454c0b784e4b10fb87fe0cc391f30f32f9bd8f4796"
+      },
+      "output_sha256": {
+        "dram_out_0.bin": "3aa6e4fbfb67e2efec9cf391b630ca928a6cb35b1e5dc7d4131689295246fa01",
+        "tmem_0.hex": "ad0aba08975e22954485265e7bd56f173e4629963d734829e6db1753952211d1"
+      },
+      "raw_log_sha256": "4de8df2c182abe73ad11ce589acd78c4149a55a7ddcedec3ded90e571d83120a",
+      "historical_input_and_log_hashes_recorded": true,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "lpn_cycles": 142.0,
+      "relative_cycle_error": -0.07792207792207795
+    },
+    {
+      "case": {
+        "name": "unit_4x1",
+        "n": 4,
+        "m": 1,
+        "kb": 7,
+        "unit": true
+      },
+      "rtl_cycles": 166,
+      "input_sha256": {
+        "prog_0.hex": "8569f535b0182ab9bf12c8524a8fa874845fad2e0eb518ba616d1c98ca930352",
+        "dram_0.bin": "4b7dfae292aa3512eb3724200031ff9674e3818b6e0a806a19b030f9f59902f0"
+      },
+      "output_sha256": {
+        "dram_out_0.bin": "34ff82f583b9fc3c7f8506cc6215dbae80ce3d0c99ca9aa5ba7047854179d6d6",
+        "tmem_0.hex": "aad8a81cdd2b17f5abc48347775e11f1fe17f225dc2d6c405edfbad2a60238d1"
+      },
+      "raw_log_sha256": "8752bcfa1f0ff0679fdeeb3613f964cc380d7c3c78f0092785fae88847d6b2e2",
+      "historical_input_and_log_hashes_recorded": true,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "lpn_cycles": 154.0,
+      "relative_cycle_error": -0.07228915662650603
+    },
+    {
+      "case": {
+        "name": "qst_stride_1",
+        "n": 35,
+        "m": 3,
+        "kb": 3,
+        "unit": true,
+        "qst_stride": 1
+      },
+      "rtl_cycles": 268,
+      "input_sha256": {
+        "prog_0.hex": "bf7fc05289d74a888e90bf6148c998f2d3b426ec44c494b570f19a792315aad1",
+        "dram_0.bin": "6650d60b06755b181424de61afd749b279925e2d663fe66bd5d152e284dba1f4"
+      },
+      "output_sha256": {
+        "dram_out_0.bin": "d7c90e075827c84115b17d27fba6a8ebcfd832c2b1b53087228b852b408582e6",
+        "tmem_0.hex": "5f3ce0dc290efa72b8ec93d81f5eaf37cafc6f49a6c132cc5c94628dab76aa79"
+      },
+      "raw_log_sha256": "bd6c6af1b575d4bd8651d18b0cf9d1ed5141df3bca2f782034722997b164d093",
+      "historical_input_and_log_hashes_recorded": true,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "lpn_cycles": 258.0,
+      "relative_cycle_error": -0.03731343283582089
+    },
+    {
+      "case": {
+        "name": "qst_stride_4",
+        "n": 35,
+        "m": 3,
+        "kb": 3,
+        "unit": true,
+        "qst_stride": 4
+      },
+      "rtl_cycles": 268,
+      "input_sha256": {
+        "prog_0.hex": "d1367d5595015793e2ca4c33702b65045f379d5eee3781d19db372f65f7d380b",
+        "dram_0.bin": "d9c3915f1f5a4067c0b03e8c0a63c411b61f9c5a584fa2a633e57b1c4db22038"
+      },
+      "output_sha256": {
+        "dram_out_0.bin": "7c04149cd11128c0754eb739aa499d81fde7c9f4058f032371a2714309b77c2c",
+        "tmem_0.hex": "b6391266c28ec070c3b7229a7b4c35dc5aa4bad66e07edba4f62f2d86fdf178d"
+      },
+      "raw_log_sha256": "37023513b0fd61928219d956f7b413fa070f15fb895e8a1a2b20895e3b650cfd",
+      "historical_input_and_log_hashes_recorded": true,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "lpn_cycles": 258.0,
+      "relative_cycle_error": -0.03731343283582089
+    },
+    {
+      "case": {
+        "name": "qst_stride_17",
+        "n": 35,
+        "m": 3,
+        "kb": 3,
+        "unit": true,
+        "qst_stride": 17
+      },
+      "rtl_cycles": 268,
+      "input_sha256": {
+        "prog_0.hex": "5a7f669c61fefbd548f7a76afa2c7c7810d41b2d98f1dae399a640552d9594c2",
+        "dram_0.bin": "941b310ecce244d542df42c3b81535a5b9ba2d38b37c179a48b12cf60c9c75a6"
+      },
+      "output_sha256": {
+        "dram_out_0.bin": "ee1cae567c5f5ffd953847f690bdfa8db81014f4c6bd50fab29a530ce4d6eca9",
+        "tmem_0.hex": "0d1b6fc45275f1cacd3a524326c2db8c75621a0b02734e853cf700c8c87f32ac"
+      },
+      "raw_log_sha256": "41ad962fad3d064989c63d48650632bd3e8ed861b55fc1913704480f4537f5c3",
+      "historical_input_and_log_hashes_recorded": true,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "lpn_cycles": 258.0,
+      "relative_cycle_error": -0.03731343283582089
+    },
+    {
+      "case": {
+        "name": "pipeline_independent",
+        "commands": 6,
+        "shapes": [
+          [
+            5,
+            3
+          ],
+          [
+            67,
+            8
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            35,
+            2
+          ],
+          [
+            64,
+            4
+          ],
+          [
+            3,
+            3
+          ]
+        ]
+      },
+      "rtl_cycles": 1469,
+      "input_sha256": {
+        "prog_0.hex": "c5787ec3076d0f51374f1196d5d2e137c30cdfa3e1d643e7ca52ce1296cccce3",
+        "dram_0.bin": "c31e77e543518fb613e5f17813c0098b700b3a58d4f73b8aff24aececedddb5e"
+      },
+      "output_sha256": {
+        "dram_out_0.bin": "c8899f5ff2d7d366d5375ac011113de9d739fd4cdfad48c71dd0bb8d1ac5a93d",
+        "tmem_0.hex": "9367cf5fc987d45882903dd80203b159299d003b6315440899f73844ac2f8a0d"
+      },
+      "raw_log_sha256": "b2c50d97f3ae9b1f765120df8cc458bdfa3548c5abdc0b064233d3c593d8e1c4",
+      "historical_input_and_log_hashes_recorded": false,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "lpn_cycles": 1446.0,
+      "relative_cycle_error": -0.015656909462219204
+    },
+    {
+      "case": {
+        "name": "pipeline_waw",
+        "commands": 6,
+        "shapes": [
+          [
+            5,
+            3
+          ],
+          [
+            67,
+            8
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            35,
+            2
+          ],
+          [
+            64,
+            4
+          ],
+          [
+            3,
+            3
+          ]
+        ]
+      },
+      "rtl_cycles": 1469,
+      "input_sha256": {
+        "prog_0.hex": "5ba7497d1ad569fd673d6a01a765cee95bcee27ff0486c7dc458db650e194c78",
+        "dram_0.bin": "e1119e7fc67336b1788cdfd8a4e06b0fcc943df9cbe95f54e6e3fe098884663f"
+      },
+      "output_sha256": {
+        "dram_out_0.bin": "22c420c9c510cdfba58cfa8dda693494c57dc63352bdec986db7b9eb6e27a7c4",
+        "tmem_0.hex": "e9e2dcd1e4998e66dae6abfb87381d7ae2318a4d5d713712c3c672b623c47b95"
+      },
+      "raw_log_sha256": "97a75610c38b0e071b9ef3eb03d86d7fd9947a636770f6ff2b7cc22be38b224b",
+      "historical_input_and_log_hashes_recorded": false,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "lpn_cycles": 1446.0,
+      "relative_cycle_error": -0.015656909462219204
+    }
+  ],
+  "all_inputs_full_outputs_cycles_and_lpn_predictions_identical": true,
+  "worst_relative_cycle_error": 0.07792207792207795,
+  "limitations": [
+    "Binary-pin specialized vendor DSP48E2 simulation, not four-state floating-pin verification",
+    "Small integrated matrix gates; no DSP58, full vendor-primitive inference or FPGA fit/Fmax proof"
+  ]
+}

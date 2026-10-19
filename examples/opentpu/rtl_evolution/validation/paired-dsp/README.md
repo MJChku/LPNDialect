@@ -29,6 +29,10 @@ It completes 16,842,752 checked single-PE clocks in about 148 host seconds.
 This component has not been integrated into the
 MXU and establishes no inference speedup or FPGA-fit/Fmax result.
 
+That statement describes the original component gate. The later paired MXU
+integration and its [eleven vendor-model gates](../vendor-mxu/README.md) are
+now complete; physical FPGA mapping and clock remain unproven.
+
 The vendor simulation library is the official
 [Xilinx Unisim repository](https://github.com/Xilinx/XilinxUnisimLibrary), pinned
 at `1c8e05fd1e9a79ceb8b996a0996674122eed086f`. Its Apache-2.0 source remains

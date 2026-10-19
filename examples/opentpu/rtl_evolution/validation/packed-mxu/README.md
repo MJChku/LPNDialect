@@ -36,8 +36,10 @@ This is not a full-inference timing validation.
 `MXU_PAIR_TECH=0` is the behavioral datapath tested here.
 `MXU_PAIR_TECH=1` explicitly instantiates the one-DSP48E2 component whose
 arithmetic was separately verified against the pinned AMD vendor library.
-The integrated MXU has not yet been run with that vendor primitive. DSP58
-mapping for the provisional V80, actual DSP totals, placement and Fmax remain
+The integrated two-row/two-column MXU now passes all eleven gates against
+the vendor primitive, with matching complete outputs and cycles and worst
+LPN error 7.7922%; see [the fresh vendor audits](../vendor-mxu/README.md).
+DSP58 mapping for the provisional V80, actual DSP totals, placement and Fmax remain
 unproven. This change halves the integer dot-product cell count for an even
 column count; it does not halve whole-design DSP use or establish 100x.
 
