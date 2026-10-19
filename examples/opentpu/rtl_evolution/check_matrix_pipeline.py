@@ -11,6 +11,8 @@ def main():
     ap.add_argument('--rows',type=int,default=32)
     ap.add_argument('--columns',type=int,choices=(1,2,4,8),default=1)
     ap.add_argument('--paired-dsp',action='store_true')
+    ap.add_argument('--pair-tech',type=int,choices=(0,1),default=0)
+    ap.add_argument('--unisim-root',type=Path)
     a=ap.parse_args()
     sys.path.insert(0,str(a.opentpu_root.resolve()))
     import numpy as np
@@ -22,6 +24,8 @@ def main():
     sys.argv=[sys.argv[0],'--opentpu-root',str(a.opentpu_root),'--output',str(a.output),
               '--rows',str(a.rows),'--columns',str(a.columns)]
     if a.paired_dsp:sys.argv.append('--paired-dsp')
+    if a.pair_tech:sys.argv+=['--pair-tech',str(a.pair_tech)]
+    if a.unisim_root:sys.argv+=['--unisim-root',str(a.unisim_root)]
     primitive_gates()
     report=json.loads((a.output/'report.json').read_text())
     report['status']='running'
@@ -30,6 +34,7 @@ def main():
     ua=dict(MXU_ROWS=a.rows,VPU_LANES=64,QST_LANES=64)
     if a.columns!=1:ua['MXU_COLS']=a.columns
     if a.paired_dsp:ua['MXU_PAIR_DOT']=1
+    if a.pair_tech:ua['MXU_PAIR_TECH']=a.pair_tech
     from examples.opentpu.e2e import digest
     report['pipeline_script_sha256']=digest(Path(__file__))
     for overlap in (False,True):
