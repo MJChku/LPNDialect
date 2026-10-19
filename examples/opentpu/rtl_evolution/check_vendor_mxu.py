@@ -1,6 +1,7 @@
 """Compare the integrated vendor-DSP MXU with behavioral RTL and independent ISA."""
 import argparse
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -21,7 +22,7 @@ def main():
     files = [Path(__file__), *[Path(__file__).with_name(n) for n in
         ('vendor_model.py','check_matrix.py','check_matrix_pipeline.py','audit_packed_mxu.py')]]
     hashes = {str(f): digest(f) for f in files}
-    atomic_json(a.output/'launch.json', dict(status='running', source_sha256=hashes,
+    atomic_json(a.output/'launch.json', dict(status='running', pid=os.getpid(), source_sha256=hashes,
         rows=a.rows, columns=a.columns))
     audited = []
     for name, tech in [('behavioral',0), ('vendor',1)]:
@@ -65,7 +66,8 @@ if __name__ == '__main__':
     except Exception as error:
         if '--output' in sys.argv:
             output=Path(sys.argv[sys.argv.index('--output')+1])
-            if output.is_dir():
+            launch=output/'launch.json'
+            if launch.is_file() and json.loads(launch.read_text()).get('pid')==os.getpid():
                 from examples.opentpu.e2e import atomic_json
                 atomic_json(output/'failure.json',dict(status='failed',
                     error_type=type(error).__name__,error=str(error)))
