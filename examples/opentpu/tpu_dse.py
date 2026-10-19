@@ -52,6 +52,13 @@ class Architecture:
 
 def architectures():
     return [
+        *[Architecture(f'proposal_paired_aspect_{rows}x{cols}_scale16_add2',rows,cols,2816,
+                       scale_cache_entries=16,paired_dsp=True,
+                       buffered_quant=True,vector_row_contexts=4,activation_streaming=True,
+                       quant_scale_lookup=True,scalar_recip_lookup=True,fp_add_latency=2,
+                       vector_command_queue=2,matrix_retirement=True,physical_scale_lines=True,
+                       act_rows=8,fifo_per_core=64,act_blocks=64)
+          for rows,cols in [(104,2),(48,4),(52,4),(24,8),(26,8)]],
         *[Architecture(name,rows,cols,2816,scale_cache_entries=16,paired_dsp=cols>1,
                        buffered_quant=True,vector_row_contexts=4,activation_streaming=True,
                        quant_scale_lookup=True,scalar_recip_lookup=True,fp_add_latency=2,
