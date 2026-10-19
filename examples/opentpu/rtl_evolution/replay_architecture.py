@@ -27,6 +27,7 @@ def main():
     p.add_argument('--matrix-rows',type=int,choices=(16,24,32,48,64,96,112,128),default=128)
     p.add_argument('--matrix-columns',type=int,choices=(1,2,4,8),default=1)
     p.add_argument('--paired-dsp',action='store_true')
+    p.add_argument('--scale-cache-entries',type=int,choices=(0,16),default=0)
     p.add_argument('--act-rows',type=int,choices=(8,16))
     p.add_argument('--fifo-depth',type=int,choices=(32,64,128),default=128)
     p.add_argument('--activation-streaming',action='store_true')
@@ -62,6 +63,7 @@ def main():
     sources += [project/name for name in ('model.py','components.py','compact.py','native_timing.py','shape_workload.py','activation_stream.py','retained_inputs.py')]
     if a.act_rows is not None:sources.append(project/'storage_envelope.py')
     sources += [Path(__file__).resolve(),Path(__file__).with_name('parallel_inference.py')]
+    if a.scale_cache_entries:sources.append(project/'scale_cache_timing.py')
     if a.lookup_scale or a.scalar_recip_lookup:
         from .rom_inputs import reciprocal_inputs
         table_files,_,_=reciprocal_inputs(a.recip_table)
@@ -82,6 +84,7 @@ def main():
     uarch=dict(reference['uarch'],MXU_ROWS=a.matrix_rows)
     if a.matrix_columns!=1:uarch['MXU_COLS']=a.matrix_columns
     if a.paired_dsp:uarch['MXU_PAIR_DOT']=1
+    if a.scale_cache_entries:uarch['SCALE_CACHE_ENTRIES']=a.scale_cache_entries
     if a.act_rows is not None:uarch['ACT_ROWS']=a.act_rows
     if a.fifo_depth!=128:uarch['FIFO_DEPTH']=a.fifo_depth
     if a.activation_streaming:uarch['ACT_STREAMING']=1
@@ -91,7 +94,7 @@ def main():
         dram_latency=8,fifo_chunks=a.fifo_depth*a.matrix_rows,scale_lanes=a.matrix_rows,unified_dram=True,scalar_store_bytes=256,
         epilogue_lanes=max(1,a.matrix_columns//2),quant_row_banks=8,quant_store_buffered=True,vector_row_contexts=4,
         fp_mul_latency=a.fp_mul_latency,fp_add_latency=a.fp_add_latency,activation_streaming=a.activation_streaming,quant_scale_lookup=a.lookup_scale,scalar_recip_lookup=a.scalar_recip_lookup,
-        vector_command_queue=a.vector_command_queue,matrix_retirement=a.matrix_retirement,physical_scale_lines=a.physical_scale_lines)
+        scale_cache_entries=a.scale_cache_entries,vector_command_queue=a.vector_command_queue,matrix_retirement=a.matrix_retirement,physical_scale_lines=a.physical_scale_lines)
     records=[];failures=[];started=time.perf_counter()
     def save(status):
         result=dict(status=status,pid=os.getpid(),scope=__doc__,case=str(case),

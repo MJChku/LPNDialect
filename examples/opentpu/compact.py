@@ -97,6 +97,7 @@ class CompactOpenTPU(OpenTPU):
     self.input_capacity = input_capacity
     self.input_tables = {}
     self.components = {}
+    self.scale_cache_statistics={}
     self.prefetch_profile=prefetch_profile
     super().__init__(workload,timing)
 
@@ -111,11 +112,13 @@ class CompactOpenTPU(OpenTPU):
   def statistics(self):
     """Counts of declared net objects; helpers and instructions are not transitions."""
     names = [p.name for p,*_ in self.net._places]
-    return {"transitions":len(self.net._transitions),"places":len(names),
+    result={"transitions":len(self.net._transitions),"places":len(names),
         "completion_flag_banks":sum("_flags_" in n for n in names),
         "command_slots":sum("_slot_" in n for n in names),
         "matrix_engines_per_slice":self.timing.matrix_engines,
         "instructions_per_slice":[len(c) for c in self.workload.commands]}
+    if self.scale_cache_statistics:result['scale_cache']=self.scale_cache_statistics
+    return result
 
   def _slice(self,sid,commands,I,W):
     cfg,t,net = self.workload.config,self.timing,self.net
@@ -189,6 +192,12 @@ class CompactOpenTPU(OpenTPU):
     scale_bytes = []
     retire_cycles=[]
     physical_scale_offsets,physical_scale_prefix=[],[0]
+    scale_miss_prefix,scale_pace_prefix=[0],[0]
+    scale_cache=None
+    if t.scale_cache_entries:
+      from .scale_cache_timing import cache_metadata
+      scale_cache=cache_metadata(commands,I,W,t.matrix_row_lanes,t.scale_cache_entries,t.dram_latency)
+      self.scale_cache_statistics[sid]={k:scale_cache[k] for k in ('requests','backing_reads','data_bytes','coherence_scope')}
     write_full,write_tail = [],[]
     barriers,dispatch_delays,pipeline_delays = [],[],[]
     last_register = nsig
@@ -235,9 +244,12 @@ class CompactOpenTPU(OpenTPU):
               t.fp_mul_latency+t.fp_add_latency if ins.flags&I.F_ACC else 0)
         self.matrix_batch_sizes.append(batch)
       physical_scale_offsets.append(len(physical_scale_prefix));physical_scale_prefix.append(0)
+      scale_miss_prefix.append(0);scale_pace_prefix.append(0)
       if ins.op==I.MM and t.physical_scale_lines:
         for row in range(n):
           physical_scale_prefix.append(physical_scale_prefix[-1]+32*matrix_scale_requests(ins,I,row,t.matrix_row_lanes))
+          scale_miss_prefix.append(scale_miss_prefix[-1]+(32*scale_cache['misses'][idx][row] if scale_cache else 0))
+          scale_pace_prefix.append(scale_pace_prefix[-1]+(scale_cache['pacing'][idx][row] if scale_cache else 0))
       batches.append(batch)
       chunkses.append(chunks)
       scale_flags.append(scaled)
@@ -249,7 +261,7 @@ class CompactOpenTPU(OpenTPU):
       scale_bytes.append(max(4,w[6]) if ins.op==I.MM and scaled else 0)
       write_full.append(bank_write_cycles(batch,m,w[5]&65535,cfg.LANES) if ins.op==I.MM else 0)
       write_tail.append(bank_write_cycles(n%batch or batch,m,w[5]&65535,cfg.LANES) if ins.op==I.MM else 0)
-    parameter_values = [latencies,services,port_ids,batches,chunkses,scale_flags,kbs,ns,row_services,tails,scale_bytes,write_full,write_tail,cache_offsets,cache_prefix,retire_cycles,physical_scale_offsets,physical_scale_prefix]
+    parameter_values = [latencies,services,port_ids,batches,chunkses,scale_flags,kbs,ns,row_services,tails,scale_bytes,write_full,write_tail,cache_offsets,cache_prefix,retire_cycles,physical_scale_offsets,physical_scale_prefix,scale_miss_prefix,scale_pace_prefix]
     parameters = CommandTiming(*(self._table(prefix+"_"+name,values)
         for name,values in zip(CommandTiming.__dataclass_fields__,parameter_values)))
     metadata = self._table(prefix+"_metadata",[ncommands])

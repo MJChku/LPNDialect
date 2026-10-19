@@ -46,10 +46,22 @@ class Architecture:
     fifo_per_core: int = 128
     matrix_engines: int = 1
     precise_tmem: bool = False
+    scale_cache_entries: int = 0
+    paired_dsp: bool = False
 
 
 def architectures():
     return [
+        *[Architecture(name,rows,cols,2816,scale_cache_entries=16,paired_dsp=cols>1,
+                       buffered_quant=True,vector_row_contexts=4,activation_streaming=True,
+                       quant_scale_lookup=True,scalar_recip_lookup=True,fp_add_latency=2,
+                       vector_command_queue=2,matrix_retirement=True,physical_scale_lines=True,
+                       act_rows=act,fifo_per_core=fifo,act_blocks=64,pinned_cache_bytes=cache)
+          for name,rows,cols,act,fifo,cache in [
+              ('physical_scale16_128x1_add2',128,1,16,128,0),
+              ('proposal_compact_scale16_128x1_add2',128,1,8,64,0),
+              ('proposal_paired_scale16_96x2_add2',96,2,8,64,0),
+              ('proposal_paired_scale16_head28m_96x2_add2',96,2,8,64,28<<20)]],
         *[Architecture(f'proposal_precise_{rows}x{cols}_v{vectors}_w{window}',rows,cols,2816,
                        precise_tmem=True,buffered_quant=True,vector_row_contexts=4,
                        activation_streaming=True,quant_scale_lookup=True,scalar_recip_lookup=True,
@@ -201,6 +213,10 @@ def architectures():
 def resources(point, config, clock_mhz):
     # Lower bounds, not placement, routing, DSP-packing or SRAM-port proof.
     macs = config['D'] * point.rows * point.columns * point.matrix_engines
+    if point.paired_dsp and (point.columns<2 or point.columns%2):raise ValueError('paired dot cells require even columns')
+    dot_cells=macs//2 if point.paired_dsp else macs
+    column_end_cells=9*point.rows*point.columns*point.matrix_engines
+    matrix_cells=dot_cells+column_end_cells
     activation = point.matrix_engines * point.rows * (point.act_rows or config['ACT_ROWS']) * (point.act_blocks or config['ACT_BLOCKS']) * (config['D'] + 8)
     fifo = point.matrix_engines * point.rows * point.fifo_per_core * config['D']
     vector_results=point.vector_engines*point.vector_result_chunks*64*4
@@ -211,7 +227,12 @@ def resources(point, config, clock_mhz):
     # Two independently addressed ports share each ROM instance and enable.
     wide_lookup_bytes=point.vector_engines*((point.reciprocal_lookup_lanes+1)//2)*((1<<21)+4096*51//8)
     cache_valid_bytes=point.pinned_cache_bytes//64//8
-    sram = activation + fifo + 4 * config['TMEM_WORDS']+vector_results+vector_read_copies+lookup_bytes+scalar_lookup_bytes+wide_lookup_bytes+point.pinned_cache_bytes+cache_valid_bytes
+    scale_data=point.rows*point.scale_cache_entries*32*point.matrix_engines
+    scale_control=0
+    if point.scale_cache_entries:
+        refs=point.latency.bit_length();index=(point.scale_cache_entries-1).bit_length()
+        scale_control=point.matrix_engines*point.rows*((point.scale_cache_entries*(30+refs)+256+point.latency*(2+index)+7)//8)
+    sram = activation + fifo + 4 * config['TMEM_WORDS']+vector_results+vector_read_copies+lookup_bytes+scalar_lookup_bytes+wide_lookup_bytes+point.pinned_cache_bytes+cache_valid_bytes+scale_data+scale_control
     limits = dict(matrix_mac_lanes=20000, onchip_bytes=64 << 20, memory_bytes_per_cycle=2816)
     # Board is an illustrative reference, not a user-selected target. Reserve
     # 20% of DSPs and half of embedded memory for shell/other units and mapping.
@@ -222,16 +243,21 @@ def resources(point, config, clock_mhz):
         matrix_dsp_fraction=.8,onchip_memory_fraction=.5,hbm_efficiency=.7,macs_per_dsp=1)
     v80_limits=dict(matrix_mac_lanes=int(v80['dsp_slices']*.8),
         onchip_bytes=int(673e6/8*.5),memory_gbs=810*.7)
-    conservative=(macs<=v80_limits['matrix_mac_lanes'] and sram<=v80_limits['onchip_bytes'] and
+    conservative=(matrix_cells<=v80_limits['matrix_mac_lanes'] and sram<=v80_limits['onchip_bytes'] and
                   point.bandwidth*clock_mhz/1000<=v80_limits['memory_gbs'])
     return dict(precise_tmem_scoreboard_rtl_implemented=False if point.precise_tmem else None,
         matrix_engines=point.matrix_engines,matrix_cluster_rtl_implemented=False if point.matrix_engines>1 else None,
         matrix_write_ports=1,matrix_write_service_scope='Aggregate bank service reserved at batch compute start; output-wave arbitration not validated.',
-        matrix_mac_lanes=macs, onchip_bytes_lower_bound=sram,
+        matrix_mac_lanes=macs,integer_dot_dsp_cells=dot_cells,column_end_dsp_cells=column_end_cells,
+        matrix_integer_dsp_cells=matrix_cells,matrix_fp32_multiply_sites=2*point.rows*max(1,point.columns//2)*point.matrix_engines,
+        paired_dot_rtl_integrated=point.paired_dsp,paired_dot_technology='DSP48E2 component verified; DSP58 mapping unverified',
+        scale_cache_data_bytes=scale_data,scale_cache_control_bytes=scale_control,
+        scale_cache_prediction_scope='Canonical-order invalidation and intrinsic replacement pacing; asynchronous invalidations approximate' if point.scale_cache_entries else None,
+ onchip_bytes_lower_bound=sram,
         pinned_cache_data_bytes=point.pinned_cache_bytes,pinned_cache_valid_bytes=cache_valid_bytes,
         pinned_cache_read_bytes_per_cycle=point.cache_read_bytes_per_cycle if point.pinned_cache_bytes else 0,
         pinned_cache_rtl_implemented=False,
-        passes_v80_80pct_sram_capacity_screen=(macs<=v80_limits['matrix_mac_lanes'] and
+        passes_v80_80pct_sram_capacity_screen=(matrix_cells<=v80_limits['matrix_mac_lanes'] and
             sram<=673e6/8*.8 and point.bandwidth*clock_mhz/1000<=v80_limits['memory_gbs']),
         quant_scale_lookup_bytes=lookup_bytes,scalar_reciprocal_lookup_bytes=scalar_lookup_bytes,
         wide_reciprocal_lookup_bytes=wide_lookup_bytes,wide_reciprocal_rtl_implemented=False,
@@ -248,7 +274,7 @@ def resources(point, config, clock_mhz):
         passes_conservative_v80_capacity_screen=conservative,
         passes_two_macs_per_dsp_capacity_screen=(macs<=2*v80_limits['matrix_mac_lanes'] and
             sram<=v80_limits['onchip_bytes'] and point.bandwidth*clock_mhz/1000<=v80_limits['memory_gbs']),
-        two_macs_per_dsp_status='Requires an implemented, numerically validated packed DSP datapath; absent from current RTL.',
+        two_macs_per_dsp_status='Hypothetical all-dot packing screen only; use explicit integer cell counts. Column ends and FP sites do not halve.',
         illustrative_fpga_screen_limits=limits,
         passes_illustrative_fpga_screen=macs <= limits['matrix_mac_lanes'] and
             sram <= limits['onchip_bytes'] and point.bandwidth <= limits['memory_bytes_per_cycle'],
@@ -298,7 +324,7 @@ def run_kernel(task):
         quant_row_banks=8 if point.buffered_quant else 0,quant_store_buffered=point.buffered_quant,quant_scale_lookup=point.quant_scale_lookup,scalar_recip_lookup=point.scalar_recip_lookup,reciprocal_lookup_lanes=point.reciprocal_lookup_lanes,pinned_cache_bytes=point.pinned_cache_bytes,cache_read_bytes_per_cycle=point.cache_read_bytes_per_cycle,
         vector_row_contexts=point.vector_row_contexts,
         fp_mul_latency=point.fp_mul_latency,fp_add_latency=point.fp_add_latency,activation_streaming=point.activation_streaming,vector_engines=point.vector_engines,vector_result_chunks=point.vector_result_chunks,vector_compatible_issue=point.vector_compatible_issue,
-        vector_command_queue=point.vector_command_queue,matrix_retirement=point.matrix_retirement,physical_scale_lines=point.physical_scale_lines)
+        scale_cache_entries=point.scale_cache_entries,vector_command_queue=point.vector_command_queue,matrix_retirement=point.matrix_retirement,physical_scale_lines=point.physical_scale_lines)
     profile=None;profile_hash=None
     if point.pinned_cache_bytes:
         root=Path(task['memory_profile_root']);manifest=json.loads((root/'manifest.json').read_text())
@@ -368,7 +394,7 @@ def main():
     output.mkdir(parents=True, exist_ok=False)
     project = Path(__file__).resolve().parent
     files = [project / name for name in ('tpu_dse.py', 'model.py', 'compact.py', 'components.py',
-                                       'workload.py', 'shape_workload.py', 'native_timing.py', 'benchmark.py','activation_stream.py','vector_pool.py','vector_select.py','retained_inputs.py','storage_envelope.py','precise_tmem.py')]
+                                       'workload.py', 'shape_workload.py', 'native_timing.py', 'benchmark.py','activation_stream.py','vector_pool.py','vector_select.py','retained_inputs.py','storage_envelope.py','precise_tmem.py','scale_cache_timing.py')]
     if args.memory_profile_root:files.append(args.memory_profile_root.resolve()/'manifest.json')
     sources = {str(p): digest(p) for p in files}
     observations = {p.name: [] for p in points}

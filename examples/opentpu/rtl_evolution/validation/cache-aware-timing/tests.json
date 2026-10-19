@@ -1,0 +1,10 @@
+{
+  "status": "complete",
+  "focused_tests": 4,
+  "focused_seconds": 0.784,
+  "general_integration_tests": 30,
+  "general_seconds": 113.591,
+  "native_python_agreement": true,
+  "test_source_sha256": "2e17b97bb82429bef256a3bf487394b65a54f069f0bc1a5b8977d1bb2765cfc4",
+  "scope": "Focused final source; general suite before observer-only statistics addition"
+}

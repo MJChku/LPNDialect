@@ -138,6 +138,7 @@ class Timing:
   vector_command_queue: int = 0
   matrix_retirement: bool = False
   physical_scale_lines: bool = False
+  scale_cache_entries: int = 0
   vector_engines: int = 1
   vector_result_chunks: int = 0
   vector_compatible_issue: bool = False
@@ -146,6 +147,11 @@ class Timing:
   fp_add_latency: int = 4
 
   def __post_init__(self):
+    if type(self.scale_cache_entries) is not int or self.scale_cache_entries not in (0,16):
+      raise ValueError('scale cache entries must be zero or sixteen')
+    if self.scale_cache_entries and (not self.physical_scale_lines or not self.unified_dram or
+                                   self.matrix_engines!=1 or self.batch_rows!=self.matrix_row_lanes or self.dram_latency<2):
+      raise ValueError('scale-cache timing requires physical unified traffic and one-wave batches on one engine')
     if type(self.vector_command_queue) is not int or self.vector_command_queue not in (0,2):
       raise ValueError('vector command queue must be 0 or the RTL two-entry FIFO')
     if self.vector_command_queue and (self.vector_result_chunks or self.vector_compatible_issue):
@@ -277,6 +283,8 @@ class OpenTPU:
   def __init__(self,workload,timing=None):
     from opentpu import isa as I, waits as W
     self.workload,self.timing = workload,timing or Timing()
+    if self.timing.scale_cache_entries and not self.supports_multiple_matrix_engines:
+      raise ValueError('scale-cache timing requires CompactOpenTPU')
     if self.timing.pinned_cache_bytes and not self.supports_multiple_matrix_engines:
       raise ValueError('pinned cache requires CompactOpenTPU and a validated prefetch profile')
     if self.timing.vector_command_queue and not self.supports_multiple_matrix_engines:

@@ -45,6 +45,8 @@ def configure_rtlsim(rtlsim,fp_mul_latency=2,fp_add_latency=4):
 
 
 def validate_variant(timing,uarch):
+    if timing.get('scale_cache_entries',0)!=uarch.get('SCALE_CACHE_ENTRIES',0):
+        raise ValueError('scale-cache timing differs from RTL')
     if timing.get('matrix_engines',1)!=1:
         raise ValueError('multiple matrix engines have no matching RTL implementation')
     columns=uarch.get('MXU_COLS',1)
@@ -97,6 +99,8 @@ def check_kernel(task):
             from .rom_inputs import reciprocal_inputs
             _,lookup_hashes,lookup_args=reciprocal_inputs(task['recip_table'])
         configure_rtlsim(rtlsim,requested.get('fp_mul_latency',2),requested.get('fp_add_latency',4))
+        if requested.get('scale_cache_entries',0) and '--output-groups' not in rtlsim.VFLAGS:
+            rtlsim.VFLAGS+=['--output-groups','0']
         atomic_json(directory/'worker.json',dict(status='building',pid=os.getpid()))
         reused=None
         if task.get('reuse_directory'):
@@ -194,6 +198,18 @@ def check_kernel(task):
             simulator=str(exe),baseline_binary_sha256=digest(exe),timing=asdict(timing),
             lookup_table_sha256=lookup_hashes,rtl_compile_flags=list(rtlsim.VFLAGS),rtl_top_parameters=rtlsim.top_params(cfg,8,task['uarch'],False,None))
         if reused is not None:record['rtl_reused_from']=str(previous)
+        if timing.scale_cache_entries:
+            cache_counts=re.findall(r'SCACHE s=(\d+) p=(\d+) req=(\d+) miss=(\d+)',log)
+            expected={(s,p) for s in range(cfg.S) for p in range(task['uarch']['MXU_ROWS'])}
+            if len(cache_counts)!=len(expected) or {(int(s),int(p)) for s,p,_,_ in cache_counts}!=expected:
+                raise RuntimeError('missing or duplicate scale-cache core counters')
+            predicted=prepared.statistics['scale_cache']
+            requests=sum(int(n) for _,_,n,_ in cache_counts)
+            if requests!=sum(v['requests'] for v in predicted.values()):
+                raise RuntimeError('modeled scale requests differ from RTL')
+            record['scale_cache_counts']=dict(requests=requests,misses=sum(int(n) for _,_,_,n in cache_counts),
+                predicted_requests=requests,predicted_misses=sum(v['backing_reads'] for v in predicted.values()),
+                coherence_scope='Canonical-order invalidation; exact overlapping write timing is approximate')
         atomic_json(directory/'rtl-result.json',record)
         atomic_json(directory/'worker.json',dict(status='complete',pid=os.getpid()))
         return record

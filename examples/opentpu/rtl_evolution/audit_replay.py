@@ -79,6 +79,16 @@ def main():
         instructions=[int(n) for n in re.findall(r'SLICE \d+ icount=(\d+)',log)]
         if instructions!=record['instructions'] or instructions!=source['instructions']:
             raise RuntimeError('RTL instruction count differs from upstream trace')
+        if report['timing'].get('scale_cache_entries',0):
+            observed=re.findall(r'SCACHE s=(\d+) p=(\d+) req=(\d+) miss=(\d+)',log)
+            expected={(s,p) for s in range(original['config']['S']) for p in range(report['uarch']['MXU_ROWS'])}
+            if len(observed)!=len(expected) or {(int(s),int(p)) for s,p,_,_ in observed}!=expected:
+                raise RuntimeError('scale cache counters missing or duplicated')
+            cache=record['scale_cache_counts']
+            if (cache['requests']!=sum(int(n) for _,_,n,_ in observed) or
+                cache['requests']!=cache['predicted_requests'] or
+                cache['misses']!=sum(int(n) for _,_,_,n in observed)):
+                raise RuntimeError('scale cache raw counts differ')
         native_log=(directory/'lpn.log').read_text()
         native_time=re.search(r'Simulation finished at t=([0-9.]+)',native_log)
         if ('rollbacks: 0' not in native_log or 'place program_completed: 1 token(s)' not in native_log

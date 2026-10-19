@@ -56,3 +56,15 @@ The four-kernel RTL total is 1.50% lower than compact 128x1's 878,707 cycles.
 This is representative numerical/timing validation, not complete inference
 or physical DSP58 placement/clock proof. The same compiled simulator is
 available for full 48-kernel validation without another RTL build.
+
+Full **48-kernel** paired 96x2 validation and a fresh audit are complete:
+**8,602,523 RTL cycles** versus **132,828,263 original cycles**, a **15.4406x**
+cycle speedup. Native LPN predicts 8,341,033 (−3.0397% overall), with worst
+kernel error **5.3560%**. Every complete DRAM/TMEM state and final generated
+ID matches the independent reference, using the identical programs and
+inputs. Four audited pilot RTL results were rechecked/reused; the remaining
+44 were newly simulated. Prefill takes 5,095,179 cycles and decode 3,507,344.
+The complete replay takes 1877.19 seconds with sixteen validation workers;
+this is host validation parallelism, not multiple hardware workload streams.
+The scale cache is not enabled in this measured result. Physical FPGA fit and
+100x remain unproven.

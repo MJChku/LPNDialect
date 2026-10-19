@@ -45,6 +45,8 @@ class CommandTiming:
   retire_cycles: list
   physical_scale_offsets: list
   physical_scale_prefix: list
+  scale_miss_prefix: list
+  scale_pace_prefix: list
 
 
 class ExecutionUnit:
@@ -192,6 +194,8 @@ class MatrixEngine:
     cache_offsets,cached_prefix=parameters.cache_offsets,parameters.cached_prefix
     retire_cycles=parameters.retire_cycles
     physical_scale_offsets,physical_scale_prefix=parameters.physical_scale_offsets,parameters.physical_scale_prefix
+    scale_miss_prefix,scale_pace_prefix=parameters.scale_miss_prefix,parameters.scale_pace_prefix
+    scale_pace=net.place(prefix+'_scale_cache_pace',initial_tokens=1) if t.scale_cache_entries else None
     self.retirement=retirement=(MatrixRetirement(net,prefix+'_retirement',resources.commands,
         window,publish,retire_cycles) if t.matrix_retirement else None)
 
@@ -229,21 +233,31 @@ class MatrixEngine:
       if t.physical_scale_lines:
         scale_begin=array(physical_scale_offsets)[idx]+row
         metadata=array(physical_scale_prefix)[scale_begin+width]-array(physical_scale_prefix)[scale_begin]
+      memory_metadata=metadata
+      if t.scale_cache_entries:
+        memory_metadata=array(scale_miss_prefix)[scale_begin+width]-array(scale_miss_prefix)[scale_begin]
       cached=const_i64(0)
       if t.pinned_cache_bytes:
         begin=array(cache_offsets)[idx]+row
         cached=array(cached_prefix)[begin+width]-array(cached_prefix)[begin]
         miss=muli(needed,cfg.D)-cached
-        if t.unified_dram:miss=miss+metadata
+        if t.unified_dram:miss=miss+memory_metadata
         guard(select(miss>0,count(memory.b)>0,True,typ='i1'))
         guard(select(cached>0,count(memory.cache)>0,True,typ='i1'))
       needs_scale = array(scaled)[idx]
+      if scale_pace is not None:
+        guard(select(needs_scale>0,count(scale_pace)>0,True,typ='i1'))
       guard(count(memory.a)>=needs_scale)
       token = take(request)
       capacity = take(resources.buffers)
       emit(resources.buffers,capacity.set('free',capacity.get('free')-needed))
       transferred=muli(needed,cfg.D)
-      if t.unified_dram:transferred=transferred+metadata
+      if t.scale_cache_entries:
+        if needs_scale>0:
+          pace=take(scale_pace)
+          interval=array(scale_pace_prefix)[scale_begin+width]-array(scale_pace_prefix)[scale_begin]
+          emit(scale_pace,pace,delay=sitofp(interval))
+      if t.unified_dram:transferred=transferred+memory_metadata
       transfer_cycles = divi(transferred+t.dram_bytes_per_cycle-1,t.dram_bytes_per_cycle)
       cache_cycles=const_i64(0)
       if t.pinned_cache_bytes:
