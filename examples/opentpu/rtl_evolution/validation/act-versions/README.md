@@ -26,6 +26,13 @@ Six tests (`tests.log`) cover partial writes, initial pages, DUP/PAIR coverage,
 barriers, unknown-access rejection, non-ACT hazards, rejection as RTL/FPGA,
 and an overlap example with identical Python/native event-driven timing.
 
+The unchanged real-kernel pilot (`pilot.json`) shows **zero cycle benefit**
+on both 128x1 and paired 96x2: kernels 0/15/16/47 are respectively
+302421/334931/98245/98545 and 291195/325474/98390/98720 cycles, exactly equal
+to their non-versioned controls. Finite ACT-version hardware is therefore
+not pursued for this workload on this evidence. This does not establish
+zero benefit for other workloads or combined future datapaths.
+
 ```sh
 python test/test_opentpu_act_versions.py --opentpu-root ../FeSens-openTPU \
   --tool build/tools/lpn-compile/lpn-compile
