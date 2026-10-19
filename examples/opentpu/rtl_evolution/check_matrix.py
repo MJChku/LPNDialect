@@ -22,6 +22,8 @@ def main():
     ap.add_argument('--scale-cache-entries',type=int,choices=(0,16),default=0)
     ap.add_argument('--packed-qst',action='store_true')
     ap.add_argument('--paired-dsp',action='store_true')
+    ap.add_argument('--pair-tech',type=int,choices=(0,1),default=0)
+    ap.add_argument('--unisim-root',type=Path)
     ap.add_argument('--depth',type=int,default=64)
     ap.add_argument('--lanes',type=int,default=64)
     ap.add_argument('--host-opt',choices=('0','3'),default='0')
@@ -29,12 +31,18 @@ def main():
     ap.add_argument('--fp-mul-latency',type=int,choices=(1,2),default=2)
     ap.add_argument('--fp-add-latency',type=int,choices=(1,2,3,4),default=4)
     a=ap.parse_args()
+    if a.pair_tech and (not a.paired_dsp or a.unisim_root is None):
+        ap.error('vendor pair technology requires --paired-dsp and --unisim-root')
     if (a.lookup_scale or a.scalar_recip_lookup) and a.recip_table is None:ap.error('lookup hardware requires --recip-table')
     sys.path.insert(0,str(a.opentpu_root.resolve()))
     import numpy as np
     from opentpu import Config,isa as I,quant as Q,rtlsim
     from opentpu.isasim import Machine
     from examples.opentpu.e2e import digest
+    vendor_model=None
+    if a.pair_tech:
+        from .vendor_model import install
+        vendor_model=install(rtlsim,a.unisim_root)
     if a.tree_source:
         rtlsim.RTL_SOURCES=[str(a.tree_source.resolve()) if s=='vpu/otpu_vtree.sv' else s for s in rtlsim.RTL_SOURCES]
     cfg=Config(D=a.depth,MCOLS=4,ACT_ROWS=16,LANES=a.lanes)
@@ -43,6 +51,7 @@ def main():
     if a.scale_cache_entries:ua['SCALE_CACHE_ENTRIES']=a.scale_cache_entries
     if a.packed_qst:ua['QST_PACKED_WORDS']=1
     if a.paired_dsp:ua['MXU_PAIR_DOT']=1
+    if a.pair_tech:ua['MXU_PAIR_TECH']=a.pair_tech
     if a.stream_act: ua["ACT_STREAMING"]=1
     lookup_hashes={};lookup_args=[]
     if a.lookup_scale or a.scalar_recip_lookup:
@@ -130,6 +139,6 @@ def main():
         print(json.dumps(result),flush=True)
     if source_hashes!={str(f):digest(f) for f in source_files}:raise RuntimeError('gate sources changed')
     (a.output/'report.json').write_text(json.dumps(dict(status='complete',config=cfg.__dict__,uarch=ua,
-        source_sha256=source_hashes,rtl_compile_flags=list(rtlsim.VFLAGS),lookup_table_sha256=lookup_hashes,records=results),indent=2)+'\n')
+        source_sha256=source_hashes,rtl_compile_flags=list(rtlsim.VFLAGS),vendor_model=vendor_model,lookup_table_sha256=lookup_hashes,records=results),indent=2)+'\n')
 
 if __name__=='__main__':main()

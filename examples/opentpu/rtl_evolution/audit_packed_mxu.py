@@ -23,6 +23,12 @@ def audit(directory,root,compiler,output):
     report=json.loads((directory/'report.json').read_text())
     if report['status']!='complete' or len(report['records'])!=11:
         raise ValueError('requires nine primitive and two queued gates')
+    vendor_model=report.get('vendor_model')
+    if report['uarch'].get('MXU_PAIR_TECH',0):
+        if not vendor_model:raise ValueError('vendor gate lacks model identity')
+        from .vendor_model import install
+        if install(rtlsim,Path(vendor_model['root']))!=vendor_model:
+            raise ValueError('vendor model identity changed')
     for name,expected in report['source_sha256'].items():
         if digest(Path(name))!=expected:raise ValueError('gate/RTL sources changed')
     gate=next(Path(n) for n in report['source_sha256'] if n.endswith('/check_matrix.py'))
@@ -72,7 +78,7 @@ def audit(directory,root,compiler,output):
             cycles,_,_,text=native.run();(output/f'{index}.log').write_text(text)
             entry.update(lpn_cycles=cycles,relative_cycle_error=cycles/record['rtl_cycles']-1)
         results.append(entry)
-    result=dict(status='complete',config=report['config'],uarch=ua,source_sha256=report['source_sha256'],
+    result=dict(status='complete',config=report['config'],uarch=ua,vendor_model=vendor_model,source_sha256=report['source_sha256'],
         report_sha256=digest(directory/'report.json'),binary_sha256=binary_hash,records=results,
         limitations=['Queued gate inputs/logs are freshly hashed; original gate did not record historical hashes',
                      'Synthetic gates, not full inference or physical FPGA mapping'])
