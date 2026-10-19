@@ -55,3 +55,20 @@ match the existing observed transaction holds exactly on kernels 0 and 16.
 Matrix compute excludes time waiting for ACT input, explaining why its service
 floor is lower than observed credit occupancy. These are bounds for current
 units/ports, not limits on a redesigned accelerator.
+
+The full 48-kernel service accounting is also complete
+(`resource-demand-full.json`). With the existing single-unit designs, the
+sum of the per-kernel resource floors is **5,407,545 cycles**, corresponding
+to a **24.5635x** ceiling even if all additional waits disappear. The vector
+unit requires 3,772,939 issue cycles, the quantizer 2,087,004, and matrix
+compute alone (excluding ACT waits) 2,845,978. These demands overlap.
+
+The unchanged programs request **6,212,192,256 weight bytes** and
+**3,053,011,968 scale bytes**. At 2816 B/cycle, weight traffic alone bounds
+speedup to **60.2113x** without caching or compression, even with free scales
+and compute. For a 100x target at that bandwidth, at least 39.8% of those
+weight bytes must avoid the link before allowing for any other traffic.
+The source-level FPGA experiments therefore need coordinated changes to
+memory reuse and vector/quantizer throughput; array enlargement alone cannot
+satisfy that target with the present unit/port schedule. This is not a claim
+that 100x is universally impossible on a different accelerator.
