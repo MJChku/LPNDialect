@@ -1,0 +1,11 @@
+{
+  "status": "complete",
+  "suite": "test_opentpu_precise_tmem.py",
+  "passed": 3,
+  "seconds": 1.562,
+  "native_python_cycle_agreement": true,
+  "source_sha256": {
+    "test/test_opentpu_precise_tmem.py": "abcf0e19fa78d256ac49c1d48b36bb2b5088256ec487af9684dd27a447d67c5a",
+    "examples/opentpu/precise_tmem.py": "fc74f86560c5cba8487077c3587438dcc8cd111fbc8cd8d7e886e3bcfd48c9e1"
+  }
+}

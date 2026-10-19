@@ -1,0 +1,487 @@
+{
+  "status": "complete",
+  "scope": "Account resource service in unchanged retained inference without neural arithmetic.\n\nBounds apply to the specified existing units and port schedule. They are not\nuniversal limits on redesigned hardware; operation waits may overlap.\n",
+  "indices": [
+    0,
+    16
+  ],
+  "timing": {
+    "dram_latency": 8,
+    "dram_bytes_per_cycle": 2816,
+    "window": 32,
+    "fifo_chunks": 8192,
+    "chain_length": 16,
+    "epilogue_lanes": 2,
+    "quant_buffer_chunks": 1024,
+    "batch_rows": 128,
+    "matrix_engines": 1,
+    "matrix_row_lanes": 128,
+    "dram_port_bytes": 2816,
+    "scale_lanes": 128,
+    "unified_dram": true,
+    "scalar_store_bytes": 256,
+    "quant_row_banks": 8,
+    "quant_store_buffered": true,
+    "quant_scale_lookup": true,
+    "scalar_recip_lookup": true,
+    "reciprocal_lookup_lanes": 0,
+    "pinned_cache_bytes": 0,
+    "cache_read_bytes_per_cycle": 8192,
+    "vector_row_contexts": 4,
+    "vector_command_queue": 2,
+    "matrix_retirement": true,
+    "physical_scale_lines": true,
+    "vector_engines": 1,
+    "vector_result_chunks": 0,
+    "vector_compatible_issue": false,
+    "activation_streaming": true,
+    "fp_mul_latency": 2,
+    "fp_add_latency": 2
+  },
+  "reference_report_sha256": "f037e875e73760f7c3d70b6851d0ce4f01bbdd9f0c62ef27ccd75ba5659f07fe",
+  "source_sha256": {
+    "/home/ubuntu/LPNDialect-bandwidth-limits-tests/examples/opentpu/resource_demand.py": "659a899665e0185d24f69d8e67838eee77096b7bf2a9cba4d772e7fce2915d49",
+    "/home/ubuntu/LPNDialect-bandwidth-limits-tests/examples/opentpu/model.py": "72f1d4aa59671bca15475907192e97d81cde658e98e6cc68a43471e079c8be60",
+    "/home/ubuntu/LPNDialect-bandwidth-limits-tests/examples/opentpu/shape_workload.py": "d0f1db9e2bba7f3b1b1b119e9483b7ebc7ce17823d343ac135b26e5e51b91169",
+    "/home/ubuntu/LPNDialect-bandwidth-limits-tests/examples/opentpu/retained_inputs.py": "50111fb14a2678b615b34f8b726fd6d4b804b3ef76a116a4d139a00086d18b59"
+  },
+  "records": [
+    {
+      "service_cycles": {
+        "dispatch": 19777,
+        "dram": 65216,
+        "dma": 14130,
+        "quantizer": 80569,
+        "scale_decoder": 14228,
+        "matrix_compute_without_activation_waits": 132992,
+        "matrix_write_port": 37568,
+        "matrix_retirement": 44550,
+        "vector_issue": 164800
+      },
+      "traffic_bytes": {
+        "dma_payload_bytes": 169632,
+        "matrix_weight_bytes": 109398528,
+        "matrix_scale_bytes": 53224704,
+        "quant_data_bytes": 92160,
+        "quant_scale_bytes": 5760
+      },
+      "existing_resource_floor_cycles": 164800,
+      "matrix_shapes": [
+        {
+          "n": 192,
+          "kb": 9,
+          "m": 8,
+          "unit": false,
+          "commands": 540,
+          "compute_floor_cycles": 77760,
+          "weight_bytes": 59719680,
+          "scale_bytes": 29859840,
+          "integer_macs": 477757440
+        },
+        {
+          "n": 576,
+          "kb": 3,
+          "m": 8,
+          "unit": false,
+          "commands": 240,
+          "compute_floor_cycles": 28800,
+          "weight_bytes": 26542080,
+          "scale_bytes": 13271040,
+          "integer_macs": 212336640
+        },
+        {
+          "n": 576,
+          "kb": 9,
+          "m": 8,
+          "unit": false,
+          "commands": 60,
+          "compute_floor_cycles": 21600,
+          "weight_bytes": 19906560,
+          "scale_bytes": 9953280,
+          "integer_macs": 159252480
+        },
+        {
+          "n": 64,
+          "kb": 1,
+          "m": 3,
+          "unit": true,
+          "commands": 720,
+          "compute_floor_cycles": 2160,
+          "weight_bytes": 2949120,
+          "scale_bytes": 0,
+          "integer_macs": 8847360
+        },
+        {
+          "n": 9,
+          "kb": 1,
+          "m": 4,
+          "unit": false,
+          "commands": 128,
+          "compute_floor_cycles": 512,
+          "weight_bytes": 73728,
+          "scale_bytes": 36864,
+          "integer_macs": 294912
+        },
+        {
+          "n": 1,
+          "kb": 1,
+          "m": 3,
+          "unit": false,
+          "commands": 90,
+          "compute_floor_cycles": 270,
+          "weight_bytes": 5760,
+          "scale_bytes": 2880,
+          "integer_macs": 17280
+        },
+        {
+          "n": 2,
+          "kb": 1,
+          "m": 3,
+          "unit": false,
+          "commands": 90,
+          "compute_floor_cycles": 270,
+          "weight_bytes": 11520,
+          "scale_bytes": 5760,
+          "integer_macs": 34560
+        },
+        {
+          "n": 3,
+          "kb": 1,
+          "m": 3,
+          "unit": false,
+          "commands": 90,
+          "compute_floor_cycles": 270,
+          "weight_bytes": 17280,
+          "scale_bytes": 8640,
+          "integer_macs": 51840
+        },
+        {
+          "n": 4,
+          "kb": 1,
+          "m": 3,
+          "unit": false,
+          "commands": 90,
+          "compute_floor_cycles": 270,
+          "weight_bytes": 23040,
+          "scale_bytes": 11520,
+          "integer_macs": 69120
+        },
+        {
+          "n": 5,
+          "kb": 1,
+          "m": 3,
+          "unit": false,
+          "commands": 90,
+          "compute_floor_cycles": 270,
+          "weight_bytes": 28800,
+          "scale_bytes": 14400,
+          "integer_macs": 86400
+        },
+        {
+          "n": 6,
+          "kb": 1,
+          "m": 3,
+          "unit": false,
+          "commands": 90,
+          "compute_floor_cycles": 270,
+          "weight_bytes": 34560,
+          "scale_bytes": 17280,
+          "integer_macs": 103680
+        },
+        {
+          "n": 7,
+          "kb": 1,
+          "m": 3,
+          "unit": false,
+          "commands": 90,
+          "compute_floor_cycles": 270,
+          "weight_bytes": 40320,
+          "scale_bytes": 20160,
+          "integer_macs": 120960
+        },
+        {
+          "n": 8,
+          "kb": 1,
+          "m": 3,
+          "unit": false,
+          "commands": 90,
+          "compute_floor_cycles": 270,
+          "weight_bytes": 46080,
+          "scale_bytes": 23040,
+          "integer_macs": 138240
+        }
+      ],
+      "vector_functions": {
+        "copy": {
+          "commands": 800,
+          "issue_busy_cycles": 7000,
+          "sum_command_latencies": 15000
+        },
+        "rssq": {
+          "commands": 60,
+          "issue_busy_cycles": 5580,
+          "sum_command_latencies": 5580
+        },
+        "mul": {
+          "commands": 4260,
+          "issue_busy_cycles": 42420,
+          "sum_command_latencies": 76500
+        },
+        "add": {
+          "commands": 1410,
+          "issue_busy_cycles": 16560,
+          "sum_command_latencies": 27840
+        },
+        "rsqrt": {
+          "commands": 60,
+          "issue_busy_cycles": 180,
+          "sum_command_latencies": 3540
+        },
+        "sub": {
+          "commands": 330,
+          "issue_busy_cycles": 3540,
+          "sum_command_latencies": 6180
+        },
+        "fill": {
+          "commands": 3600,
+          "issue_busy_cycles": 13680,
+          "sum_command_latencies": 49680
+        },
+        "max": {
+          "commands": 720,
+          "issue_busy_cycles": 2160,
+          "sum_command_latencies": 9360
+        },
+        "exp2sub": {
+          "commands": 1440,
+          "issue_busy_cycles": 5760,
+          "sum_command_latencies": 79200
+        },
+        "rsum": {
+          "commands": 720,
+          "issue_busy_cycles": 17280,
+          "sum_command_latencies": 17280
+        },
+        "recip": {
+          "commands": 960,
+          "issue_busy_cycles": 27120,
+          "sum_command_latencies": 41520
+        },
+        "exp2": {
+          "commands": 240,
+          "issue_busy_cycles": 23520,
+          "sum_command_latencies": 35760
+        }
+      },
+      "kernel": 0,
+      "phase": "prefill",
+      "program_json_sha256": "429c954f6c50c0ca8cbbc7cfa4870b9bc1b0cb062844b2ac6699d4ad5edc9d85"
+    },
+    {
+      "service_cycles": {
+        "dispatch": 5812,
+        "dram": 81204,
+        "dma": 8524,
+        "quantizer": 24213,
+        "scale_decoder": 17062,
+        "matrix_compute_without_activation_waits": 21430,
+        "matrix_write_port": 6004,
+        "matrix_retirement": 15732,
+        "vector_issue": 30041
+      },
+      "traffic_bytes": {
+        "dma_payload_bytes": 400232,
+        "matrix_weight_bytes": 136338048,
+        "matrix_scale_bytes": 67616064,
+        "quant_data_bytes": 11520,
+        "quant_scale_bytes": 720
+      },
+      "existing_resource_floor_cycles": 81204,
+      "matrix_shapes": [
+        {
+          "n": 192,
+          "kb": 9,
+          "m": 1,
+          "unit": false,
+          "commands": 630,
+          "compute_floor_cycles": 11340,
+          "weight_bytes": 69672960,
+          "scale_bytes": 34836480,
+          "integer_macs": 69672960
+        },
+        {
+          "n": 576,
+          "kb": 3,
+          "m": 1,
+          "unit": false,
+          "commands": 240,
+          "compute_floor_cycles": 3600,
+          "weight_bytes": 26542080,
+          "scale_bytes": 13271040,
+          "integer_macs": 26542080
+        },
+        {
+          "n": 8192,
+          "kb": 9,
+          "m": 1,
+          "unit": false,
+          "commands": 6,
+          "compute_floor_cycles": 3456,
+          "weight_bytes": 28311552,
+          "scale_bytes": 14155776,
+          "integer_macs": 28311552
+        },
+        {
+          "n": 576,
+          "kb": 9,
+          "m": 1,
+          "unit": false,
+          "commands": 30,
+          "compute_floor_cycles": 1350,
+          "weight_bytes": 9953280,
+          "scale_bytes": 4976640,
+          "integer_macs": 9953280
+        },
+        {
+          "n": 129,
+          "kb": 1,
+          "m": 3,
+          "unit": false,
+          "commands": 90,
+          "compute_floor_cycles": 810,
+          "weight_bytes": 743040,
+          "scale_bytes": 371520,
+          "integer_macs": 2229120
+        },
+        {
+          "n": 64,
+          "kb": 3,
+          "m": 3,
+          "unit": true,
+          "commands": 90,
+          "compute_floor_cycles": 810,
+          "weight_bytes": 1105920,
+          "scale_bytes": 0,
+          "integer_macs": 3317760
+        },
+        {
+          "n": 9,
+          "kb": 1,
+          "m": 4,
+          "unit": false,
+          "commands": 16,
+          "compute_floor_cycles": 64,
+          "weight_bytes": 9216,
+          "scale_bytes": 4608,
+          "integer_macs": 36864
+        }
+      ],
+      "vector_functions": {
+        "copy": {
+          "commands": 99,
+          "issue_busy_cycles": 864,
+          "sum_command_latencies": 1854
+        },
+        "rssq": {
+          "commands": 61,
+          "issue_busy_cycles": 2318,
+          "sum_command_latencies": 2318
+        },
+        "mul": {
+          "commands": 1531,
+          "issue_busy_cycles": 7893,
+          "sum_command_latencies": 20141
+        },
+        "add": {
+          "commands": 571,
+          "issue_busy_cycles": 2913,
+          "sum_command_latencies": 7481
+        },
+        "rsqrt": {
+          "commands": 61,
+          "issue_busy_cycles": 183,
+          "sum_command_latencies": 3599
+        },
+        "sub": {
+          "commands": 120,
+          "issue_busy_cycles": 600,
+          "sum_command_latencies": 1560
+        },
+        "fill": {
+          "commands": 450,
+          "issue_busy_cycles": 2250,
+          "sum_command_latencies": 6750
+        },
+        "max": {
+          "commands": 90,
+          "issue_busy_cycles": 270,
+          "sum_command_latencies": 1170
+        },
+        "exp2sub": {
+          "commands": 180,
+          "issue_busy_cycles": 2880,
+          "sum_command_latencies": 12060
+        },
+        "rsum": {
+          "commands": 90,
+          "issue_busy_cycles": 2700,
+          "sum_command_latencies": 2700
+        },
+        "recip": {
+          "commands": 330,
+          "issue_busy_cycles": 3810,
+          "sum_command_latencies": 13170
+        },
+        "exp2": {
+          "commands": 240,
+          "issue_busy_cycles": 3360,
+          "sum_command_latencies": 15600
+        }
+      },
+      "kernel": 16,
+      "phase": "decode",
+      "program_json_sha256": "d0cfcb995eb454885223567974802c72acd44e03c0bf0d730424a74ec55d781a"
+    }
+  ],
+  "summed_resource_service_cycles": {
+    "dispatch": 25589,
+    "dram": 146420,
+    "dma": 22654,
+    "quantizer": 104782,
+    "scale_decoder": 31290,
+    "matrix_compute_without_activation_waits": 154422,
+    "matrix_write_port": 43572,
+    "matrix_retirement": 60282,
+    "vector_issue": 194841
+  },
+  "summed_traffic_bytes": {
+    "dma_payload_bytes": 569864,
+    "matrix_weight_bytes": 245736576,
+    "matrix_scale_bytes": 120840768,
+    "quant_data_bytes": 103680,
+    "quant_scale_bytes": 6480
+  },
+  "existing_resource_floor_cycles": 246004,
+  "existing_resource_speedup_ceiling": 24.357250288613194,
+  "raw_weight_bandwidth_floor_cycles": 87264.40909090909,
+  "raw_weight_only_speedup_ceiling": 68.66466022542774,
+  "observer_checks": [
+    {
+      "kernel": 0,
+      "timeline_sha256": "2e5e05a2e51cb6ef77cfc19e1b0596d2b04a8c58974841d0a8cf17b29b46cb8a",
+      "all_five_resource_services_equal": true
+    },
+    {
+      "kernel": 16,
+      "timeline_sha256": "122d0b88b8dd0da8a1578d374e16293cd7e439df1ee1b1a941ba4c4584efc42a",
+      "all_five_resource_services_equal": true
+    }
+  ],
+  "numerical_arithmetic_executed": false,
+  "limitations": [
+    "Bounds for current unit throughput, not universal hardware limits",
+    "Resource demands overlap; do not sum as elapsed time",
+    "Excludes activation waits from matrix service",
+    "No cache hits assumed; raw weight bytes alone omit scale/DMA/quantizer traffic"
+  ]
+}

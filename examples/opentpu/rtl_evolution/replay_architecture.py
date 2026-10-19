@@ -23,7 +23,7 @@ def main():
     p.add_argument('--workers',type=int,default=8)
     p.add_argument('--rtl-timeout',type=float,default=7200)
     p.add_argument('--reuse-rtl',type=Path,
-        help='Recheck completed identical-hardware RTL outputs with new LPN timing details')
+        help='Recheck available identical-hardware RTL outputs; simulate selected kernels absent from that replay')
     p.add_argument('--matrix-rows',type=int,choices=(16,24,32,48,64,96,112,128),default=128)
     p.add_argument('--matrix-columns',type=int,choices=(1,2,4,8),default=1)
     p.add_argument('--paired-dsp',action='store_true')
@@ -67,16 +67,17 @@ def main():
         table_files,_,_=reciprocal_inputs(a.recip_table)
         sources += table_files+[a.recip_table.resolve()/'report.json',Path(__file__).with_name('rom_inputs.py')]
     hashes={str(s):digest(s) for s in sources}
+    reuse_indices=set()
     if a.reuse_rtl:
         retained=json.loads((a.reuse_rtl/'report.json').read_text())
         if (retained['status']!='complete' or
-            retained['reference_report_sha256']!=digest(case/'report.json') or
-            not set(indices)<=set(retained['indices'])):
+            retained['reference_report_sha256']!=digest(case/'report.json')):
             raise ValueError('RTL reuse requires a completed replay of the same selected inputs')
+        reuse_indices=set(indices)&set(retained['indices'])
         rtl_files=[rtlsim.RTL/name for name in rtlsim.RTL_SOURCES]+[rtlsim.TB/'tb_top.sv',rtlsim.TB/'lpn_wall.cpp']
         if any(retained['rtl_and_model_source_sha256'].get(str(s))!=digest(s) for s in rtl_files):
             raise ValueError('retained RTL source files differ')
-        if any(not (a.reuse_rtl/'kernels'/f'{i:04d}'/'rtl-result.json').exists() for i in indices):
+        if any(not (a.reuse_rtl/'kernels'/f'{i:04d}'/'rtl-result.json').exists() for i in reuse_indices):
             raise ValueError('retained RTL kernel result is missing')
     uarch=dict(reference['uarch'],MXU_ROWS=a.matrix_rows)
     if a.matrix_columns!=1:uarch['MXU_COLS']=a.matrix_columns
@@ -103,6 +104,7 @@ def main():
             numerical_prepass_repeated=False)
         if a.reuse_rtl:
             result.update(retained_rtl_report=str(a.reuse_rtl.resolve()/'report.json'),
+                reused_kernel_indices=sorted(reuse_indices),
                 retained_rtl_report_sha256=digest(a.reuse_rtl/'report.json'))
         if len(records)==len(indices):
             rtl=sum(r['rtl_cycles'] for r in records);predicted=sum(r['lpn_cycles'] for r in records)
@@ -137,8 +139,8 @@ def main():
             opentpu_root=str(a.opentpu_root.resolve()),baseline=str(a.baseline.resolve()),baseline_job=None,
             compiler=str(a.compiler.resolve()),cache=str(output/'timing-cache'),timing=asdict(timing),
             instructions=record['instructions'],args=record['args'],input_sha256=record['input_sha256'],
-            rtl_timeout=a.rtl_timeout,reuse_directory=str(a.reuse_rtl.resolve()/'kernels') if a.reuse_rtl else None,
-            reuse_input_identity=identity if a.reuse_rtl else None,
+            rtl_timeout=a.rtl_timeout,reuse_directory=str(a.reuse_rtl.resolve()/'kernels') if index in reuse_indices else None,
+            reuse_input_identity=identity if index in reuse_indices else None,
             recip_table=str(a.recip_table.resolve()) if a.lookup_scale or a.scalar_recip_lookup else None)
         tasks.append(task)
     save('running')

@@ -46,3 +46,13 @@ python -m examples.opentpu.rtl_evolution.check_matrix_pipeline \
   --opentpu-root ../FeSens-openTPU-packed-mxu --rows 8 --columns 2 \
   --paired-dsp --output /tmp/paired-c2
 ```
+
+The **96-row, two-column** retained real-kernel pilot has completed and passed
+a fresh audit (`inference-pilot{,-audit}.json`). All complete DRAM and TMEM
+bits match on kernels 0/15/16/47, with unchanged programs and input images.
+RTL cycles are 306,541 / 339,787 / 109,454 / 109,752. Native totals 839,263
+versus 865,534 RTL cycles (−3.0352%); worst kernel error is 4.9671%.
+The four-kernel RTL total is 1.50% lower than compact 128x1's 878,707 cycles.
+This is representative numerical/timing validation, not complete inference
+or physical DSP58 placement/clock proof. The same compiled simulator is
+available for full 48-kernel validation without another RTL build.
