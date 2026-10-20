@@ -101,17 +101,22 @@ def main():
             if not out_elements:
                 for out in outputs:remember(out,deps)
                 return result
-            unit='vector';macs=weight_bytes=0;matrix_shape=None
+            unit='vector';macs=weight_bytes=0;matrix_shape=None;matrix_precision=None
             if name in ('aten.mm.default','aten.bmm.default'):
                 x,w=args[:2];m,k=x.shape[-2:];n=w.shape[-1]
                 batches=prod(x.shape[:-2]);macs=batches*m*n*k;unit='matrix'
                 matrix_shape=dict(batch=batches,m=m,n=n,k=k)
                 weight_parameter=info(w)[1]
                 if weight_parameter:
-                    if '.gate.weight' in weight_parameter:weight_bytes=w.numel()*4
-                    else:weight_bytes=sum(nvfp4_bytes((batches*n,k)).values())
+                    if '.gate.weight' in weight_parameter:
+                        weight_bytes=w.numel()*4;matrix_precision='fp32'
+                    else:
+                        weight_bytes=sum(nvfp4_bytes((batches*n,k)).values());matrix_precision='nvfp4'
+                else:matrix_precision='fp32' if x.dtype==torch.float32 else 'bf16'
             elif name=='aten.embedding.default':
                 weight_bytes=sum(nvfp4_bytes((prod(outputs[0].shape[:-1]),outputs[0].shape[-1])).values())
+            else:
+                weight_bytes=sum(t.numel()*t.element_size() for t in inputs if info(t)[1] is not None)
             index=len(commands)
             activation_read=sum(t.numel()*t.element_size() for t in inputs if t.device.type=='meta' and info(t)[1] is None)
             activation_write=sum(t.numel()*t.element_size() for t in outputs)
@@ -119,7 +124,7 @@ def main():
                 macs=macs,weight_bytes=weight_bytes,vector_elements=max(out_elements,
                     max((t.numel() for t in inputs if info(t)[1] is None),default=0)),
                 activation_read_bytes=activation_read,activation_write_bytes=activation_write,
-                matrix_shape=matrix_shape,parameters=sorted(parameters)))
+                matrix_shape=matrix_shape,matrix_precision=matrix_precision,parameters=sorted(parameters)))
             for out in outputs:remember(out,{index})
             if func._schema.is_mutable:
                 for argument,value in zip(func._schema.arguments,args):
@@ -154,7 +159,7 @@ def main():
                 vector_elements=count*cfg.n_routed_experts,
                 activation_read_bytes=count*cfg.n_routed_experts*4,
                 activation_write_bytes=count*cfg.num_experts_per_tok*8,
-                matrix_shape=None,parameters=[]))
+                matrix_shape=None,matrix_precision=None,parameters=[]))
             route_dependencies[li]={index}
             ids=torch.tensor(rows,dtype=torch.long)
             weights=torch.empty((count,cfg.num_experts_per_tok),device='meta')
