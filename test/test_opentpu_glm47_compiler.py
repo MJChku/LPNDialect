@@ -144,6 +144,26 @@ class GLMCompilerTest(unittest.TestCase):
                 root=Path(temp);native=ReusableTiming(self.tool,root/'cache',capacity=len(work.commands[0])).prepare(work,timing,root/'inputs')
                 self.assertEqual(native.run()[0],ticks)
 
+    def test_batched_router_is_bit_exact_to_scalar_reductions(self):
+        import numpy as np
+        from opentpu import Config
+        from examples.opentpu.glm47_router_hardware import compile_router
+        rng=np.random.default_rng(1447);R,H,E=4,256,8
+        x=rng.normal(size=(R,H)).astype(np.float32);norm=np.ones(H,np.float32)
+        weight=(rng.normal(size=(E,H))/H**.5).astype(np.float32);bias=rng.normal(size=E).astype(np.float32)
+        cfg=Config(D=128,MCOLS=4,ACT_ROWS=16,LANES=64)
+        values=[];counts=[]
+        for batched in (False,True):
+            program,m,image=compile_router(cfg,x,norm,weight,bias,batched=batched)
+            work=execute(cfg,[program],[image]);raw=work.machine.slices[0].dram
+            counts.append(len(work.commands[0]));result=[]
+            for name in ('logits','ids','weights'):
+                desc=getattr(m,name);start=desc.base.static();size=int(np.prod(desc.shape))*4
+                result.append(raw[start:start+size].copy())
+            values.append(result)
+        for before,after in zip(*values):np.testing.assert_array_equal(before,after)
+        self.assertLess(counts[1],counts[0])
+
     def test_real_glm_projection_work_is_in_hardware_commands(self):
         from opentpu import Config
         from examples.opentpu.glm47_hardware import Layout,Spec

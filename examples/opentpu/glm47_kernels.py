@@ -110,7 +110,7 @@ def rotary_test(x,cos,sin,out):
 
 
 @ol.jit
-def glm_router(m,topk=4,scale=1.8):
+def glm_router(m,topk=4,scale=1.8,batched=True):
     """Actual FP32 router and GLM's single-group sigmoid+bias top-k rule.
 
     Router weights stay FP32. ARGMAX/RLD and indexed VOPs perform the
@@ -126,9 +126,14 @@ def glm_router(m,topk=4,scale=1.8):
     # results at affine DRAM addresses so one hardware loop serves all E.
     for e in ol.range(E):
         weight=ol.load(m.router[e:e+1,:])
-        column=ol.empty((R,1))
-        for r in range(R):
-            column[r,0:1].set(ol.sum(xn[r,:]*weight[0,:]))
+        if batched:
+            # One real multi-row RDOT exposes the RTL's independent reduction
+            # contexts. It preserves FP32 operations without a product tile.
+            column=(xn@weight[0,:]).reshape(R,1)
+        else:
+            column=ol.empty((R,1))
+            for r in range(R):
+                column[r,0:1].set(ol.sum(xn[r,:]*weight[0,:]))
         ol.store(m.logits[:,e:e+1],column)
     logits=ol.load(m.logits);bias=ol.load(m.bias)
     pr=ol.empty((2,));register=b.scratch()

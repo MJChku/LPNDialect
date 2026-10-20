@@ -35,7 +35,9 @@ def resolved_router(directory):
         at=(at+127)//128*128;n=int(np.prod(shape))
         value=raw[at:at+4*n].view(np.float32).reshape(shape).copy();at+=4*n;return value
     x=array((R,H));norm=array((H,));w=array((E,H));bias=array((E,))
-    program,m,_=compile_router(work.config,x,norm,w,bias)
+    reduction=report.get('router_reduction','scalar')
+    if reduction not in ('scalar','batched'):raise ValueError('unsupported retained router reduction')
+    program,m,_=compile_router(work.config,x,norm,w,bias,batched=reduction=='batched')
     if [i.encode() for i in program]!=[i.encode() for i in work.programs[0]]:
         raise ValueError('router output address reconstruction differs from canonical instructions')
     memory=work.machine.slices[0].dram

@@ -14,7 +14,7 @@ from .e2e import atomic_json,digest
 from .workload import load,use_checkout
 
 
-def compile_router(cfg,x,norm,weight,bias,topk=4):
+def compile_router(cfg,x,norm,weight,bias,topk=4,batched=True):
     from opentpu.runtime import Input,Output,place
     from .glm47_kernels import glm_router
     R,H=x.shape;E=weight.shape[0]
@@ -25,7 +25,7 @@ def compile_router(cfg,x,norm,weight,bias,topk=4):
     # Device workspace is written through an affine loop address. It is not
     # a host-collected static store record; callers explicitly read its DRAM.
     m.logits=replace(m.logits,host=None)
-    builder=glm_router.trace(cfg,0,dict(m=m,topk=topk,scale=1.8))
+    builder=glm_router.trace(cfg,0,dict(m=m,topk=topk,scale=1.8,batched=batched))
     program=builder.finish()
     if len(program)*8>cfg.IMEM_WORDS:raise ValueError('router program exceeds physical IMEM')
     return program,m,memory.images[0]
@@ -76,7 +76,7 @@ def main():
     result=dict(status='complete',scope=__doc__,timing=asdict(timing),physical_epilogue_lanes=timing.epilogue_lanes,rows=R,hidden=H,experts=E,
         hardware_instructions=arithmetic,ids=ids.tolist(),weights=weights.tolist(),
         logits_max_absolute_error=float(np.max(np.abs(logits-ref_logits))),weights_max_absolute_error=error,
-        numerical_expert_selection_exact=True,routing_annotations_used=False,
+        numerical_expert_selection_exact=True,routing_annotations_used=False,router_reduction='batched',
         lpn_cycles=cycles,lpn_seconds=seconds,rtl_validated=False,full_glm_model=False,
         input_sha256=work.hashes,
         source_sha256={str(f):digest(f) for f in (Path(__file__),Path(__file__).with_name('glm47_kernels.py'))})
