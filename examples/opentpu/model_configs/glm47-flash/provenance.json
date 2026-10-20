@@ -1,0 +1,8 @@
+{
+  "model": "zai-org/GLM-4.7-Flash",
+  "revision": "7dd20894a642a0aa287e9827cb1a1f7f91386b67",
+  "files": {
+    "config.json": "dc9b97c7c9bed726a2e6939da4234d5c43abb3edec8812068c9a1af1dbc13acb",
+    "model.safetensors.index.json": "91e6e95ca21700f50904a680c8c4212f5aa16dc7c10a013f01c906957c889791"
+  }
+}
