@@ -12,11 +12,14 @@ from .workload import load,use_checkout
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for n in ('opentpu-root','compiler','base-rtl-gate','output'):p.add_argument('--'+n,type=Path,required=True)
-    p.add_argument('--cases',type=Path,nargs='+',required=True);a=p.parse_args()
+    p.add_argument('--cases',type=Path,nargs='+',required=True)
+    p.add_argument('--correct-epilogue-profile',action='store_true',
+        help='Preserve and reproduce legacy two-lane predictions, then replay the physical RTL epilogue profile')
+    a=p.parse_args()
     root=use_checkout(a.opentpu_root);a.output.mkdir(parents=True,exist_ok=False)
     import numpy as np
     from opentpu import rtlsim
-    from .model import Timing
+    from .glm47_target import component_timing
     from .native_timing import ReusableTiming
     from .hardware_commands import instruction_statistics
     from .rtl_evolution.parallel_inference import simulator_cache_key
@@ -24,13 +27,12 @@ def main():
     for f,h in base['source_sha256'].items():
         if digest(Path(f))!=h:raise ValueError('original packed RTL source changed')
     rtlsim.VFLAGS[:]=base['rtl_compile_flags'];uarch=base['uarch']
-    timing=Timing(batch_rows=2,matrix_row_lanes=2,fifo_chunks=256,scale_lanes=2,chain_length=8,
-        dram_bytes_per_cycle=2816,dram_port_bytes=2816,unified_dram=True,scalar_store_bytes=256,
-        quant_row_banks=8,quant_store_buffered=True,vector_row_contexts=4,vector_command_queue=2,
-        matrix_retirement=True,physical_scale_lines=True)
+    timing=component_timing()
+    if uarch.get('MXU_COLS')!=2 or uarch.get('MXU_ROWS')!=2 or uarch.get('MXU_E',0)!=0:
+        raise ValueError('audit requires the two-column, two-row RTL with its default epilogue')
     project=Path(__file__).parent
     files=[Path(__file__),*[project/n for n in ('model.py','compact.py','components.py','workload.py',
-        'hardware_commands.py','shape_workload.py','native_timing.py','benchmark.py','activation_stream.py')],
+        'hardware_commands.py','shape_workload.py','native_timing.py','benchmark.py','activation_stream.py','glm47_target.py')],
         *[root/'opentpu'/n for n in ('compiler.py','language.py','runtime.py','isasim.py','fp32.py','quant.py','isa.py','waits.py')]]
     sources={str(f):digest(f) for f in files};records=[]
     for case in a.cases:
@@ -66,12 +68,25 @@ def main():
                 if not binary.is_file():raise ValueError('matching RTL simulator binary missing')
                 observed=expected['rtl_cycles']
             target=a.output/(case.name+'-'+expected.get('name','component'));target.mkdir()
-            native=ReusableTiming(a.compiler,a.output/'native-cache',capacity=32768).prepare(
+            runner=ReusableTiming(a.compiler,a.output/'native-cache',capacity=32768)
+            legacy=None
+            if a.correct_epilogue_profile:
+                if report.get('timing') is not None:raise ValueError('legacy correction only accepts original unprofiled reports')
+                legacy=runner.prepare(replace(work,config=replace(work.config,MCOLS=2)),
+                    replace(timing,epilogue_lanes=2),target/'legacy-timing.tables')
+                old_cycles,_,_,old_log=legacy.run();(target/'legacy-lpn.log').write_text(old_log)
+                if old_cycles!=expected['lpn_cycles']:raise ValueError('original legacy prediction not reproduced')
+            elif report.get('timing')!=asdict(timing):
+                raise ValueError('explicit matching physical profile required; use legacy correction for old reports')
+            native=runner.prepare(
                 replace(work,config=replace(work.config,MCOLS=2)),timing,target/'timing.tables')
-            cycles,_,_,text=native.run();(target/'lpn.log').write_text(text)
-            if cycles!=expected['lpn_cycles']:raise ValueError('fresh actual LPN prediction differs')
+            cycles,seconds,_,text=native.run();(target/'lpn.log').write_text(text)
+            if not a.correct_epilogue_profile and cycles!=expected['lpn_cycles']:raise ValueError('fresh actual LPN prediction differs')
             subrecords.append(dict(name=expected.get('name','component'),fresh_lpn_cycles=cycles,
+                native_seconds=seconds,original_lpn_cycles=expected['lpn_cycles'],
+                legacy_prediction_reproduced=legacy is not None,
                 actual_rtl_cycles=observed,relative_cycle_error=cycles/observed-1 if observed else None,
+                timing_target_met=abs(cycles/observed-1)<=.1 if observed else None,
                 actual_hardware_program_sha256=digest(directory/'prog_0.hex'),
                 numerical_full_dram_sha256=digest(directory/'rtl/dram_out_0.bin') if observed else None,
                 matching_simulator_sha256=digest(binary) if binary else None,
@@ -82,6 +97,7 @@ def main():
     if sources!={str(f):digest(f) for f in files}:raise ValueError('audit inputs changed')
     atomic_json(a.output/'report.json',dict(status='complete',scope=__doc__,source_sha256=sources,
         packed_rtl_gate_sha256=digest(a.base_rtl_gate/'report.json'),timing=asdict(timing),records=records,
+        legacy_epilogue_profile_corrected=a.correct_epilogue_profile,
         full_glm_model=False,all_numerical_cases_use_actual_hardware_programs=True))
     print('fresh GLM ISA/native/full-memory audit passed',flush=True)
 

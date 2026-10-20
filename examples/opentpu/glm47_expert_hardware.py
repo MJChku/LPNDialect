@@ -117,7 +117,7 @@ def main():
     from opentpu import isa as I,rtlsim
     from .hardware_commands import load_commands,instruction_statistics
     from .native_timing import ReusableTiming
-    from .model import Timing
+    from .glm47_target import component_timing
     before=time.perf_counter();x,norm,ids,weights,E=resolved_router(a.router_case)
     R,H=x.shape;layout=Layout(H,a.ffn,E,R);cfg=layout.cfg;program=layout.compile(ids)
     rtlsim._write_hex(a.output/'prog_0.hex',I.assemble(program))
@@ -126,14 +126,11 @@ def main():
     work=load_commands(a.output);stats=instruction_statistics(work)
     expected=3*R*H*layout.fmt.F*(len(ids[0])+1)
     if stats['matrix_dot_macs']!=expected:raise ValueError('encoded expert work differs from selected batched SwiGLU work')
-    timing=Timing(batch_rows=2,matrix_row_lanes=2,fifo_chunks=256,scale_lanes=2,chain_length=8,
-        dram_bytes_per_cycle=2816,dram_port_bytes=2816,unified_dram=True,scalar_store_bytes=256,
-        quant_row_banks=8,quant_store_buffered=True,vector_row_contexts=4,vector_command_queue=2,
-        matrix_retirement=True,physical_scale_lines=True)
+    timing=component_timing()
     native=ReusableTiming(a.compiler,a.output/'native-cache',capacity=len(work.commands[0])).prepare(
         replace(work,config=replace(cfg,MCOLS=2)),timing,a.output/'timing.tables')
     cycles,seconds,_,log=native.run();(a.output/'lpn.log').write_text(log)
-    result=dict(status='complete',scope=__doc__,rows=R,hidden=H,ffn=a.ffn,experts=E,
+    result=dict(status='complete',scope=__doc__,timing=asdict(timing),physical_epilogue_lanes=timing.epilogue_lanes,rows=R,hidden=H,ffn=a.ffn,experts=E,
         ids=ids,router_report_sha256=digest(a.router_case/'report.json'),fresh_actual_router_reexecuted=True,
         routing_annotations_used=False,hardware_instructions=stats,lpn_cycles=cycles,lpn_seconds=seconds,
         layout_bytes=layout.next,static_instructions=len(program),numerical_validated=False,rtl_validated=False,

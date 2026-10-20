@@ -30,7 +30,7 @@ def main():
     from .glm47_expert_hardware import Layout as Experts
     from .glm47_kernels import glm_router
     from .benchmark import write_inputs
-    from .model import Timing
+    from .glm47_target import component_timing
     from .native_timing import ReusableTiming
     from .hardware_commands import instruction_statistics
     started=time.perf_counter();R=2 if a.small_test else 4
@@ -109,10 +109,7 @@ def main():
     expert_error=float(np.linalg.norm(got-(reference+mid))/np.linalg.norm(got))
     if not np.isfinite(mla_error+expert_error) or max(mla_error,expert_error)>.15:
         raise ValueError(f'integrated stage math differs: {mla_error}, {expert_error}')
-    timing=Timing(batch_rows=2,matrix_row_lanes=2,fifo_chunks=256,scale_lanes=2,chain_length=8,
-        dram_bytes_per_cycle=2816,dram_port_bytes=2816,unified_dram=True,scalar_store_bytes=256,
-        quant_row_banks=8,quant_store_buffered=True,vector_row_contexts=4,vector_command_queue=2,
-        matrix_retirement=True,physical_scale_lines=True)
+    timing=component_timing()
     runner=ReusableTiming(a.compiler,a.output/'native-cache',capacity=32768);records=[]
     items=[('mla',first,image),('router',second,first.machine.slices[0].dram),('experts',third,second.machine.slices[0].dram)]
     previous_rtl=None
@@ -137,7 +134,7 @@ def main():
                 relative_cycle_error=cycles/observed['cycles']-1)
         records.append(record)
         atomic_json(a.output/'progress.json',dict(status='running',records=records))
-    result=dict(status='complete',scope=__doc__,spec=asdict(spec),rows=R,experts=E,ffn=F,position=a.position,
+    result=dict(status='complete',scope=__doc__,timing=asdict(timing),physical_epilogue_lanes=timing.epilogue_lanes,spec=asdict(spec),rows=R,experts=E,ffn=F,position=a.position,
         physical_layer_bytes=experts.next,config=asdict(cfg),records=records,ids=ids,
         mla_reference_relative_error=mla_error,expert_reference_relative_error=expert_error,
         all_stages_numerically_executed=True,routing_annotations_used=False,shared_physical_dram=True,

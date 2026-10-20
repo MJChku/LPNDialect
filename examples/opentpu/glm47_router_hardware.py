@@ -4,7 +4,7 @@ Expert IDs are computed by ARGMAX/RLD from numerical input, never supplied as
 annotations. This tests the router component, not full GLM text generation.
 """
 import argparse
-from dataclasses import replace
+from dataclasses import asdict,replace
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -42,7 +42,7 @@ def main():
     from .benchmark import write_inputs
     from .hardware_commands import instruction_statistics
     from .native_timing import ReusableTiming
-    from .model import Timing
+    from .glm47_target import component_timing
     if min(a.rows,a.hidden)<1 or a.experts<4:p.error('positive shapes and at least four experts required')
     rng=np.random.default_rng(1447);R,H,E=a.rows,a.hidden,a.experts;topk=4
     x=rng.normal(size=(R,H)).astype(np.float32);norm=(1+.1*rng.normal(size=H)).astype(np.float32)
@@ -69,14 +69,11 @@ def main():
     arithmetic=instruction_statistics(work)
     if arithmetic['matrix_commands'] or arithmetic['opcode_counts'].get('RLD',0)!=R*topk:
         raise ValueError('router did not use FP32 vector math and real data-dependent selection')
-    timing=Timing(batch_rows=2,matrix_row_lanes=2,fifo_chunks=256,scale_lanes=2,chain_length=8,
-        dram_bytes_per_cycle=2816,dram_port_bytes=2816,unified_dram=True,scalar_store_bytes=256,
-        quant_row_banks=8,quant_store_buffered=True,vector_row_contexts=4,vector_command_queue=2,
-        matrix_retirement=True,physical_scale_lines=True)
+    timing=component_timing()
     prepared=ReusableTiming(a.compiler,a.output/'native-cache',capacity=len(work.commands[0])).prepare(
         replace(work,config=replace(cfg,MCOLS=2)),timing,a.output/'timing.tables')
     cycles,seconds,_,log=prepared.run();(a.output/'lpn.log').write_text(log)
-    result=dict(status='complete',scope=__doc__,rows=R,hidden=H,experts=E,
+    result=dict(status='complete',scope=__doc__,timing=asdict(timing),physical_epilogue_lanes=timing.epilogue_lanes,rows=R,hidden=H,experts=E,
         hardware_instructions=arithmetic,ids=ids.tolist(),weights=weights.tolist(),
         logits_max_absolute_error=float(np.max(np.abs(logits-ref_logits))),weights_max_absolute_error=error,
         numerical_expert_selection_exact=True,routing_annotations_used=False,

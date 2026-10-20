@@ -10,6 +10,13 @@ from examples.opentpu.workload import use_checkout,execute
 class GLMCompilerTest(unittest.TestCase):
     tool=None
 
+    def test_epilogue_profile_tracks_physical_rtl_columns(self):
+        from examples.opentpu.glm47_target import component_timing
+        for columns,lanes in ((1,1),(2,1),(4,2),(8,4)):
+            with self.subTest(columns=columns):
+                self.assertEqual(component_timing(columns=columns).epilogue_lanes,lanes)
+        with self.assertRaises(ValueError):component_timing(columns=3)
+
     def test_expert_dispatch_preserves_every_selected_token_and_rank(self):
         from examples.opentpu.glm47_kernels import expert_batches
         ids=[[7,1,3,0],[1,6,7,3],[7,2,1,0],[2,4,1,7]]

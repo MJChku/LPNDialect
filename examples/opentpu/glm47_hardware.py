@@ -170,7 +170,7 @@ def main():
     from opentpu import Config,isa as I,rtlsim
     from .hardware_commands import load_commands,instruction_statistics
     from .native_timing import ReusableTiming
-    from .model import Timing
+    from .glm47_target import component_timing
     s=Spec(256,2,256,128,64,64,128) if a.small_numerical_test else Spec.pinned()
     cfg=Config(D=128,MCOLS=4,ACT_ROWS=16,LANES=64,DRAM_BYTES=(1<<20 if a.small_numerical_test else 64<<20),IMEM_WORDS=65536)
     before=time.perf_counter();layout=Layout(s,a.rows,a.capacity,cfg);program=layout.compile(a.position,stage=a.stage)
@@ -178,14 +178,11 @@ def main():
     atomic_json(a.output/'input.json',metadata);rtlsim._write_hex(a.output/'prog_0.hex',I.assemble(program))
     atomic_json(a.output/'layout.json',dict(regions=layout.regions,total_bytes=layout.next))
     work=load_commands(a.output)
-    timing=Timing(batch_rows=2,matrix_row_lanes=2,fifo_chunks=256,scale_lanes=2,chain_length=8,
-        dram_bytes_per_cycle=2816,dram_port_bytes=2816,unified_dram=True,scalar_store_bytes=256,
-        quant_row_banks=8,quant_store_buffered=True,vector_row_contexts=4,vector_command_queue=2,
-        matrix_retirement=True,physical_scale_lines=True)
+    timing=component_timing()
     prepared=ReusableTiming(a.compiler,a.output/'native-cache',capacity=max(len(c) for c in work.commands)).prepare(
         replace(work,config=replace(cfg,MCOLS=2)),timing,a.output/'timing.tables')
     cycles,seconds,_,log=prepared.run();(a.output/'lpn.log').write_text(log)
-    result=dict(status='complete',scope=__doc__,spec=asdict(s),rows=a.rows,position=a.position,
+    result=dict(status='complete',scope=__doc__,timing=asdict(timing),physical_epilogue_lanes=timing.epilogue_lanes,spec=asdict(s),rows=a.rows,position=a.position,
         capacity=a.capacity,stage=a.stage,static_instructions=len(program),
         hardware_instructions=instruction_statistics(work),lpn_cycles=cycles,lpn_seconds=seconds,
         command_sha256=digest(a.output/'prog_0.hex'),layout_bytes=layout.next,
