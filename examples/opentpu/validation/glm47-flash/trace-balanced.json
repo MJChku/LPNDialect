@@ -1,0 +1,157 @@
+{
+  "status": "complete",
+  "scope": "Observe upstream GLM generate on meta tensors with explicit routing annotations.\n\nThis is shape/control planning, not numerical inference. Tensor math executes\nthe pinned Transformers implementation on meta tensors. Expert IDs must come\nfrom an external trace or an explicitly labeled sensitivity scenario. Logits\nare placeholders so unmodified generate owns batched prefill and decode.\nThe exported tensor-operation DAG is not the existing FeSens ISA.\n",
+  "model": {
+    "model": "zai-org/GLM-4.7-Flash",
+    "revision": "7dd20894a642a0aa287e9827cb1a1f7f91386b67",
+    "files": {
+      "config.json": "dc9b97c7c9bed726a2e6939da4234d5c43abb3edec8812068c9a1af1dbc13acb",
+      "model.safetensors.index.json": "91e6e95ca21700f50904a680c8c4212f5aa16dc7c10a013f01c906957c889791"
+    }
+  },
+  "parameter_count": 29943390976,
+  "transformers_version": "5.12.0",
+  "torch_version": "2.14.1+cpu",
+  "prompt_tokens": 1024,
+  "output_tokens": 8,
+  "entrypoint": "upstream Transformers model.generate",
+  "calls": [
+    {
+      "index": 0,
+      "input_shape": [
+        1,
+        1024
+      ],
+      "start_command": 0,
+      "end_command": 26577
+    },
+    {
+      "index": 1,
+      "input_shape": [
+        1,
+        1
+      ],
+      "start_command": 26577,
+      "end_command": 31027
+    },
+    {
+      "index": 2,
+      "input_shape": [
+        1,
+        1
+      ],
+      "start_command": 31027,
+      "end_command": 35477
+    },
+    {
+      "index": 3,
+      "input_shape": [
+        1,
+        1
+      ],
+      "start_command": 35477,
+      "end_command": 39927
+    },
+    {
+      "index": 4,
+      "input_shape": [
+        1,
+        1
+      ],
+      "start_command": 39927,
+      "end_command": 44377
+    },
+    {
+      "index": 5,
+      "input_shape": [
+        1,
+        1
+      ],
+      "start_command": 44377,
+      "end_command": 48827
+    },
+    {
+      "index": 6,
+      "input_shape": [
+        1,
+        1
+      ],
+      "start_command": 48827,
+      "end_command": 53277
+    },
+    {
+      "index": 7,
+      "input_shape": [
+        1,
+        1
+      ],
+      "start_command": 53277,
+      "end_command": 57727
+    }
+  ],
+  "all_47_layers_visited_each_call": true,
+  "tensor_commands": 57727,
+  "matrix_commands": 12600,
+  "matrix_macs": 3873905156096,
+  "weight_fetch_bytes_without_cache": 30929257216,
+  "operator_counts": {
+    "aten.embedding.default": 8,
+    "aten._to_copy.default": 8776,
+    "aten.arange.default": 32,
+    "aten.detach.default": 768,
+    "aten.add.Tensor": 3776,
+    "aten.unsqueeze.default": 5096,
+    "aten.new_ones.default": 8,
+    "aten.le.Tensor": 8,
+    "aten.bitwise_and.Tensor": 16,
+    "aten.index.Tensor": 8472,
+    "aten.expand.default": 1904,
+    "aten.scalar_tensor.default": 8,
+    "aten.where.self": 8,
+    "aten.view.default": 7136,
+    "aten.pow.Tensor_Scalar": 1512,
+    "aten.mean.dim": 1512,
+    "aten.rsqrt.default": 1512,
+    "aten.mul.Tensor": 15248,
+    "aten.t.default": 11848,
+    "aten.mm.default": 11848,
+    "aten._unsafe_view.default": 3768,
+    "aten.transpose.int": 1504,
+    "aten.split_with_sizes.default": 1128,
+    "aten.slice.Tensor": 2264,
+    "aten.sub.Tensor": 752,
+    "aten.cat.default": 2256,
+    "aten.bmm.default": 752,
+    "aten._softmax.default": 376,
+    "aten.clone.default": 47,
+    "aten.silu.default": 4608,
+    "aten.empty.memory_format": 368,
+    "aten.zeros_like.default": 368,
+    "aten.select.int": 8464,
+    "aten.split.Tensor": 4232,
+    "aten.index_add_.default": 4232
+  },
+  "routing_provenance": "sensitivity_balanced",
+  "commands_sha256": "7878adf2e81520fe95009ef9b2b53c063d4203ab9455cb6dbd6e7f5f576b6e9a",
+  "routing_sha256": "60d7a83861c34c7aa8649bade4bccfa7698b7a2820d7b03905f1dc24e196c735",
+  "source_sha256": {
+    "/home/ubuntu/LPNDialect-glm47-screen-replay/examples/opentpu/glm47_trace.py": "67e04140ee0a0d8a68490a0263e2411d70b1c7901578972fa08dc8560bb3f71d",
+    "/home/ubuntu/LPNDialect-glm47-screen-replay/examples/opentpu/glm47.py": "bce67a4583849ffef464ad01dea9155d7f46e5ac1ec81997f1c48a97a51ece55",
+    "/home/ubuntu/.local/opt/lpn-glm-transformers/transformers/models/glm4_moe_lite/modeling_glm4_moe_lite.py": "135165c589b3dda793902842b2225aa201fcd2429822459b27e92bdc3af5c3b2",
+    "/home/ubuntu/.local/opt/lpn-glm-transformers/transformers/generation/utils.py": "1eaf0aebe61f9616968f298bc33c78f6bfc83cb43f563db4d7ce572824131c7b"
+  },
+  "seconds": 17.139510234817863,
+  "generation_seconds": 17.042452480643988,
+  "weights_loaded": false,
+  "model_tensor_values_computed": false,
+  "text_or_accuracy_predicted": false,
+  "lpn_executed": false,
+  "rtl_validated": false,
+  "limitations": [
+    "Explicit routing annotations replace only data-dependent expert IDs/weights",
+    "CPU placeholder logits let upstream generate choose standard prefill/decode; IDs are not predictions",
+    "Reference MLA expands K/V before attention; compressed cache and absorbed MLA not substituted",
+    "Tensor commands require a new hardware command adapter; existing FeSens compiler cannot execute this stream",
+    "No activation quantization, physical SRAM ports, bank service or hardware cycle calibration yet"
+  ]
+}

@@ -1,0 +1,10 @@
+test_annotations_are_explicit_and_topk_is_validated (__main__.GLMTest.test_annotations_are_explicit_and_topk_is_validated) ... ok
+test_compressed_mla_does_not_silently_replace_reference_cache (__main__.GLMTest.test_compressed_mla_does_not_silently_replace_reference_cache) ... ok
+test_layout_requires_wide_addresses_and_counts_scales (__main__.GLMTest.test_layout_requires_wide_addresses_and_counts_scales) ... ok
+test_real_model_inventory_matches_checkpoint_tensor_names (__main__.GLMTest.test_real_model_inventory_matches_checkpoint_tensor_names) ... ok
+test_upstream_meta_parameters_and_exact_nvfp4_import (__main__.GLMTest.test_upstream_meta_parameters_and_exact_nvfp4_import) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 4.779s
+
+OK

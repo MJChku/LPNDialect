@@ -1,0 +1,102 @@
+{
+  "status": "complete",
+  "scope": "Fresh full-file, ISA and native-timing audit of retained NVFP4 matrix gates.",
+  "source_sha256": {
+    "/home/ubuntu/LPNDialect-glm47-tests-v1/examples/opentpu/rtl_evolution/audit_nvfp4_matrix.py": "26be5253ca1b5f79ef160b7c7b66426f619ffb5c3d2db3631bae067a205645ca",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/opentpu/isasim.py": "d0fc7a987213fb2334d4e869743f940516319753a5d714d77c254ec59b413666",
+    "/home/ubuntu/FeSens-openTPU-packed-mxu/opentpu/quant.py": "4af67cf5abd511e4ac7d1d78587def88d84ce28f6a2530b83b049717859292a7",
+    "/home/ubuntu/LPNDialect-glm47-tests-v1/examples/opentpu/model.py": "289e3b57cd26db7ee01eaaa1351335191522d129c23424e939ab73bafe8daa0b",
+    "/home/ubuntu/LPNDialect-glm47-tests-v1/examples/opentpu/compact.py": "4d5370256cd96bc399e3cc79fe0832bf4d243e81d3b23d1f5486863ce9258810",
+    "/home/ubuntu/LPNDialect-glm47-tests-v1/examples/opentpu/components.py": "c64a8d2ef6b067da7fd277f64464ba1ef8d386083c5b53c5c4c09f2b8616824c",
+    "/home/ubuntu/LPNDialect-glm47-tests-v1/examples/opentpu/shape_workload.py": "d0f1db9e2bba7f3b1b1b119e9483b7ebc7ce17823d343ac135b26e5e51b91169",
+    "/home/ubuntu/LPNDialect-glm47-tests-v1/examples/opentpu/native_timing.py": "b48b2bded7b7c112f5d837572002472904bad80478315524fb1d13563c3a3989"
+  },
+  "gate_report_sha256": "de3265e5f1242d186a18b76eeefc1bd843f533597b793e2c48a7ffd95f48e3a0",
+  "binary_sha256": "eaceac137f494cfe36664de1bd4528c5b530e7dc80ec0669495e221d15e586ea",
+  "records": [
+    {
+      "name": "nvfp4_scaled",
+      "n": 5,
+      "m": 3,
+      "kb": 3,
+      "pair": false,
+      "acc": false,
+      "rtl_cycles": 190,
+      "lpn_cycles": 179.0,
+      "relative_cycle_error": -0.05789473684210522,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "zero_rollbacks": true,
+      "simulator": "/home/ubuntu/FeSens-openTPU-packed-mxu/build/verilator/tb_top_92e3c23f311e/Vtb_top",
+      "simulator_sha256": "eaceac137f494cfe36664de1bd4528c5b530e7dc80ec0669495e221d15e586ea",
+      "input_sha256": {
+        "prog_0.hex": "7414b58f8f15dc15de45cdaa5ea40eeab99425fdec91f623ec8bc6b19286b75d",
+        "dram_0.bin": "9d0c8c830aefbdc6a7965a873e4427b22724a8fd081842744bd57fe73efa5c95"
+      },
+      "output_sha256": {
+        "dram_out_0.bin": "04fb5736fcd20e16324f9c69ab51d3cb01dd24388110c97e4796fa69200c7ee7",
+        "tmem_0.hex": "24325d74f8a14bd6f8f10322b60606ddbd6dfa1963ab258970cd7ace772f433e"
+      },
+      "raw_log_sha256": "aa3d078d7542300f26e1bfedfb7aa5d6fe405fc3cb4dcb80347fb620481c63e0",
+      "fresh_isa_full_memories_exact": true,
+      "fresh_native_cycles": 179.0
+    },
+    {
+      "name": "nvfp4_replay_acc",
+      "n": 9,
+      "m": 8,
+      "kb": 5,
+      "pair": false,
+      "acc": true,
+      "rtl_cycles": 477,
+      "lpn_cycles": 467.0,
+      "relative_cycle_error": -0.02096436058700213,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "zero_rollbacks": true,
+      "simulator": "/home/ubuntu/FeSens-openTPU-packed-mxu/build/verilator/tb_top_92e3c23f311e/Vtb_top",
+      "simulator_sha256": "eaceac137f494cfe36664de1bd4528c5b530e7dc80ec0669495e221d15e586ea",
+      "input_sha256": {
+        "prog_0.hex": "588fcfc448aa98eca7beae664b7b100953cf35d88f380a53e4a431aae4e6d9df",
+        "dram_0.bin": "84e5361cdaab459619a3aeed8371a945aa70450907dbdfdced6e42fdd7bb9e72"
+      },
+      "output_sha256": {
+        "dram_out_0.bin": "17d65c2c8ea004fdf01012b35eaa57691340d79b934f9c93f59275db7a10ad5e",
+        "tmem_0.hex": "35aad52b6afd217448d5b7082f946f20e329ca939d10054e9525954a8125ebe7"
+      },
+      "raw_log_sha256": "3bc8210609de6840d63c6e6f6afd437167e639162823a65427eff0f9860c9c21",
+      "fresh_isa_full_memories_exact": true,
+      "fresh_native_cycles": 467.0
+    },
+    {
+      "name": "nvfp4_pair",
+      "n": 7,
+      "m": 2,
+      "kb": 3,
+      "pair": true,
+      "acc": false,
+      "rtl_cycles": 166,
+      "lpn_cycles": 153.0,
+      "relative_cycle_error": -0.07831325301204817,
+      "all_full_dram_and_tmem_bit_exact": true,
+      "zero_rollbacks": true,
+      "simulator": "/home/ubuntu/FeSens-openTPU-packed-mxu/build/verilator/tb_top_92e3c23f311e/Vtb_top",
+      "simulator_sha256": "eaceac137f494cfe36664de1bd4528c5b530e7dc80ec0669495e221d15e586ea",
+      "input_sha256": {
+        "prog_0.hex": "3e8768134933bd39312f16720a665ad2a9d19a0ae967c876669efabcfee227a4",
+        "dram_0.bin": "90beae07ca2e3f1bae0a78c310dd18cb6c4b7fdf93b304bf1b62994bd63e31d1"
+      },
+      "output_sha256": {
+        "dram_out_0.bin": "1888cbad46beb63b13ad8daf9e78d693fa3fd8f39991dc6c3a374bc235a56573",
+        "tmem_0.hex": "49b4b0eafe8af053cbdb30ac4c910846aa86ac8ad89ac6d9c3fdca84eb9912a5"
+      },
+      "raw_log_sha256": "c5846fc29bdd06c9fc2b6fa2a77482866211442694e281d383e2dcbe2a5ce799",
+      "fresh_isa_full_memories_exact": true,
+      "fresh_native_cycles": 153.0
+    }
+  ],
+  "all_full_memories_exact": true,
+  "actual_nvfp4_selected": true,
+  "worst_relative_cycle_error": 0.07831325301204817,
+  "timing_target_met": true,
+  "full_glm_inference": false,
+  "physical_mapping_or_frequency_proven": false
+}

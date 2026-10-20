@@ -1,0 +1,94 @@
+{
+  "status": "complete",
+  "scope": "Audit shape work and dependencies independently of upstream GLM trace instrumentation.",
+  "trace_report_sha256": "66152f237ddb9b97d68ae31f19ddf11b160c54ee22a889a7b1e6197809fcb72b",
+  "commands_sha256": "7878adf2e81520fe95009ef9b2b53c063d4203ab9455cb6dbd6e7f5f576b6e9a",
+  "routing_sha256": "60d7a83861c34c7aa8649bade4bccfa7698b7a2820d7b03905f1dc24e196c735",
+  "records": [
+    {
+      "call": 0,
+      "input_rows": 1024,
+      "kv_positions": 1024,
+      "linear_macs": 3340728008704,
+      "attention_macs": 504658657280,
+      "routed_matmuls": 5888,
+      "work_matches_independent_config_formulas": true,
+      "route_and_generation_dependencies_preserved": true
+    },
+    {
+      "call": 1,
+      "input_rows": 1,
+      "kv_positions": 1025,
+      "linear_macs": 3579314176,
+      "attention_macs": 493312000,
+      "routed_matmuls": 368,
+      "work_matches_independent_config_formulas": true,
+      "route_and_generation_dependencies_preserved": true
+    },
+    {
+      "call": 2,
+      "input_rows": 1,
+      "kv_positions": 1026,
+      "linear_macs": 3579314176,
+      "attention_macs": 493793280,
+      "routed_matmuls": 368,
+      "work_matches_independent_config_formulas": true,
+      "route_and_generation_dependencies_preserved": true
+    },
+    {
+      "call": 3,
+      "input_rows": 1,
+      "kv_positions": 1027,
+      "linear_macs": 3579314176,
+      "attention_macs": 494274560,
+      "routed_matmuls": 368,
+      "work_matches_independent_config_formulas": true,
+      "route_and_generation_dependencies_preserved": true
+    },
+    {
+      "call": 4,
+      "input_rows": 1,
+      "kv_positions": 1028,
+      "linear_macs": 3579314176,
+      "attention_macs": 494755840,
+      "routed_matmuls": 368,
+      "work_matches_independent_config_formulas": true,
+      "route_and_generation_dependencies_preserved": true
+    },
+    {
+      "call": 5,
+      "input_rows": 1,
+      "kv_positions": 1029,
+      "linear_macs": 3579314176,
+      "attention_macs": 495237120,
+      "routed_matmuls": 368,
+      "work_matches_independent_config_formulas": true,
+      "route_and_generation_dependencies_preserved": true
+    },
+    {
+      "call": 6,
+      "input_rows": 1,
+      "kv_positions": 1030,
+      "linear_macs": 3579314176,
+      "attention_macs": 495718400,
+      "routed_matmuls": 368,
+      "work_matches_independent_config_formulas": true,
+      "route_and_generation_dependencies_preserved": true
+    },
+    {
+      "call": 7,
+      "input_rows": 1,
+      "kv_positions": 1031,
+      "linear_macs": 3579314176,
+      "attention_macs": 496199680,
+      "routed_matmuls": 368,
+      "work_matches_independent_config_formulas": true,
+      "route_and_generation_dependencies_preserved": true
+    }
+  ],
+  "all_topological_dependencies_valid": true,
+  "all_linear_and_attention_work_verified": true,
+  "all_router_and_decode_readiness_preserved": true,
+  "routing_provenance": "sensitivity_balanced",
+  "numerical_or_rtl_validation": false
+}

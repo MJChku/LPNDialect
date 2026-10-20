@@ -4,6 +4,6 @@ test_dependency_fork_and_shared_bus (__main__.DAGTest.test_dependency_fork_and_s
 test_hbm_service_stays_constant_when_compute_is_increased (__main__.DAGTest.test_hbm_service_stays_constant_when_compute_is_increased) ... ok
 
 ----------------------------------------------------------------------
-Ran 4 tests in 1.697s
+Ran 4 tests in 1.934s
 
 OK

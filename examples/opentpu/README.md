@@ -10,6 +10,15 @@ error**, **5.3560% worst kernel**. See the
 FPGA resource fit, operating clock and vendor HBM integration remain unproven.
 The 100x cycle-reduction target has not yet been achieved.
 
+The new [GLM-4.7-Flash target](validation/glm47-flash/README.md) adds a pinned
+30B-A3B MLA/MoE inventory, NVFP4 capacity accounting and upstream `generate`
+shape traces. A 1024-input/8-output tensor-DAG screen is complete with explicit
+routing sensitivity annotations. Three NVFP4 matrix RTL gates pass a fresh
+full-state/native audit with worst timing error 7.83%. Full GLM execution on
+the FeSens ISA, compressed MLA caching and wide HBM addressing remain open;
+the new tensor-level timing screen is uncalibrated and separate from the
+validated openTPU cycle results above.
+
 A small [integrated DSP48E2 vendor-model gate](rtl_evolution/validation/vendor-mxu/README.md)
 passes eleven matrix/store/queue cases with identical complete outputs and
 cycles versus behavioral packed RTL. This strengthens the paired arithmetic

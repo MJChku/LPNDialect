@@ -1,0 +1,20 @@
+{
+  "status": "complete",
+  "tests": [
+    {
+      "case": "missing_router_readiness",
+      "rejected": true,
+      "reason": "expert matrix can execute before route readiness"
+    },
+    {
+      "case": "missing_prior_logits",
+      "rejected": true,
+      "reason": "decode can start before previous logits complete"
+    },
+    {
+      "case": "incorrect_mac_count",
+      "rejected": true,
+      "reason": "matrix shape and MAC count differ"
+    }
+  ]
+}

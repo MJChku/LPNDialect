@@ -58,6 +58,9 @@ class DAGTest(unittest.TestCase):
         for cmd in [command(0,[0]),command(0,[-1]),dict(command(0),weight_bytes=-1),dict(command(0),unit='unknown')]:
             with self.assertRaises(ValueError):checked_commands(dict(version=1,commands=[cmd]))
         with self.assertRaises(ValueError):Hardware(hbm_gbs=0)
+        with self.assertRaises(ValueError):Hardware(hbm_gbs=float('nan'))
+        with self.assertRaises(ValueError):
+            checked_commands(dict(version=1,commands=[dict(command(0,macs=2),matrix_shape=dict(batch=1,m=1,n=1,k=1))]))
 
 
 if __name__=='__main__':

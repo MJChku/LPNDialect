@@ -10,7 +10,7 @@ and controller timing, so its cycle results have no RTL accuracy guarantee.
 import argparse
 from dataclasses import asdict,dataclass
 import json
-from math import ceil
+from math import ceil,isfinite
 from pathlib import Path
 import subprocess
 import time
@@ -33,6 +33,7 @@ class Hardware:
     hbm_capacity_bytes: int = 32_000_000_000
 
     def __post_init__(self):
+        if not isfinite(self.hbm_gbs):raise ValueError('finite HBM bandwidth required')
         if min(asdict(self).values())<=0:raise ValueError('positive hardware budgets required')
         for name,value in asdict(self).items():
             if name!='hbm_gbs' and type(value) is not int:raise ValueError('integer hardware counts required')
@@ -48,6 +49,11 @@ def checked_commands(document):
             raise ValueError('dependencies must point to distinct preceding commands')
         for name in ('macs','weight_bytes','vector_elements','activation_read_bytes','activation_write_bytes'):
             if type(c[name]) is not int or c[name]<0:raise ValueError('nonnegative integer command service required')
+        if c.get('matrix_shape') is not None:
+            shape=c['matrix_shape']
+            if (any(type(shape[k]) is not int or shape[k]<1 for k in ('batch','m','n','k')) or
+                shape['batch']*shape['m']*shape['n']*shape['k']!=c['macs']):
+                raise ValueError('matrix shape and MAC count differ')
     return commands
 
 
