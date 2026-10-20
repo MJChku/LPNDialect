@@ -146,3 +146,47 @@ def glm_router(m,topk=4,scale=1.8):
         weights.set(weights*ol.recip(ol.sum(weights)+1e-20)*scale)
         ol.store(m.ids[r,:],ids);ol.store(m.weights[r,:],weights)
     b.unscratch(register)
+
+
+def expert_batches(ids,experts,max_rows):
+    """Compiler/runtime dispatch from resolved router IDs, outside the LPN.
+
+    Ascending expert order matches the pinned reference's index_add loop.
+    Each selected token appears once per expert, with its original top-k rank.
+    """
+    groups={}
+    for token,row in enumerate(ids):
+        if len(set(row))!=len(row):raise ValueError('duplicate expert in one token route')
+        for rank,e in enumerate(row):
+            if type(e) is not int or not 0<=e<experts:raise ValueError('invalid resolved expert ID')
+            groups.setdefault(e,[]).append((token,rank))
+    if max_rows<1:raise ValueError('positive physical batch size required')
+    return [(e,items[start:start+max_rows]) for e,items in sorted(groups.items())
+            for start in range(0,len(items),max_rows)]
+
+
+@ol.jit
+def glm_resident_experts(m,ids):
+    """Routed and unconditional shared SwiGLU, encoded as real hardware commands.
+
+    IDs must be actual functional/router results before compilation. Dispatch
+    is a compiler/runtime responsibility; the LPN sees the resulting hex only.
+    This first backend holds one layer's experts resident in a 32-bit region.
+    """
+    from opentpu.kernels.mlp import swiglu_down
+    x=ol.load(m.x);xn=rmsnorm(x,ol.load(m.norm),m.eps)
+    ol.store(m.out,ol.zeros(x.shape))
+    for expert,batch in expert_batches(ids,m.experts,x.rows):
+        gathered=ol.empty((len(batch),x.cols))
+        for i,(token,rank) in enumerate(batch):gathered[i,:].set(xn[token,:])
+        descriptor=m.fmt.descs(m.expert_base+expert*m.fmt.nbytes)
+        xs=ol.quantize(gathered)
+        y=swiglu_down(xs,descriptor.wg,descriptor.wu,descriptor.wd,loop=True)
+        for i,(token,rank) in enumerate(batch):
+            weight=ol.load(m.weights[token,rank:rank+1])
+            ol.store(m.out[token,:],ol.load(m.out[token,:])+y[i,:]*weight)
+        del y,xs,gathered,descriptor
+    shared=m.fmt.descs(m.shared_base)
+    y=swiglu_down(ol.quantize(xn),shared.wg,shared.wu,shared.wd,loop=True)
+    # GLM's shared expert is unconditional, without Qwen's extra sigmoid gate.
+    ol.store(m.out,ol.load(m.out)+y+x)

@@ -10,6 +10,17 @@ from examples.opentpu.workload import use_checkout,execute
 class GLMCompilerTest(unittest.TestCase):
     tool=None
 
+    def test_expert_dispatch_preserves_every_selected_token_and_rank(self):
+        from examples.opentpu.glm47_kernels import expert_batches
+        ids=[[7,1,3,0],[1,6,7,3],[7,2,1,0],[2,4,1,7]]
+        batches=expert_batches(ids,8,2)
+        self.assertTrue(all(len(items)<=2 for e,items in batches))
+        self.assertEqual([e for e,items in batches],sorted(e for e,items in batches))
+        actual=sorted((token,rank,e) for e,items in batches for token,rank in items)
+        self.assertEqual(actual,sorted((token,rank,e) for token,row in enumerate(ids) for rank,e in enumerate(row)))
+        with self.assertRaises(ValueError):expert_batches([[0,0]],8,2)
+        with self.assertRaises(ValueError):expert_batches([[8]],8,2)
+
     def test_interleaved_rotary_matches_independent_equations_bit_exact(self):
         import numpy as np
         from opentpu import Config
