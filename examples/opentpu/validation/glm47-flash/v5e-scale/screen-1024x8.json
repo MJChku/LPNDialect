@@ -1,0 +1,1142 @@
+{
+  "status": "complete",
+  "scope": "Replay audited upstream GLM DAGs on proposed v5e-scale array organizations.\n\nThis is an uncalibrated architecture study, not v5e or finished openTPU RTL.\nAll points share matrix resources across weight, attention and router work.\nNVFP4 saves weight bytes but receives no automatic arithmetic speed multiplier.\n",
+  "source_sha256": {
+    "/home/ubuntu/LPNDialect-glm47-v5e-replay/examples/opentpu/glm47_v5e_screen.py": "e399cb17d61ac9cf3659b9142340afe3f5c4910e787a873f64e806aa5bf62cc7",
+    "/home/ubuntu/LPNDialect-glm47-v5e-replay/examples/tensor_dag.py": "6dbe292e13e7a53718fbc252cf1651574fceb42133ebea0475b4668c85047f2e"
+  },
+  "records": [
+    {
+      "scenario": "balanced",
+      "name": "four_128x128",
+      "status": "complete",
+      "scope": "Generic event-driven operation-DAG screen with explicit shared HBM service.\n\nConsumes external tensor commands; contains no inference scheduling or model\ndimensions. This uncalibrated proposal is NOT the FeSens ISA/RTL timing model.\nAll intermediate reads/writes spill to HBM. Operations stream through bounded\ntile buffers, with optimistic overlap of compute and aggregate transfer service.\nIt omits detailed tiling, bank conflicts, quantization/scale decode, FP feedback\nand controller timing, so its cycle results have no RTL accuracy guarantee.\n",
+      "hardware": {
+        "clock_mhz": 1500,
+        "weight_macs_per_cycle": 65536,
+        "bf16_macs_per_cycle": 65536,
+        "fp32_macs_per_cycle": 1024,
+        "vector_elements_per_cycle": 1024,
+        "hbm_gbs": 858.9934592,
+        "pipeline_cycles": 16,
+        "window": 32,
+        "tile_buffer_bytes_per_unit": 1048576,
+        "hbm_capacity_bytes": 32000000000
+      },
+      "commands_sha256": "7878adf2e81520fe95009ef9b2b53c063d4203ab9455cb6dbd6e7f5f576b6e9a",
+      "source_sha256": "6dbe292e13e7a53718fbc252cf1651574fceb42133ebea0475b4668c85047f2e",
+      "binary_sha256": "8df77bdc75c6c8cd85fd85686ff879ee1fc8357e0c0ba5c9e632d685f680fba2",
+      "input_tables_sha256": "14ffdc66ca823f533c17742b16cad49141c3ce594d961b658bf89fe64b3bd938",
+      "command_count": 57727,
+      "statistics": {
+        "transitions": 7,
+        "places": 951,
+        "tile_buffer_bytes": 3145728,
+        "hbm_transfer_bytes": 140526164348
+      },
+      "cycles": 303623403.0,
+      "assumed_hardware_seconds": 0.202415602,
+      "native_seconds": 1.7740989,
+      "native_seconds_samples": [
+        1.7740989,
+        1.774362229,
+        1.788803195
+      ],
+      "native_process_seconds_samples": [
+        1.796778418123722,
+        1.800493897870183,
+        1.8150874432176352
+      ],
+      "model_build_seconds": 0.42542709596455097,
+      "native_compile_seconds": 0.2538559939712286,
+      "arithmetic": {
+        "matrix_macs": 3873905156096,
+        "matrix_flops": 7747810312192,
+        "by_precision": {
+          "nvfp4": {
+            "macs": 3359566987264,
+            "matrix_flops": 6719133974528,
+            "compute_service_cycles": 148161084
+          },
+          "bf16": {
+            "macs": 508121948160,
+            "matrix_flops": 1016243896320,
+            "compute_service_cycles": 24244010
+          },
+          "fp32": {
+            "macs": 6216220672,
+            "matrix_flops": 12432441344,
+            "compute_service_cycles": 6770556
+          }
+        },
+        "matrix_flops_by_call": {
+          "0": 7690773331968,
+          "1": 8145252352,
+          "2": 8146214912,
+          "3": 8147177472,
+          "4": 8148140032,
+          "5": 8149102592,
+          "6": 8150065152,
+          "7": 8151027712
+        },
+        "counting_convention": "One mathematical matrix multiply-add is 2 FLOPs, including NVFP4-weight mixed arithmetic; vector/SFU/routing work excluded, not zero",
+        "vector_work_elements": 22892970327,
+        "peak_matrix_tflops_by_precision": {
+          "nvfp4": 196.608,
+          "bf16": 196.608,
+          "fp32": 3.072
+        },
+        "achieved_matrix_tflops": 38.276744656234555,
+        "achieved_matrix_tflops_by_precision": {
+          "nvfp4": 33.194743429550456,
+          "bf16": 5.020580855817626,
+          "fp32": 0.06142037086647106
+        }
+      },
+      "array_geometry": {
+        "rows": 128,
+        "columns": 128,
+        "arrays": 4
+      },
+      "shared_matrix_unit": true,
+      "host_total_seconds": 6.136339904740453,
+      "zero_rollbacks": true,
+      "rtl_calibrated": false,
+      "numerical_validated": false,
+      "fpga_mapping_proven": false,
+      "existing_opentpu_isa": false,
+      "implementation": "Hypothetical streaming tensor-operation accelerator",
+      "limitations": [
+        "All intermediate activation reads/writes spill to HBM; no SRAM reuse invented",
+        "Compute and aggregate HBM service overlap optimistically per operation",
+        "Tile-buffer capacity is fixed, but detailed tile timing/refills and port conflicts are unvalidated",
+        "NVFP4 scale/dequantization, activation quantization and FP recurrence are not calibrated",
+        "No full allocation/liveness capacity proof for out-of-order activation storage",
+        "No speedup/accuracy comparison with original openTPU or commercial TPU/GPU is established"
+      ],
+      "upstream_trace_sha256": "66152f237ddb9b97d68ae31f19ddf11b160c54ee22a889a7b1e6197809fcb72b",
+      "report_sha256": "79ab197b5b5fd518922514da6dbf3dfa9d540eaf992be66eabf70448f6497607"
+    },
+    {
+      "scenario": "balanced",
+      "name": "sixtyfour_32x32",
+      "status": "complete",
+      "scope": "Generic event-driven operation-DAG screen with explicit shared HBM service.\n\nConsumes external tensor commands; contains no inference scheduling or model\ndimensions. This uncalibrated proposal is NOT the FeSens ISA/RTL timing model.\nAll intermediate reads/writes spill to HBM. Operations stream through bounded\ntile buffers, with optimistic overlap of compute and aggregate transfer service.\nIt omits detailed tiling, bank conflicts, quantization/scale decode, FP feedback\nand controller timing, so its cycle results have no RTL accuracy guarantee.\n",
+      "hardware": {
+        "clock_mhz": 1500,
+        "weight_macs_per_cycle": 65536,
+        "bf16_macs_per_cycle": 65536,
+        "fp32_macs_per_cycle": 1024,
+        "vector_elements_per_cycle": 1024,
+        "hbm_gbs": 858.9934592,
+        "pipeline_cycles": 16,
+        "window": 32,
+        "tile_buffer_bytes_per_unit": 1048576,
+        "hbm_capacity_bytes": 32000000000
+      },
+      "commands_sha256": "7878adf2e81520fe95009ef9b2b53c063d4203ab9455cb6dbd6e7f5f576b6e9a",
+      "source_sha256": "6dbe292e13e7a53718fbc252cf1651574fceb42133ebea0475b4668c85047f2e",
+      "binary_sha256": "8df77bdc75c6c8cd85fd85686ff879ee1fc8357e0c0ba5c9e632d685f680fba2",
+      "input_tables_sha256": "b627b13ad656fd2ff7b721119b1a9e6e82c626435e76e291a0738903bd67eb5a",
+      "command_count": 57727,
+      "statistics": {
+        "transitions": 7,
+        "places": 951,
+        "tile_buffer_bytes": 3145728,
+        "hbm_transfer_bytes": 140526164348
+      },
+      "cycles": 263421072.0,
+      "assumed_hardware_seconds": 0.175614048,
+      "native_seconds": 1.829158751,
+      "native_seconds_samples": [
+        1.829158751,
+        1.827399537,
+        1.837735475
+      ],
+      "native_process_seconds_samples": [
+        1.8521723318845034,
+        1.8534639403223991,
+        1.863501463085413
+      ],
+      "model_build_seconds": 0.4210625849664211,
+      "native_compile_seconds": 0.26863628067076206,
+      "arithmetic": {
+        "matrix_macs": 3873905156096,
+        "matrix_flops": 7747810312192,
+        "by_precision": {
+          "nvfp4": {
+            "macs": 3359566987264,
+            "matrix_flops": 6719133974528,
+            "compute_service_cycles": 68560934
+          },
+          "bf16": {
+            "macs": 508121948160,
+            "matrix_flops": 1016243896320,
+            "compute_service_cycles": 11092752
+          },
+          "fp32": {
+            "macs": 6216220672,
+            "matrix_flops": 12432441344,
+            "compute_service_cycles": 6708732
+          }
+        },
+        "matrix_flops_by_call": {
+          "0": 7690773331968,
+          "1": 8145252352,
+          "2": 8146214912,
+          "3": 8147177472,
+          "4": 8148140032,
+          "5": 8149102592,
+          "6": 8150065152,
+          "7": 8151027712
+        },
+        "counting_convention": "One mathematical matrix multiply-add is 2 FLOPs, including NVFP4-weight mixed arithmetic; vector/SFU/routing work excluded, not zero",
+        "vector_work_elements": 22892970327,
+        "peak_matrix_tflops_by_precision": {
+          "nvfp4": 196.608,
+          "bf16": 196.608,
+          "fp32": 3.072
+        },
+        "achieved_matrix_tflops": 44.118397135245125,
+        "achieved_matrix_tflops_by_precision": {
+          "nvfp4": 38.26080003877595,
+          "bf16": 5.786802980135166,
+          "fp32": 0.07079411633401902
+        }
+      },
+      "array_geometry": {
+        "rows": 32,
+        "columns": 32,
+        "arrays": 64
+      },
+      "shared_matrix_unit": true,
+      "host_total_seconds": 6.303690420463681,
+      "zero_rollbacks": true,
+      "rtl_calibrated": false,
+      "numerical_validated": false,
+      "fpga_mapping_proven": false,
+      "existing_opentpu_isa": false,
+      "implementation": "Hypothetical streaming tensor-operation accelerator",
+      "limitations": [
+        "All intermediate activation reads/writes spill to HBM; no SRAM reuse invented",
+        "Compute and aggregate HBM service overlap optimistically per operation",
+        "Tile-buffer capacity is fixed, but detailed tile timing/refills and port conflicts are unvalidated",
+        "NVFP4 scale/dequantization, activation quantization and FP recurrence are not calibrated",
+        "No full allocation/liveness capacity proof for out-of-order activation storage",
+        "No speedup/accuracy comparison with original openTPU or commercial TPU/GPU is established"
+      ],
+      "upstream_trace_sha256": "66152f237ddb9b97d68ae31f19ddf11b160c54ee22a889a7b1e6197809fcb72b",
+      "report_sha256": "1eab2e59572f0e25dcf452319f58938987566a781031e3fe56fe73d7037f1402"
+    },
+    {
+      "scenario": "balanced",
+      "name": "sixtyfour_16x64",
+      "status": "complete",
+      "scope": "Generic event-driven operation-DAG screen with explicit shared HBM service.\n\nConsumes external tensor commands; contains no inference scheduling or model\ndimensions. This uncalibrated proposal is NOT the FeSens ISA/RTL timing model.\nAll intermediate reads/writes spill to HBM. Operations stream through bounded\ntile buffers, with optimistic overlap of compute and aggregate transfer service.\nIt omits detailed tiling, bank conflicts, quantization/scale decode, FP feedback\nand controller timing, so its cycle results have no RTL accuracy guarantee.\n",
+      "hardware": {
+        "clock_mhz": 1500,
+        "weight_macs_per_cycle": 65536,
+        "bf16_macs_per_cycle": 65536,
+        "fp32_macs_per_cycle": 1024,
+        "vector_elements_per_cycle": 1024,
+        "hbm_gbs": 858.9934592,
+        "pipeline_cycles": 16,
+        "window": 32,
+        "tile_buffer_bytes_per_unit": 1048576,
+        "hbm_capacity_bytes": 32000000000
+      },
+      "commands_sha256": "7878adf2e81520fe95009ef9b2b53c063d4203ab9455cb6dbd6e7f5f576b6e9a",
+      "source_sha256": "6dbe292e13e7a53718fbc252cf1651574fceb42133ebea0475b4668c85047f2e",
+      "binary_sha256": "8df77bdc75c6c8cd85fd85686ff879ee1fc8357e0c0ba5c9e632d685f680fba2",
+      "input_tables_sha256": "3a9749fc3ff30c2d6e4ee80049b60116e3029a8055494979ffb3623e2cbe0b53",
+      "command_count": 57727,
+      "statistics": {
+        "transitions": 7,
+        "places": 951,
+        "tile_buffer_bytes": 3145728,
+        "hbm_transfer_bytes": 140526164348
+      },
+      "cycles": 263594512.0,
+      "assumed_hardware_seconds": 0.17572967466666667,
+      "native_seconds": 1.838430513,
+      "native_seconds_samples": [
+        1.838430513,
+        1.82962706,
+        1.835078872
+      ],
+      "native_process_seconds_samples": [
+        1.86442962102592,
+        1.855997422710061,
+        1.8609510604292154
+      ],
+      "model_build_seconds": 0.42215038649737835,
+      "native_compile_seconds": 0.2711057122796774,
+      "arithmetic": {
+        "matrix_macs": 3873905156096,
+        "matrix_flops": 7747810312192,
+        "by_precision": {
+          "nvfp4": {
+            "macs": 3359566987264,
+            "matrix_flops": 6719133974528,
+            "compute_service_cycles": 65101732
+          },
+          "bf16": {
+            "macs": 508121948160,
+            "matrix_flops": 1016243896320,
+            "compute_service_cycles": 10553944
+          },
+          "fp32": {
+            "macs": 6216220672,
+            "matrix_flops": 12432441344,
+            "compute_service_cycles": 6713884
+          }
+        },
+        "matrix_flops_by_call": {
+          "0": 7690773331968,
+          "1": 8145252352,
+          "2": 8146214912,
+          "3": 8147177472,
+          "4": 8148140032,
+          "5": 8149102592,
+          "6": 8150065152,
+          "7": 8151027712
+        },
+        "counting_convention": "One mathematical matrix multiply-add is 2 FLOPs, including NVFP4-weight mixed arithmetic; vector/SFU/routing work excluded, not zero",
+        "vector_work_elements": 22892970327,
+        "peak_matrix_tflops_by_precision": {
+          "nvfp4": 196.608,
+          "bf16": 196.608,
+          "fp32": 3.072
+        },
+        "achieved_matrix_tflops": 44.08936809840715,
+        "achieved_matrix_tflops_by_precision": {
+          "nvfp4": 38.235625185519794,
+          "bf16": 5.782995377688288,
+          "fp32": 0.07074753519906363
+        }
+      },
+      "array_geometry": {
+        "rows": 16,
+        "columns": 64,
+        "arrays": 64
+      },
+      "shared_matrix_unit": true,
+      "host_total_seconds": 6.319538088515401,
+      "zero_rollbacks": true,
+      "rtl_calibrated": false,
+      "numerical_validated": false,
+      "fpga_mapping_proven": false,
+      "existing_opentpu_isa": false,
+      "implementation": "Hypothetical streaming tensor-operation accelerator",
+      "limitations": [
+        "All intermediate activation reads/writes spill to HBM; no SRAM reuse invented",
+        "Compute and aggregate HBM service overlap optimistically per operation",
+        "Tile-buffer capacity is fixed, but detailed tile timing/refills and port conflicts are unvalidated",
+        "NVFP4 scale/dequantization, activation quantization and FP recurrence are not calibrated",
+        "No full allocation/liveness capacity proof for out-of-order activation storage",
+        "No speedup/accuracy comparison with original openTPU or commercial TPU/GPU is established"
+      ],
+      "upstream_trace_sha256": "66152f237ddb9b97d68ae31f19ddf11b160c54ee22a889a7b1e6197809fcb72b",
+      "report_sha256": "9183e8e399e836a5237a9212fb59348b67a5ba7fbef7a28852517c21c819b122"
+    },
+    {
+      "scenario": "balanced",
+      "name": "eight_128x128",
+      "status": "complete",
+      "scope": "Generic event-driven operation-DAG screen with explicit shared HBM service.\n\nConsumes external tensor commands; contains no inference scheduling or model\ndimensions. This uncalibrated proposal is NOT the FeSens ISA/RTL timing model.\nAll intermediate reads/writes spill to HBM. Operations stream through bounded\ntile buffers, with optimistic overlap of compute and aggregate transfer service.\nIt omits detailed tiling, bank conflicts, quantization/scale decode, FP feedback\nand controller timing, so its cycle results have no RTL accuracy guarantee.\n",
+      "hardware": {
+        "clock_mhz": 1500,
+        "weight_macs_per_cycle": 131072,
+        "bf16_macs_per_cycle": 131072,
+        "fp32_macs_per_cycle": 1024,
+        "vector_elements_per_cycle": 1024,
+        "hbm_gbs": 858.9934592,
+        "pipeline_cycles": 16,
+        "window": 32,
+        "tile_buffer_bytes_per_unit": 1048576,
+        "hbm_capacity_bytes": 32000000000
+      },
+      "commands_sha256": "7878adf2e81520fe95009ef9b2b53c063d4203ab9455cb6dbd6e7f5f576b6e9a",
+      "source_sha256": "6dbe292e13e7a53718fbc252cf1651574fceb42133ebea0475b4668c85047f2e",
+      "binary_sha256": "8df77bdc75c6c8cd85fd85686ff879ee1fc8357e0c0ba5c9e632d685f680fba2",
+      "input_tables_sha256": "f6abeb6ed2581d7fcddbaa5ad1c8e76c746c0ccf67a1dfd7860fa2d8573a6682",
+      "command_count": 57727,
+      "statistics": {
+        "transitions": 7,
+        "places": 951,
+        "tile_buffer_bytes": 3145728,
+        "hbm_transfer_bytes": 140526164348
+      },
+      "cycles": 259727331.0,
+      "assumed_hardware_seconds": 0.173151554,
+      "native_seconds": 1.867584111,
+      "native_seconds_samples": [
+        1.867584111,
+        1.868519684,
+        1.86863904
+      ],
+      "native_process_seconds_samples": [
+        1.8937721643596888,
+        1.8914857264608145,
+        1.894816167652607
+      ],
+      "model_build_seconds": 0.42413997650146484,
+      "native_compile_seconds": 0.26993067376315594,
+      "arithmetic": {
+        "matrix_macs": 3873905156096,
+        "matrix_flops": 7747810312192,
+        "by_precision": {
+          "nvfp4": {
+            "macs": 3359566987264,
+            "matrix_flops": 6719133974528,
+            "compute_service_cycles": 74830994
+          },
+          "bf16": {
+            "macs": 508121948160,
+            "matrix_flops": 1016243896320,
+            "compute_service_cycles": 12205900
+          },
+          "fp32": {
+            "macs": 6216220672,
+            "matrix_flops": 12432441344,
+            "compute_service_cycles": 6770556
+          }
+        },
+        "matrix_flops_by_call": {
+          "0": 7690773331968,
+          "1": 8145252352,
+          "2": 8146214912,
+          "3": 8147177472,
+          "4": 8148140032,
+          "5": 8149102592,
+          "6": 8150065152,
+          "7": 8151027712
+        },
+        "counting_convention": "One mathematical matrix multiply-add is 2 FLOPs, including NVFP4-weight mixed arithmetic; vector/SFU/routing work excluded, not zero",
+        "vector_work_elements": 22892970327,
+        "peak_matrix_tflops_by_precision": {
+          "nvfp4": 393.216,
+          "bf16": 393.216,
+          "fp32": 3.072
+        },
+        "achieved_matrix_tflops": 44.74583180577172,
+        "achieved_matrix_tflops_by_precision": {
+          "nvfp4": 38.80493024352528,
+          "bf16": 5.8691006395472485,
+          "fp32": 0.07180092269919795
+        }
+      },
+      "array_geometry": {
+        "rows": 128,
+        "columns": 128,
+        "arrays": 8
+      },
+      "shared_matrix_unit": true,
+      "host_total_seconds": 6.418830923736095,
+      "zero_rollbacks": true,
+      "rtl_calibrated": false,
+      "numerical_validated": false,
+      "fpga_mapping_proven": false,
+      "existing_opentpu_isa": false,
+      "implementation": "Hypothetical streaming tensor-operation accelerator",
+      "limitations": [
+        "All intermediate activation reads/writes spill to HBM; no SRAM reuse invented",
+        "Compute and aggregate HBM service overlap optimistically per operation",
+        "Tile-buffer capacity is fixed, but detailed tile timing/refills and port conflicts are unvalidated",
+        "NVFP4 scale/dequantization, activation quantization and FP recurrence are not calibrated",
+        "No full allocation/liveness capacity proof for out-of-order activation storage",
+        "No speedup/accuracy comparison with original openTPU or commercial TPU/GPU is established"
+      ],
+      "upstream_trace_sha256": "66152f237ddb9b97d68ae31f19ddf11b160c54ee22a889a7b1e6197809fcb72b",
+      "report_sha256": "847f36c2c74ea466922551685e614ac3421ef778acc872ff4a4090e4405e805b"
+    },
+    {
+      "scenario": "balanced",
+      "name": "sixtyfour_16x64_hbm2x",
+      "status": "complete",
+      "scope": "Generic event-driven operation-DAG screen with explicit shared HBM service.\n\nConsumes external tensor commands; contains no inference scheduling or model\ndimensions. This uncalibrated proposal is NOT the FeSens ISA/RTL timing model.\nAll intermediate reads/writes spill to HBM. Operations stream through bounded\ntile buffers, with optimistic overlap of compute and aggregate transfer service.\nIt omits detailed tiling, bank conflicts, quantization/scale decode, FP feedback\nand controller timing, so its cycle results have no RTL accuracy guarantee.\n",
+      "hardware": {
+        "clock_mhz": 1500,
+        "weight_macs_per_cycle": 65536,
+        "bf16_macs_per_cycle": 65536,
+        "fp32_macs_per_cycle": 1024,
+        "vector_elements_per_cycle": 1024,
+        "hbm_gbs": 1717.9869184,
+        "pipeline_cycles": 16,
+        "window": 32,
+        "tile_buffer_bytes_per_unit": 1048576,
+        "hbm_capacity_bytes": 32000000000
+      },
+      "commands_sha256": "7878adf2e81520fe95009ef9b2b53c063d4203ab9455cb6dbd6e7f5f576b6e9a",
+      "source_sha256": "6dbe292e13e7a53718fbc252cf1651574fceb42133ebea0475b4668c85047f2e",
+      "binary_sha256": "8df77bdc75c6c8cd85fd85686ff879ee1fc8357e0c0ba5c9e632d685f680fba2",
+      "input_tables_sha256": "729e9c966812458352d81525c324fba0ce9729863944b3422e5d0809570e8df4",
+      "command_count": 57727,
+      "statistics": {
+        "transitions": 7,
+        "places": 951,
+        "tile_buffer_bytes": 3145728,
+        "hbm_transfer_bytes": 140526164348
+      },
+      "cycles": 152380193.0,
+      "assumed_hardware_seconds": 0.10158679533333333,
+      "native_seconds": 1.772799343,
+      "native_seconds_samples": [
+        1.772799343,
+        1.785278441,
+        1.768114565
+      ],
+      "native_process_seconds_samples": [
+        1.7988093830645084,
+        1.8113697730004787,
+        1.7944559138268232
+      ],
+      "model_build_seconds": 0.42464361153542995,
+      "native_compile_seconds": 0.2702542096376419,
+      "arithmetic": {
+        "matrix_macs": 3873905156096,
+        "matrix_flops": 7747810312192,
+        "by_precision": {
+          "nvfp4": {
+            "macs": 3359566987264,
+            "matrix_flops": 6719133974528,
+            "compute_service_cycles": 65101732
+          },
+          "bf16": {
+            "macs": 508121948160,
+            "matrix_flops": 1016243896320,
+            "compute_service_cycles": 10553944
+          },
+          "fp32": {
+            "macs": 6216220672,
+            "matrix_flops": 12432441344,
+            "compute_service_cycles": 6713884
+          }
+        },
+        "matrix_flops_by_call": {
+          "0": 7690773331968,
+          "1": 8145252352,
+          "2": 8146214912,
+          "3": 8147177472,
+          "4": 8148140032,
+          "5": 8149102592,
+          "6": 8150065152,
+          "7": 8151027712
+        },
+        "counting_convention": "One mathematical matrix multiply-add is 2 FLOPs, including NVFP4-weight mixed arithmetic; vector/SFU/routing work excluded, not zero",
+        "vector_work_elements": 22892970327,
+        "peak_matrix_tflops_by_precision": {
+          "nvfp4": 196.608,
+          "bf16": 196.608,
+          "fp32": 3.072
+        },
+        "achieved_matrix_tflops": 76.2678878368923,
+        "achieved_matrix_tflops_by_precision": {
+          "nvfp4": 66.14180467530974,
+          "bf16": 10.003700707217245,
+          "fp32": 0.12238245436531243
+        }
+      },
+      "array_geometry": {
+        "rows": 16,
+        "columns": 64,
+        "arrays": 64
+      },
+      "shared_matrix_unit": true,
+      "host_total_seconds": 6.1439357828348875,
+      "zero_rollbacks": true,
+      "rtl_calibrated": false,
+      "numerical_validated": false,
+      "fpga_mapping_proven": false,
+      "existing_opentpu_isa": false,
+      "implementation": "Hypothetical streaming tensor-operation accelerator",
+      "limitations": [
+        "All intermediate activation reads/writes spill to HBM; no SRAM reuse invented",
+        "Compute and aggregate HBM service overlap optimistically per operation",
+        "Tile-buffer capacity is fixed, but detailed tile timing/refills and port conflicts are unvalidated",
+        "NVFP4 scale/dequantization, activation quantization and FP recurrence are not calibrated",
+        "No full allocation/liveness capacity proof for out-of-order activation storage",
+        "No speedup/accuracy comparison with original openTPU or commercial TPU/GPU is established"
+      ],
+      "upstream_trace_sha256": "66152f237ddb9b97d68ae31f19ddf11b160c54ee22a889a7b1e6197809fcb72b",
+      "report_sha256": "fe819d69782620c41aaa46fd3a437cab29bb464e4978d08fb54af3807b57642a"
+    },
+    {
+      "scenario": "hotspot",
+      "name": "four_128x128",
+      "status": "complete",
+      "scope": "Generic event-driven operation-DAG screen with explicit shared HBM service.\n\nConsumes external tensor commands; contains no inference scheduling or model\ndimensions. This uncalibrated proposal is NOT the FeSens ISA/RTL timing model.\nAll intermediate reads/writes spill to HBM. Operations stream through bounded\ntile buffers, with optimistic overlap of compute and aggregate transfer service.\nIt omits detailed tiling, bank conflicts, quantization/scale decode, FP feedback\nand controller timing, so its cycle results have no RTL accuracy guarantee.\n",
+      "hardware": {
+        "clock_mhz": 1500,
+        "weight_macs_per_cycle": 65536,
+        "bf16_macs_per_cycle": 65536,
+        "fp32_macs_per_cycle": 1024,
+        "vector_elements_per_cycle": 1024,
+        "hbm_gbs": 858.9934592,
+        "pipeline_cycles": 16,
+        "window": 32,
+        "tile_buffer_bytes_per_unit": 1048576,
+        "hbm_capacity_bytes": 32000000000
+      },
+      "commands_sha256": "66b4961167d0b593f062992b389ecfefb26a3709aa88ce18f4226e6d772404f5",
+      "source_sha256": "6dbe292e13e7a53718fbc252cf1651574fceb42133ebea0475b4668c85047f2e",
+      "binary_sha256": "d73203014b9c3f37b1787c9e5fc265482a5248db28777a1e7e71949771b5e562",
+      "input_tables_sha256": "bff065a5daf7966f8116059c813f3661af0a4c05a843670dcee4a8cf585ad10a",
+      "command_count": 35647,
+      "statistics": {
+        "transitions": 7,
+        "places": 606,
+        "tile_buffer_bytes": 3145728,
+        "hbm_transfer_bytes": 91100857148
+      },
+      "cycles": 226312767.0,
+      "assumed_hardware_seconds": 0.150875178,
+      "native_seconds": 1.148770051,
+      "native_seconds_samples": [
+        1.148770051,
+        1.139076622,
+        1.157047957
+      ],
+      "native_process_seconds_samples": [
+        1.166898326948285,
+        1.157323319464922,
+        1.174993583932519
+      ],
+      "model_build_seconds": 0.2750667594373226,
+      "native_compile_seconds": 0.2604864779859781,
+      "arithmetic": {
+        "matrix_macs": 3873905156096,
+        "matrix_flops": 7747810312192,
+        "by_precision": {
+          "nvfp4": {
+            "macs": 3359566987264,
+            "matrix_flops": 6719133974528,
+            "compute_service_cycles": 117290300
+          },
+          "bf16": {
+            "macs": 508121948160,
+            "matrix_flops": 1016243896320,
+            "compute_service_cycles": 24244010
+          },
+          "fp32": {
+            "macs": 6216220672,
+            "matrix_flops": 12432441344,
+            "compute_service_cycles": 6770556
+          }
+        },
+        "matrix_flops_by_call": {
+          "0": 7690773331968,
+          "1": 8145252352,
+          "2": 8146214912,
+          "3": 8147177472,
+          "4": 8148140032,
+          "5": 8149102592,
+          "6": 8150065152,
+          "7": 8151027712
+        },
+        "counting_convention": "One mathematical matrix multiply-add is 2 FLOPs, including NVFP4-weight mixed arithmetic; vector/SFU/routing work excluded, not zero",
+        "vector_work_elements": 11305386327,
+        "peak_matrix_tflops_by_precision": {
+          "nvfp4": 196.608,
+          "bf16": 196.608,
+          "fp32": 3.072
+        },
+        "achieved_matrix_tflops": 51.35245184063346,
+        "achieved_matrix_tflops_by_precision": {
+          "nvfp4": 44.53438970940601,
+          "bf16": 6.735659966015086,
+          "fp32": 0.08240216521235852
+        }
+      },
+      "array_geometry": {
+        "rows": 128,
+        "columns": 128,
+        "arrays": 4
+      },
+      "shared_matrix_unit": true,
+      "host_total_seconds": 4.0632184613496065,
+      "zero_rollbacks": true,
+      "rtl_calibrated": false,
+      "numerical_validated": false,
+      "fpga_mapping_proven": false,
+      "existing_opentpu_isa": false,
+      "implementation": "Hypothetical streaming tensor-operation accelerator",
+      "limitations": [
+        "All intermediate activation reads/writes spill to HBM; no SRAM reuse invented",
+        "Compute and aggregate HBM service overlap optimistically per operation",
+        "Tile-buffer capacity is fixed, but detailed tile timing/refills and port conflicts are unvalidated",
+        "NVFP4 scale/dequantization, activation quantization and FP recurrence are not calibrated",
+        "No full allocation/liveness capacity proof for out-of-order activation storage",
+        "No speedup/accuracy comparison with original openTPU or commercial TPU/GPU is established"
+      ],
+      "upstream_trace_sha256": "945c88aed76276b3f16257608704e40b60224606bed625348f7edf4dd9d17a71",
+      "report_sha256": "b4ce3b6b4b3e57855f0c96f0a2a4b440399c5ec4ea180e7abf9bc3c35f4f1b00"
+    },
+    {
+      "scenario": "hotspot",
+      "name": "sixtyfour_32x32",
+      "status": "complete",
+      "scope": "Generic event-driven operation-DAG screen with explicit shared HBM service.\n\nConsumes external tensor commands; contains no inference scheduling or model\ndimensions. This uncalibrated proposal is NOT the FeSens ISA/RTL timing model.\nAll intermediate reads/writes spill to HBM. Operations stream through bounded\ntile buffers, with optimistic overlap of compute and aggregate transfer service.\nIt omits detailed tiling, bank conflicts, quantization/scale decode, FP feedback\nand controller timing, so its cycle results have no RTL accuracy guarantee.\n",
+      "hardware": {
+        "clock_mhz": 1500,
+        "weight_macs_per_cycle": 65536,
+        "bf16_macs_per_cycle": 65536,
+        "fp32_macs_per_cycle": 1024,
+        "vector_elements_per_cycle": 1024,
+        "hbm_gbs": 858.9934592,
+        "pipeline_cycles": 16,
+        "window": 32,
+        "tile_buffer_bytes_per_unit": 1048576,
+        "hbm_capacity_bytes": 32000000000
+      },
+      "commands_sha256": "66b4961167d0b593f062992b389ecfefb26a3709aa88ce18f4226e6d772404f5",
+      "source_sha256": "6dbe292e13e7a53718fbc252cf1651574fceb42133ebea0475b4668c85047f2e",
+      "binary_sha256": "d73203014b9c3f37b1787c9e5fc265482a5248db28777a1e7e71949771b5e562",
+      "input_tables_sha256": "70b36046dd5bd088c71d86d2c5b0240e5468f5c765fcf2dc790ff37b7ce2d0f9",
+      "command_count": 35647,
+      "statistics": {
+        "transitions": 7,
+        "places": 606,
+        "tile_buffer_bytes": 3145728,
+        "hbm_transfer_bytes": 91100857148
+      },
+      "cycles": 185945342.0,
+      "assumed_hardware_seconds": 0.12396356133333333,
+      "native_seconds": 1.117810802,
+      "native_seconds_samples": [
+        1.117810802,
+        1.11564584,
+        1.129186019
+      ],
+      "native_process_seconds_samples": [
+        1.1275667920708656,
+        1.1336819287389517,
+        1.1473157443106174
+      ],
+      "model_build_seconds": 0.275731710717082,
+      "native_compile_seconds": 0.23911819607019424,
+      "arithmetic": {
+        "matrix_macs": 3873905156096,
+        "matrix_flops": 7747810312192,
+        "by_precision": {
+          "nvfp4": {
+            "macs": 3359566987264,
+            "matrix_flops": 6719133974528,
+            "compute_service_cycles": 68560934
+          },
+          "bf16": {
+            "macs": 508121948160,
+            "matrix_flops": 1016243896320,
+            "compute_service_cycles": 11092752
+          },
+          "fp32": {
+            "macs": 6216220672,
+            "matrix_flops": 12432441344,
+            "compute_service_cycles": 6708732
+          }
+        },
+        "matrix_flops_by_call": {
+          "0": 7690773331968,
+          "1": 8145252352,
+          "2": 8146214912,
+          "3": 8147177472,
+          "4": 8148140032,
+          "5": 8149102592,
+          "6": 8150065152,
+          "7": 8151027712
+        },
+        "counting_convention": "One mathematical matrix multiply-add is 2 FLOPs, including NVFP4-weight mixed arithmetic; vector/SFU/routing work excluded, not zero",
+        "vector_work_elements": 11305386327,
+        "peak_matrix_tflops_by_precision": {
+          "nvfp4": 196.608,
+          "bf16": 196.608,
+          "fp32": 3.072
+        },
+        "achieved_matrix_tflops": 62.50070769876021,
+        "achieved_matrix_tflops_by_precision": {
+          "nvfp4": 54.20249226674363,
+          "bf16": 8.197924336711807,
+          "fp32": 0.10029109530476972
+        }
+      },
+      "array_geometry": {
+        "rows": 32,
+        "columns": 32,
+        "arrays": 64
+      },
+      "shared_matrix_unit": true,
+      "host_total_seconds": 3.951732574030757,
+      "zero_rollbacks": true,
+      "rtl_calibrated": false,
+      "numerical_validated": false,
+      "fpga_mapping_proven": false,
+      "existing_opentpu_isa": false,
+      "implementation": "Hypothetical streaming tensor-operation accelerator",
+      "limitations": [
+        "All intermediate activation reads/writes spill to HBM; no SRAM reuse invented",
+        "Compute and aggregate HBM service overlap optimistically per operation",
+        "Tile-buffer capacity is fixed, but detailed tile timing/refills and port conflicts are unvalidated",
+        "NVFP4 scale/dequantization, activation quantization and FP recurrence are not calibrated",
+        "No full allocation/liveness capacity proof for out-of-order activation storage",
+        "No speedup/accuracy comparison with original openTPU or commercial TPU/GPU is established"
+      ],
+      "upstream_trace_sha256": "945c88aed76276b3f16257608704e40b60224606bed625348f7edf4dd9d17a71",
+      "report_sha256": "c831806ac2380daaa5cb88969676a6c1acdf0d0f247e0c73cf27199d3fd89dd2"
+    },
+    {
+      "scenario": "hotspot",
+      "name": "sixtyfour_16x64",
+      "status": "complete",
+      "scope": "Generic event-driven operation-DAG screen with explicit shared HBM service.\n\nConsumes external tensor commands; contains no inference scheduling or model\ndimensions. This uncalibrated proposal is NOT the FeSens ISA/RTL timing model.\nAll intermediate reads/writes spill to HBM. Operations stream through bounded\ntile buffers, with optimistic overlap of compute and aggregate transfer service.\nIt omits detailed tiling, bank conflicts, quantization/scale decode, FP feedback\nand controller timing, so its cycle results have no RTL accuracy guarantee.\n",
+      "hardware": {
+        "clock_mhz": 1500,
+        "weight_macs_per_cycle": 65536,
+        "bf16_macs_per_cycle": 65536,
+        "fp32_macs_per_cycle": 1024,
+        "vector_elements_per_cycle": 1024,
+        "hbm_gbs": 858.9934592,
+        "pipeline_cycles": 16,
+        "window": 32,
+        "tile_buffer_bytes_per_unit": 1048576,
+        "hbm_capacity_bytes": 32000000000
+      },
+      "commands_sha256": "66b4961167d0b593f062992b389ecfefb26a3709aa88ce18f4226e6d772404f5",
+      "source_sha256": "6dbe292e13e7a53718fbc252cf1651574fceb42133ebea0475b4668c85047f2e",
+      "binary_sha256": "d73203014b9c3f37b1787c9e5fc265482a5248db28777a1e7e71949771b5e562",
+      "input_tables_sha256": "4f4f390f8024719458f039549eac379a36a9b3bef4f6599e970dc93aff031476",
+      "command_count": 35647,
+      "statistics": {
+        "transitions": 7,
+        "places": 606,
+        "tile_buffer_bytes": 3145728,
+        "hbm_transfer_bytes": 91100857148
+      },
+      "cycles": 186289534.0,
+      "assumed_hardware_seconds": 0.12419302266666667,
+      "native_seconds": 1.114191635,
+      "native_seconds_samples": [
+        1.114191635,
+        1.117795795,
+        1.121193884
+      ],
+      "native_process_seconds_samples": [
+        1.131955087184906,
+        1.134715037420392,
+        1.1393679063767195
+      ],
+      "model_build_seconds": 0.2760068792849779,
+      "native_compile_seconds": 0.2605063784867525,
+      "arithmetic": {
+        "matrix_macs": 3873905156096,
+        "matrix_flops": 7747810312192,
+        "by_precision": {
+          "nvfp4": {
+            "macs": 3359566987264,
+            "matrix_flops": 6719133974528,
+            "compute_service_cycles": 65101732
+          },
+          "bf16": {
+            "macs": 508121948160,
+            "matrix_flops": 1016243896320,
+            "compute_service_cycles": 10553944
+          },
+          "fp32": {
+            "macs": 6216220672,
+            "matrix_flops": 12432441344,
+            "compute_service_cycles": 6713884
+          }
+        },
+        "matrix_flops_by_call": {
+          "0": 7690773331968,
+          "1": 8145252352,
+          "2": 8146214912,
+          "3": 8147177472,
+          "4": 8148140032,
+          "5": 8149102592,
+          "6": 8150065152,
+          "7": 8151027712
+        },
+        "counting_convention": "One mathematical matrix multiply-add is 2 FLOPs, including NVFP4-weight mixed arithmetic; vector/SFU/routing work excluded, not zero",
+        "vector_work_elements": 11305386327,
+        "peak_matrix_tflops_by_precision": {
+          "nvfp4": 196.608,
+          "bf16": 196.608,
+          "fp32": 3.072
+        },
+        "achieved_matrix_tflops": 62.38523023138809,
+        "achieved_matrix_tflops_by_precision": {
+          "nvfp4": 54.102346736193994,
+          "bf16": 8.18277769957812,
+          "fp32": 0.10010579561597915
+        }
+      },
+      "array_geometry": {
+        "rows": 16,
+        "columns": 64,
+        "arrays": 64
+      },
+      "shared_matrix_unit": true,
+      "host_total_seconds": 3.970575552433729,
+      "zero_rollbacks": true,
+      "rtl_calibrated": false,
+      "numerical_validated": false,
+      "fpga_mapping_proven": false,
+      "existing_opentpu_isa": false,
+      "implementation": "Hypothetical streaming tensor-operation accelerator",
+      "limitations": [
+        "All intermediate activation reads/writes spill to HBM; no SRAM reuse invented",
+        "Compute and aggregate HBM service overlap optimistically per operation",
+        "Tile-buffer capacity is fixed, but detailed tile timing/refills and port conflicts are unvalidated",
+        "NVFP4 scale/dequantization, activation quantization and FP recurrence are not calibrated",
+        "No full allocation/liveness capacity proof for out-of-order activation storage",
+        "No speedup/accuracy comparison with original openTPU or commercial TPU/GPU is established"
+      ],
+      "upstream_trace_sha256": "945c88aed76276b3f16257608704e40b60224606bed625348f7edf4dd9d17a71",
+      "report_sha256": "076518f3d69c7aaa8c13a8c82f84c378e594e3c48771fddcdff19e4c58dec33b"
+    },
+    {
+      "scenario": "hotspot",
+      "name": "eight_128x128",
+      "status": "complete",
+      "scope": "Generic event-driven operation-DAG screen with explicit shared HBM service.\n\nConsumes external tensor commands; contains no inference scheduling or model\ndimensions. This uncalibrated proposal is NOT the FeSens ISA/RTL timing model.\nAll intermediate reads/writes spill to HBM. Operations stream through bounded\ntile buffers, with optimistic overlap of compute and aggregate transfer service.\nIt omits detailed tiling, bank conflicts, quantization/scale decode, FP feedback\nand controller timing, so its cycle results have no RTL accuracy guarantee.\n",
+      "hardware": {
+        "clock_mhz": 1500,
+        "weight_macs_per_cycle": 131072,
+        "bf16_macs_per_cycle": 131072,
+        "fp32_macs_per_cycle": 1024,
+        "vector_elements_per_cycle": 1024,
+        "hbm_gbs": 858.9934592,
+        "pipeline_cycles": 16,
+        "window": 32,
+        "tile_buffer_bytes_per_unit": 1048576,
+        "hbm_capacity_bytes": 32000000000
+      },
+      "commands_sha256": "66b4961167d0b593f062992b389ecfefb26a3709aa88ce18f4226e6d772404f5",
+      "source_sha256": "6dbe292e13e7a53718fbc252cf1651574fceb42133ebea0475b4668c85047f2e",
+      "binary_sha256": "d73203014b9c3f37b1787c9e5fc265482a5248db28777a1e7e71949771b5e562",
+      "input_tables_sha256": "24f16b658b4898b946bef501b5b9c4411aced4ed0d6e4667d8ca6dd6693ccdd5",
+      "command_count": 35647,
+      "statistics": {
+        "transitions": 7,
+        "places": 606,
+        "tile_buffer_bytes": 3145728,
+        "hbm_transfer_bytes": 91100857148
+      },
+      "cycles": 173968335.0,
+      "assumed_hardware_seconds": 0.11597889,
+      "native_seconds": 1.150839063,
+      "native_seconds_samples": [
+        1.150839063,
+        1.140165286,
+        1.145086983
+      ],
+      "native_process_seconds_samples": [
+        1.1691688783466816,
+        1.15919198282063,
+        1.1636692862957716
+      ],
+      "model_build_seconds": 0.27600986510515213,
+      "native_compile_seconds": 0.2583792954683304,
+      "arithmetic": {
+        "matrix_macs": 3873905156096,
+        "matrix_flops": 7747810312192,
+        "by_precision": {
+          "nvfp4": {
+            "macs": 3359566987264,
+            "matrix_flops": 6719133974528,
+            "compute_service_cycles": 59395602
+          },
+          "bf16": {
+            "macs": 508121948160,
+            "matrix_flops": 1016243896320,
+            "compute_service_cycles": 12205900
+          },
+          "fp32": {
+            "macs": 6216220672,
+            "matrix_flops": 12432441344,
+            "compute_service_cycles": 6770556
+          }
+        },
+        "matrix_flops_by_call": {
+          "0": 7690773331968,
+          "1": 8145252352,
+          "2": 8146214912,
+          "3": 8147177472,
+          "4": 8148140032,
+          "5": 8149102592,
+          "6": 8150065152,
+          "7": 8151027712
+        },
+        "counting_convention": "One mathematical matrix multiply-add is 2 FLOPs, including NVFP4-weight mixed arithmetic; vector/SFU/routing work excluded, not zero",
+        "vector_work_elements": 11305386327,
+        "peak_matrix_tflops_by_precision": {
+          "nvfp4": 393.216,
+          "bf16": 393.216,
+          "fp32": 3.072
+        },
+        "achieved_matrix_tflops": 66.80362531657269,
+        "achieved_matrix_tflops_by_precision": {
+          "nvfp4": 57.934111755406526,
+          "bf16": 8.762317834909439,
+          "fp32": 0.10719572625673517
+        }
+      },
+      "array_geometry": {
+        "rows": 128,
+        "columns": 128,
+        "arrays": 8
+      },
+      "shared_matrix_unit": true,
+      "host_total_seconds": 4.054536873474717,
+      "zero_rollbacks": true,
+      "rtl_calibrated": false,
+      "numerical_validated": false,
+      "fpga_mapping_proven": false,
+      "existing_opentpu_isa": false,
+      "implementation": "Hypothetical streaming tensor-operation accelerator",
+      "limitations": [
+        "All intermediate activation reads/writes spill to HBM; no SRAM reuse invented",
+        "Compute and aggregate HBM service overlap optimistically per operation",
+        "Tile-buffer capacity is fixed, but detailed tile timing/refills and port conflicts are unvalidated",
+        "NVFP4 scale/dequantization, activation quantization and FP recurrence are not calibrated",
+        "No full allocation/liveness capacity proof for out-of-order activation storage",
+        "No speedup/accuracy comparison with original openTPU or commercial TPU/GPU is established"
+      ],
+      "upstream_trace_sha256": "945c88aed76276b3f16257608704e40b60224606bed625348f7edf4dd9d17a71",
+      "report_sha256": "e4ce780987f9c916e5ef91484c6fa9ffa4c7f95b603b7c1223e5b74e88f0984e"
+    },
+    {
+      "scenario": "hotspot",
+      "name": "sixtyfour_16x64_hbm2x",
+      "status": "complete",
+      "scope": "Generic event-driven operation-DAG screen with explicit shared HBM service.\n\nConsumes external tensor commands; contains no inference scheduling or model\ndimensions. This uncalibrated proposal is NOT the FeSens ISA/RTL timing model.\nAll intermediate reads/writes spill to HBM. Operations stream through bounded\ntile buffers, with optimistic overlap of compute and aggregate transfer service.\nIt omits detailed tiling, bank conflicts, quantization/scale decode, FP feedback\nand controller timing, so its cycle results have no RTL accuracy guarantee.\n",
+      "hardware": {
+        "clock_mhz": 1500,
+        "weight_macs_per_cycle": 65536,
+        "bf16_macs_per_cycle": 65536,
+        "fp32_macs_per_cycle": 1024,
+        "vector_elements_per_cycle": 1024,
+        "hbm_gbs": 1717.9869184,
+        "pipeline_cycles": 16,
+        "window": 32,
+        "tile_buffer_bytes_per_unit": 1048576,
+        "hbm_capacity_bytes": 32000000000
+      },
+      "commands_sha256": "66b4961167d0b593f062992b389ecfefb26a3709aa88ce18f4226e6d772404f5",
+      "source_sha256": "6dbe292e13e7a53718fbc252cf1651574fceb42133ebea0475b4668c85047f2e",
+      "binary_sha256": "d73203014b9c3f37b1787c9e5fc265482a5248db28777a1e7e71949771b5e562",
+      "input_tables_sha256": "9e61e65629f7df8ad842fdc38eef3805f30c191c4ce1adf7a0757ced5b716359",
+      "command_count": 35647,
+      "statistics": {
+        "transitions": 7,
+        "places": 606,
+        "tile_buffer_bytes": 3145728,
+        "hbm_transfer_bytes": 91100857148
+      },
+      "cycles": 126290143.0,
+      "assumed_hardware_seconds": 0.08419342866666667,
+      "native_seconds": 1.135951852,
+      "native_seconds_samples": [
+        1.135951852,
+        1.127967992,
+        1.127862403
+      ],
+      "native_process_seconds_samples": [
+        1.1540033016353846,
+        1.1457353122532368,
+        1.1453325599431992
+      ],
+      "model_build_seconds": 0.27735736034810543,
+      "native_compile_seconds": 0.26147895120084286,
+      "arithmetic": {
+        "matrix_macs": 3873905156096,
+        "matrix_flops": 7747810312192,
+        "by_precision": {
+          "nvfp4": {
+            "macs": 3359566987264,
+            "matrix_flops": 6719133974528,
+            "compute_service_cycles": 65101732
+          },
+          "bf16": {
+            "macs": 508121948160,
+            "matrix_flops": 1016243896320,
+            "compute_service_cycles": 10553944
+          },
+          "fp32": {
+            "macs": 6216220672,
+            "matrix_flops": 12432441344,
+            "compute_service_cycles": 6713884
+          }
+        },
+        "matrix_flops_by_call": {
+          "0": 7690773331968,
+          "1": 8145252352,
+          "2": 8146214912,
+          "3": 8147177472,
+          "4": 8148140032,
+          "5": 8149102592,
+          "6": 8150065152,
+          "7": 8151027712
+        },
+        "counting_convention": "One mathematical matrix multiply-add is 2 FLOPs, including NVFP4-weight mixed arithmetic; vector/SFU/routing work excluded, not zero",
+        "vector_work_elements": 11305386327,
+        "peak_matrix_tflops_by_precision": {
+          "nvfp4": 196.608,
+          "bf16": 196.608,
+          "fp32": 3.072
+        },
+        "achieved_matrix_tflops": 92.02393149786836,
+        "achieved_matrix_tflops_by_precision": {
+          "nvfp4": 79.80591930909445,
+          "bf16": 12.070346966667067,
+          "fp32": 0.1476652221068433
+        }
+      },
+      "array_geometry": {
+        "rows": 16,
+        "columns": 64,
+        "arrays": 64
+      },
+      "shared_matrix_unit": true,
+      "host_total_seconds": 4.012159219011664,
+      "zero_rollbacks": true,
+      "rtl_calibrated": false,
+      "numerical_validated": false,
+      "fpga_mapping_proven": false,
+      "existing_opentpu_isa": false,
+      "implementation": "Hypothetical streaming tensor-operation accelerator",
+      "limitations": [
+        "All intermediate activation reads/writes spill to HBM; no SRAM reuse invented",
+        "Compute and aggregate HBM service overlap optimistically per operation",
+        "Tile-buffer capacity is fixed, but detailed tile timing/refills and port conflicts are unvalidated",
+        "NVFP4 scale/dequantization, activation quantization and FP recurrence are not calibrated",
+        "No full allocation/liveness capacity proof for out-of-order activation storage",
+        "No speedup/accuracy comparison with original openTPU or commercial TPU/GPU is established"
+      ],
+      "upstream_trace_sha256": "945c88aed76276b3f16257608704e40b60224606bed625348f7edf4dd9d17a71",
+      "report_sha256": "47cb1f5311abbbb7db8e7c4493c02f60902157a0576f08f5b2fff66ffc4ac69e"
+    }
+  ],
+  "host_total_seconds": 55.18933505564928,
+  "baseline_reference": {
+    "url": "https://docs.cloud.google.com/tpu/docs/v5e?hl=en",
+    "bf16_tflops": 197,
+    "hbm_gib_per_second": 800,
+    "hbm_capacity_listed": "16 GB",
+    "mxus": 4
+  },
+  "assumptions": [
+    "1.5 GHz design assumption; no FPGA or ASIC Fmax proof",
+    "32 decimal GB proposed HBM capacity, larger than v5e listed 16 GB",
+    "NVFP4-weight dequantization assumed sustainable at BF16 array throughput; not calibrated",
+    "1024 FP32 MACs/cycle and 1024 vector elements/cycle are proposed budgets",
+    "All matrix precisions share one cluster; whole operations reserve it",
+    "Output-stationary padded tiles with fill/drain, no interoperation tile packing",
+    "All intermediates spill to HBM; reference expanded K/V, not compressed MLA",
+    "No detailed tile refill, physical SRAM ports, SFU or controller calibration",
+    "Routing is a sensitivity annotation and logits are placeholders; no text inference"
+  ],
+  "rtl_calibrated": false,
+  "fpga_mapping_proven": false,
+  "commercial_tpu_latency_comparison": false
+}

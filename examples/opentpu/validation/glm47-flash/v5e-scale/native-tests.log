@@ -1,0 +1,11 @@
+test_array_padding_and_same_compute_partition (__main__.DAGTest.test_array_padding_and_same_compute_partition) ... ok
+test_bad_graphs_and_budgets_are_rejected (__main__.DAGTest.test_bad_graphs_and_budgets_are_rejected) ... ok
+test_completion_flags_and_window_wrap (__main__.DAGTest.test_completion_flags_and_window_wrap) ... ok
+test_dependency_fork_and_shared_bus (__main__.DAGTest.test_dependency_fork_and_shared_bus) ... ok
+test_hbm_service_stays_constant_when_compute_is_increased (__main__.DAGTest.test_hbm_service_stays_constant_when_compute_is_increased) ... ok
+test_shared_matrix_formats_and_useful_flops (__main__.DAGTest.test_shared_matrix_formats_and_useful_flops) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 2.575s
+
+OK

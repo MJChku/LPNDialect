@@ -1,5 +1,9 @@
 # GLM-4.7-Flash: NVFP4 capacity and first MLA/MoE timing screen
 
+The subsequent [v5e-scale LPN study](v5e-scale/README.md) adds shared matrix
+resources, padded systolic-array service and useful FLOP accounting. Its ten
+points are complete and audited; the timings remain architecture estimates.
+
 This target is the real **zai-org/GLM-4.7-Flash** configuration, pinned at
 `7dd20894a642a0aa287e9827cb1a1f7f91386b67`. It has 47 main-model layers,
 2048 hidden dimensions, 20 attention heads, query rank 768, KV rank 512,

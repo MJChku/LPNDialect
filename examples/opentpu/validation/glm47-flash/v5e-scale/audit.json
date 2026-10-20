@@ -1,0 +1,351 @@
+{
+  "status": "complete",
+  "scope": "Verify retained graph work, native logs, binaries and v5e-screen accounting.",
+  "report_sha256": "1cf5f4cff76cdda9c8216d9548c79e16e7451bd8a41d057453a29db3648938bc",
+  "audit_source_sha256": "3571aff6c859d1c718111cf292922a668f4a371981408b311153c7ef595825fe",
+  "compiler_sha256": "e264d5fd1334e5bdc922267eaa764123b874c33a343dd4e7f8120f0ff5623982",
+  "upstream_shape_audits": {
+    "balanced": {
+      "status": "complete",
+      "scope": "Audit shape work and dependencies independently of upstream GLM trace instrumentation.",
+      "trace_report_sha256": "66152f237ddb9b97d68ae31f19ddf11b160c54ee22a889a7b1e6197809fcb72b",
+      "commands_sha256": "7878adf2e81520fe95009ef9b2b53c063d4203ab9455cb6dbd6e7f5f576b6e9a",
+      "routing_sha256": "60d7a83861c34c7aa8649bade4bccfa7698b7a2820d7b03905f1dc24e196c735",
+      "records": [
+        {
+          "call": 0,
+          "input_rows": 1024,
+          "kv_positions": 1024,
+          "linear_macs": 3340728008704,
+          "attention_macs": 504658657280,
+          "routed_matmuls": 5888,
+          "work_matches_independent_config_formulas": true,
+          "route_and_generation_dependencies_preserved": true
+        },
+        {
+          "call": 1,
+          "input_rows": 1,
+          "kv_positions": 1025,
+          "linear_macs": 3579314176,
+          "attention_macs": 493312000,
+          "routed_matmuls": 368,
+          "work_matches_independent_config_formulas": true,
+          "route_and_generation_dependencies_preserved": true
+        },
+        {
+          "call": 2,
+          "input_rows": 1,
+          "kv_positions": 1026,
+          "linear_macs": 3579314176,
+          "attention_macs": 493793280,
+          "routed_matmuls": 368,
+          "work_matches_independent_config_formulas": true,
+          "route_and_generation_dependencies_preserved": true
+        },
+        {
+          "call": 3,
+          "input_rows": 1,
+          "kv_positions": 1027,
+          "linear_macs": 3579314176,
+          "attention_macs": 494274560,
+          "routed_matmuls": 368,
+          "work_matches_independent_config_formulas": true,
+          "route_and_generation_dependencies_preserved": true
+        },
+        {
+          "call": 4,
+          "input_rows": 1,
+          "kv_positions": 1028,
+          "linear_macs": 3579314176,
+          "attention_macs": 494755840,
+          "routed_matmuls": 368,
+          "work_matches_independent_config_formulas": true,
+          "route_and_generation_dependencies_preserved": true
+        },
+        {
+          "call": 5,
+          "input_rows": 1,
+          "kv_positions": 1029,
+          "linear_macs": 3579314176,
+          "attention_macs": 495237120,
+          "routed_matmuls": 368,
+          "work_matches_independent_config_formulas": true,
+          "route_and_generation_dependencies_preserved": true
+        },
+        {
+          "call": 6,
+          "input_rows": 1,
+          "kv_positions": 1030,
+          "linear_macs": 3579314176,
+          "attention_macs": 495718400,
+          "routed_matmuls": 368,
+          "work_matches_independent_config_formulas": true,
+          "route_and_generation_dependencies_preserved": true
+        },
+        {
+          "call": 7,
+          "input_rows": 1,
+          "kv_positions": 1031,
+          "linear_macs": 3579314176,
+          "attention_macs": 496199680,
+          "routed_matmuls": 368,
+          "work_matches_independent_config_formulas": true,
+          "route_and_generation_dependencies_preserved": true
+        }
+      ],
+      "all_topological_dependencies_valid": true,
+      "all_linear_and_attention_work_verified": true,
+      "all_router_and_decode_readiness_preserved": true,
+      "routing_provenance": "sensitivity_balanced",
+      "numerical_or_rtl_validation": false
+    },
+    "hotspot": {
+      "status": "complete",
+      "scope": "Audit shape work and dependencies independently of upstream GLM trace instrumentation.",
+      "trace_report_sha256": "945c88aed76276b3f16257608704e40b60224606bed625348f7edf4dd9d17a71",
+      "commands_sha256": "66b4961167d0b593f062992b389ecfefb26a3709aa88ce18f4226e6d772404f5",
+      "routing_sha256": "27b42384adf773d8efa12c8e7e7ac5e1d860c26995b4ef3bd29be726c9cc4ab4",
+      "records": [
+        {
+          "call": 0,
+          "input_rows": 1024,
+          "kv_positions": 1024,
+          "linear_macs": 3340728008704,
+          "attention_macs": 504658657280,
+          "routed_matmuls": 368,
+          "work_matches_independent_config_formulas": true,
+          "route_and_generation_dependencies_preserved": true
+        },
+        {
+          "call": 1,
+          "input_rows": 1,
+          "kv_positions": 1025,
+          "linear_macs": 3579314176,
+          "attention_macs": 493312000,
+          "routed_matmuls": 368,
+          "work_matches_independent_config_formulas": true,
+          "route_and_generation_dependencies_preserved": true
+        },
+        {
+          "call": 2,
+          "input_rows": 1,
+          "kv_positions": 1026,
+          "linear_macs": 3579314176,
+          "attention_macs": 493793280,
+          "routed_matmuls": 368,
+          "work_matches_independent_config_formulas": true,
+          "route_and_generation_dependencies_preserved": true
+        },
+        {
+          "call": 3,
+          "input_rows": 1,
+          "kv_positions": 1027,
+          "linear_macs": 3579314176,
+          "attention_macs": 494274560,
+          "routed_matmuls": 368,
+          "work_matches_independent_config_formulas": true,
+          "route_and_generation_dependencies_preserved": true
+        },
+        {
+          "call": 4,
+          "input_rows": 1,
+          "kv_positions": 1028,
+          "linear_macs": 3579314176,
+          "attention_macs": 494755840,
+          "routed_matmuls": 368,
+          "work_matches_independent_config_formulas": true,
+          "route_and_generation_dependencies_preserved": true
+        },
+        {
+          "call": 5,
+          "input_rows": 1,
+          "kv_positions": 1029,
+          "linear_macs": 3579314176,
+          "attention_macs": 495237120,
+          "routed_matmuls": 368,
+          "work_matches_independent_config_formulas": true,
+          "route_and_generation_dependencies_preserved": true
+        },
+        {
+          "call": 6,
+          "input_rows": 1,
+          "kv_positions": 1030,
+          "linear_macs": 3579314176,
+          "attention_macs": 495718400,
+          "routed_matmuls": 368,
+          "work_matches_independent_config_formulas": true,
+          "route_and_generation_dependencies_preserved": true
+        },
+        {
+          "call": 7,
+          "input_rows": 1,
+          "kv_positions": 1031,
+          "linear_macs": 3579314176,
+          "attention_macs": 496199680,
+          "routed_matmuls": 368,
+          "work_matches_independent_config_formulas": true,
+          "route_and_generation_dependencies_preserved": true
+        }
+      ],
+      "all_topological_dependencies_valid": true,
+      "all_linear_and_attention_work_verified": true,
+      "all_router_and_decode_readiness_preserved": true,
+      "routing_provenance": "sensitivity_hotspot",
+      "numerical_or_rtl_validation": false
+    }
+  },
+  "records": [
+    {
+      "scenario": "balanced",
+      "name": "four_128x128",
+      "cycles": 303623403.0,
+      "matrix_flops": 7747810312192,
+      "matrix_flops_by_precision": {
+        "nvfp4": 6719133974528,
+        "bf16": 1016243896320,
+        "fp32": 12432441344
+      },
+      "assumed_hardware_seconds": 0.202415602,
+      "hbm_service_lower_bound_seconds": 0.16359398647677154,
+      "useful_matrix_tflops": 38.276744656234555,
+      "all_retained_artifacts_verified": true
+    },
+    {
+      "scenario": "balanced",
+      "name": "sixtyfour_32x32",
+      "cycles": 263421072.0,
+      "matrix_flops": 7747810312192,
+      "matrix_flops_by_precision": {
+        "nvfp4": 6719133974528,
+        "bf16": 1016243896320,
+        "fp32": 12432441344
+      },
+      "assumed_hardware_seconds": 0.175614048,
+      "hbm_service_lower_bound_seconds": 0.16359398647677154,
+      "useful_matrix_tflops": 44.118397135245125,
+      "all_retained_artifacts_verified": true
+    },
+    {
+      "scenario": "balanced",
+      "name": "sixtyfour_16x64",
+      "cycles": 263594512.0,
+      "matrix_flops": 7747810312192,
+      "matrix_flops_by_precision": {
+        "nvfp4": 6719133974528,
+        "bf16": 1016243896320,
+        "fp32": 12432441344
+      },
+      "assumed_hardware_seconds": 0.17572967466666667,
+      "hbm_service_lower_bound_seconds": 0.16359398647677154,
+      "useful_matrix_tflops": 44.08936809840715,
+      "all_retained_artifacts_verified": true
+    },
+    {
+      "scenario": "balanced",
+      "name": "eight_128x128",
+      "cycles": 259727331.0,
+      "matrix_flops": 7747810312192,
+      "matrix_flops_by_precision": {
+        "nvfp4": 6719133974528,
+        "bf16": 1016243896320,
+        "fp32": 12432441344
+      },
+      "assumed_hardware_seconds": 0.173151554,
+      "hbm_service_lower_bound_seconds": 0.16359398647677154,
+      "useful_matrix_tflops": 44.74583180577172,
+      "all_retained_artifacts_verified": true
+    },
+    {
+      "scenario": "balanced",
+      "name": "sixtyfour_16x64_hbm2x",
+      "cycles": 152380193.0,
+      "matrix_flops": 7747810312192,
+      "matrix_flops_by_precision": {
+        "nvfp4": 6719133974528,
+        "bf16": 1016243896320,
+        "fp32": 12432441344
+      },
+      "assumed_hardware_seconds": 0.10158679533333333,
+      "hbm_service_lower_bound_seconds": 0.08179699323838577,
+      "useful_matrix_tflops": 76.2678878368923,
+      "all_retained_artifacts_verified": true
+    },
+    {
+      "scenario": "hotspot",
+      "name": "four_128x128",
+      "cycles": 226312767.0,
+      "matrix_flops": 7747810312192,
+      "matrix_flops_by_precision": {
+        "nvfp4": 6719133974528,
+        "bf16": 1016243896320,
+        "fp32": 12432441344
+      },
+      "assumed_hardware_seconds": 0.150875178,
+      "hbm_service_lower_bound_seconds": 0.10605535603594035,
+      "useful_matrix_tflops": 51.35245184063346,
+      "all_retained_artifacts_verified": true
+    },
+    {
+      "scenario": "hotspot",
+      "name": "sixtyfour_32x32",
+      "cycles": 185945342.0,
+      "matrix_flops": 7747810312192,
+      "matrix_flops_by_precision": {
+        "nvfp4": 6719133974528,
+        "bf16": 1016243896320,
+        "fp32": 12432441344
+      },
+      "assumed_hardware_seconds": 0.12396356133333333,
+      "hbm_service_lower_bound_seconds": 0.10605535603594035,
+      "useful_matrix_tflops": 62.50070769876021,
+      "all_retained_artifacts_verified": true
+    },
+    {
+      "scenario": "hotspot",
+      "name": "sixtyfour_16x64",
+      "cycles": 186289534.0,
+      "matrix_flops": 7747810312192,
+      "matrix_flops_by_precision": {
+        "nvfp4": 6719133974528,
+        "bf16": 1016243896320,
+        "fp32": 12432441344
+      },
+      "assumed_hardware_seconds": 0.12419302266666667,
+      "hbm_service_lower_bound_seconds": 0.10605535603594035,
+      "useful_matrix_tflops": 62.38523023138809,
+      "all_retained_artifacts_verified": true
+    },
+    {
+      "scenario": "hotspot",
+      "name": "eight_128x128",
+      "cycles": 173968335.0,
+      "matrix_flops": 7747810312192,
+      "matrix_flops_by_precision": {
+        "nvfp4": 6719133974528,
+        "bf16": 1016243896320,
+        "fp32": 12432441344
+      },
+      "assumed_hardware_seconds": 0.11597889,
+      "hbm_service_lower_bound_seconds": 0.10605535603594035,
+      "useful_matrix_tflops": 66.80362531657269,
+      "all_retained_artifacts_verified": true
+    },
+    {
+      "scenario": "hotspot",
+      "name": "sixtyfour_16x64_hbm2x",
+      "cycles": 126290143.0,
+      "matrix_flops": 7747810312192,
+      "matrix_flops_by_precision": {
+        "nvfp4": 6719133974528,
+        "bf16": 1016243896320,
+        "fp32": 12432441344
+      },
+      "assumed_hardware_seconds": 0.08419342866666667,
+      "hbm_service_lower_bound_seconds": 0.053027678017970176,
+      "useful_matrix_tflops": 92.02393149786836,
+      "all_retained_artifacts_verified": true
+    }
+  ],
+  "rtl_or_numerical_validation": false,
+  "hardware_design_assumptions_unchanged": true
+}
