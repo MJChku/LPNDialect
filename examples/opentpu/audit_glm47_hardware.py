@@ -54,7 +54,8 @@ def main():
                     if digest(directory/name)!=h:raise ValueError('canonical input changed')
             observed=None;binary=None
             if report.get('rtl_validated'):
-                rtl=directory/'rtl';text=(directory/'rtl.log').read_text()
+                rtl=directory if report.get('retained_case') else directory/'rtl'
+                text=(directory/'rtl.log').read_text()
                 match=re.search(r'RESULT cycles=(\d+) halted=1 error=0',text)
                 if not match or int(match[1])!=expected['rtl_cycles']:raise ValueError('raw RTL completion differs')
                 if [int(n) for n in re.findall(r'SLICE \d+ icount=(\d+)',text)]!=[len(work.commands[0])]:
@@ -88,7 +89,7 @@ def main():
                 actual_rtl_cycles=observed,relative_cycle_error=cycles/observed-1 if observed else None,
                 timing_target_met=abs(cycles/observed-1)<=.1 if observed else None,
                 actual_hardware_program_sha256=digest(directory/'prog_0.hex'),
-                numerical_full_dram_sha256=digest(directory/'rtl/dram_out_0.bin') if observed else None,
+                numerical_full_dram_sha256=digest(rtl/'dram_out_0.bin') if observed else None,
                 matching_simulator_sha256=digest(binary) if binary else None,
                 all_full_memories_bit_exact=observed is not None,
                 native_binary_sha256=digest(native.binary),input_tables_sha256=digest(native.inputs)))
@@ -97,6 +98,7 @@ def main():
     if sources!={str(f):digest(f) for f in files}:raise ValueError('audit inputs changed')
     atomic_json(a.output/'report.json',dict(status='complete',scope=__doc__,source_sha256=sources,
         packed_rtl_gate_sha256=digest(a.base_rtl_gate/'report.json'),timing=asdict(timing),records=records,
+        rtl_compile_flags=base['rtl_compile_flags'],uarch=uarch,
         legacy_epilogue_profile_corrected=a.correct_epilogue_profile,
         full_glm_model=False,all_numerical_cases_use_actual_hardware_programs=True))
     print('fresh GLM ISA/native/full-memory audit passed',flush=True)
