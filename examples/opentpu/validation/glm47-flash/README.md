@@ -1,4 +1,10 @@
-# GLM-4.7-Flash: NVFP4 capacity and first MLA/MoE timing screen
+# GLM-4.7-Flash: hardware compiler and historical capacity studies
+
+The [actual hardware compiler and validation](hardware-commands/README.md)
+now cover MLA, numerical FP32 routing, resident experts, dense FFN, embeddings
+and the vocabulary head. A joined numerical decoder layer at full model width
+uses canonical hardware inputs and the existing component LPN. Complete
+47-layer generation and whole-model memory mapping remain unfinished.
 
 **Scope correction:** the user requires hardware commands as the LPN input.
 The historical tensor-DAG studies below do not satisfy that requirement and
@@ -20,9 +26,9 @@ four selected experts per token and one shared expert. The optional MTP
 layer in the checkpoint is excluded explicitly.
 
 This is **not a completed GLM implementation on existing openTPU RTL**.
-The first frontend and tensor-command architecture screen are executable;
-the FeSens ISA adapter, compressed MLA cache, routing implementation,
-physical memory mapping and full numerical/timing validation remain open.
+The studies below predate the actual hardware compiler and retain their
+original assumptions. Compressed MLA, whole-model physical memory mapping
+and full-model numerical/timing validation remain open.
 
 ## Capacity and arithmetic
 

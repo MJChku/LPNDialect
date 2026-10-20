@@ -17,14 +17,16 @@ and feeds the sequencer/DMA/quantizer/matrix/VPU component model. See
 does not require numerical tensor computation; data-dependent controls still
 need the functional frontend, and are rejected by static replay.
 
-**GLM-4.7-Flash does not yet have a complete compiled hardware program.** Its
-[inventory and NVFP4 component evidence](validation/glm47-flash/README.md)
-remain useful, but the separate tensor-DAG experiment does not meet this
-project's hardware-command requirement. Its 1–2-second graph replay and
-hardware-time estimates must not be presented as GLM execution on this LPN.
-Three actual NVFP4 matrix RTL gates pass a full-state/native audit with worst
-timing error 7.83%; those are component tests, not full GLM support. A real GLM
-compiler/backend path for MLA, routing and memory is still needed.
+**GLM-4.7-Flash now has an actual instruction compiler path for its components.**
+MLA, FP32 routing and resident experts run as three hardware programs sharing
+physical DRAM, including a numerical layer with the real model dimensions.
+Dense FFN, NVFP4 embedding gathers and the untied vocabulary head also compile.
+Completed small RTL gates match complete DRAM/TMEM states; timing errors are
+within 7.5%. See the [actual hardware evidence and remaining integration work](
+validation/glm47-flash/hardware-commands/README.md). Full 47-layer generation
+and whole-model memory mapping are unfinished. The separate tensor-DAG
+experiment's 1–2-second graph replay must not be presented as GLM execution
+on this LPN.
 
 A small [integrated DSP48E2 vendor-model gate](rtl_evolution/validation/vendor-mxu/README.md)
 passes eleven matrix/store/queue cases with identical complete outputs and

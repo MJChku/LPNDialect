@@ -1,0 +1,263 @@
+{
+  "status": "complete",
+  "scope": "Run one integrated GLM decoder layer through actual hardware programs.\n\nMLA, FP32 routing and grouped routed/shared experts share physical DRAM.\nThe functional ISA resolves router IDs before the expert program is compiled.\nThis is a test-weight layer gate, not trained checkpoint/full-model inference.\nHost program-loading, route-readback and compilation overhead are not device\nkernel cycles and are not folded into a claimed model-inference latency.\n",
+  "spec": {
+    "hidden": 2048,
+    "heads": 20,
+    "q_rank": 768,
+    "kv_rank": 512,
+    "nope": 192,
+    "rope": 64,
+    "value": 256,
+    "eps": 1e-05,
+    "theta": 1000000
+  },
+  "rows": 4,
+  "experts": 64,
+  "ffn": 1536,
+  "position": 0,
+  "physical_layer_bytes": 386464384,
+  "config": {
+    "S": 1,
+    "D": 128,
+    "MCOLS": 4,
+    "ACT_BLOCKS": 64,
+    "TMEM_WORDS": 65536,
+    "DRAM_BYTES": 536870912,
+    "IMEM_WORDS": 65536,
+    "LANES": 64,
+    "PAIR": false,
+    "DSTEP": false,
+    "STREAM": false,
+    "ACT_ROWS": 16,
+    "SEQ_WC": false
+  },
+  "records": [
+    {
+      "name": "mla",
+      "static_instructions": 2366,
+      "hardware_instructions": {
+        "dynamic_instructions": 2366,
+        "opcode_counts": {
+          "LD": 108,
+          "VOP": 1929,
+          "QACT": 44,
+          "MM": 83,
+          "QST": 40,
+          "ST": 161,
+          "HALT": 1
+        },
+        "matrix_commands": 83,
+        "matrix_dot_macs": 89735168,
+        "matrix_dot_operations": 179470336,
+        "matrix_by_weight_format": {
+          "nvfp4": {
+            "commands": 43,
+            "dot_macs": 87031808,
+            "dot_operations": 174063616
+          },
+          "int8": {
+            "commands": 40,
+            "dot_macs": 2703360,
+            "dot_operations": 5406720
+          }
+        },
+        "logical_fp32_vector_flops": 99180,
+        "vector_function_elements": {
+          "rssq": 13312,
+          "mul": 58268,
+          "add": 10972,
+          "rsqrt": 12,
+          "copy": 31056,
+          "sub": 2688,
+          "fill": 36440,
+          "max": 80,
+          "exp2sub": 400,
+          "rsum": 320,
+          "recip": 80
+        },
+        "special_function_evaluations": {
+          "rsqrt": 12,
+          "exp2sub": 400,
+          "recip": 80
+        },
+        "uncounted_vector_function_elements": {},
+        "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+        "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+        "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+        "exclusions": [
+          "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+          "Vector counts are mathematical operations, excluding physical reduction padding",
+          "Special functions, comparisons and copies are not converted into FLOPs"
+        ]
+      },
+      "lpn_cycles": 187887.0,
+      "lpn_seconds": 0.171564266,
+      "input_sha256": {
+        "input.json": "06a8a383f6be4f636a77d75b780b5d984aea178ffdac0a9a65b259452d2f9bf7",
+        "prog_0.hex": "a9e487cab26540b6d6cc325387687319f0d47b132d3425095b1241d09023f2a9",
+        "dram_0.bin": "4b717a04a434c5bbbe5fdc1421256fda10792bbf4985f9c10c543baf8a9a2b9b"
+      }
+    },
+    {
+      "name": "router",
+      "static_instructions": 160,
+      "hardware_instructions": {
+        "dynamic_instructions": 1105,
+        "opcode_counts": {
+          "LI": 3,
+          "LD": 68,
+          "VOP": 622,
+          "LOOP": 1,
+          "ST": 264,
+          "ADDI": 130,
+          "RLD": 16,
+          "HALT": 1
+        },
+        "matrix_commands": 0,
+        "matrix_dot_macs": 0,
+        "matrix_dot_operations": 0,
+        "matrix_by_weight_format": {},
+        "logical_fp32_vector_flops": 1081908,
+        "vector_function_elements": {
+          "rssq": 8192,
+          "mul": 16676,
+          "add": 520,
+          "rsqrt": 4,
+          "rdot": 524288,
+          "copy": 288,
+          "exp2": 256,
+          "recip": 260,
+          "argmax": 1024,
+          "fill": 16,
+          "rsum": 16
+        },
+        "special_function_evaluations": {
+          "rsqrt": 4,
+          "exp2": 256,
+          "recip": 260
+        },
+        "uncounted_vector_function_elements": {},
+        "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+        "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+        "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+        "exclusions": [
+          "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+          "Vector counts are mathematical operations, excluding physical reduction padding",
+          "Special functions, comparisons and copies are not converted into FLOPs"
+        ]
+      },
+      "lpn_cycles": 49964.0,
+      "lpn_seconds": 0.0322471,
+      "input_sha256": {
+        "input.json": "c786e92441761cfbffd239b850be23751eaa19aa2a456a677f264ee05ead9571",
+        "prog_0.hex": "1db67007e866da56973bbd1c8138e6ebc6eff48652ba3a425c38b8fd7a91ffdd",
+        "dram_0.bin": "b271851ccae2006fb3dc9e18a04de418432f01a7bb22ee3ff00bffff4e680c3e"
+      }
+    },
+    {
+      "name": "experts",
+      "static_instructions": 741,
+      "hardware_instructions": {
+        "dynamic_instructions": 1040,
+        "opcode_counts": {
+          "LI": 3,
+          "LD": 35,
+          "VOP": 525,
+          "ST": 21,
+          "QACT": 91,
+          "MM": 234,
+          "LOOP": 13,
+          "ADDI": 117,
+          "HALT": 1
+        },
+        "matrix_commands": 234,
+        "matrix_dot_macs": 188743680,
+        "matrix_dot_operations": 377487360,
+        "matrix_by_weight_format": {
+          "nvfp4": {
+            "commands": 234,
+            "dot_macs": 188743680,
+            "dot_operations": 377487360
+          }
+        },
+        "logical_fp32_vector_flops": 237572,
+        "vector_function_elements": {
+          "rssq": 8192,
+          "mul": 141316,
+          "add": 79876,
+          "rsqrt": 4,
+          "fill": 8192,
+          "copy": 32768,
+          "exp2": 30720,
+          "recip": 30720
+        },
+        "special_function_evaluations": {
+          "rsqrt": 4,
+          "exp2": 30720,
+          "recip": 30720
+        },
+        "uncounted_vector_function_elements": {},
+        "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+        "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+        "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+        "exclusions": [
+          "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+          "Vector counts are mathematical operations, excluding physical reduction padding",
+          "Special functions, comparisons and copies are not converted into FLOPs"
+        ]
+      },
+      "lpn_cycles": 572563.0,
+      "lpn_seconds": 0.886782494,
+      "input_sha256": {
+        "input.json": "168f21fd6516b6edf945ac13204d685aeee6b4b4da8040bc901e1928191a578c",
+        "prog_0.hex": "4e3a1a64159c182e5bb0fc32a3a90ad7545cd528779ac9445504e52d6660e823",
+        "dram_0.bin": "cccd96c63d5922efba37b2e3e18c3391092af85ab1cfc1581c8da5f83749af9d"
+      }
+    }
+  ],
+  "ids": [
+    [
+      63,
+      15,
+      31,
+      50
+    ],
+    [
+      31,
+      61,
+      9,
+      11
+    ],
+    [
+      4,
+      35,
+      50,
+      43
+    ],
+    [
+      53,
+      59,
+      31,
+      9
+    ]
+  ],
+  "mla_reference_relative_error": 0.06433180937462751,
+  "expert_reference_relative_error": 0.008732193149626255,
+  "all_stages_numerically_executed": true,
+  "routing_annotations_used": false,
+  "shared_physical_dram": true,
+  "compiler_expert_dispatch_from_actual_router_outputs": true,
+  "full_glm_model": false,
+  "weights": "Deterministic numerical test weights",
+  "rtl_validated": false,
+  "host_seconds": 52.9675211366266,
+  "lpn_cycles_sum": 810414.0,
+  "lpn_seconds_sum": 1.09059386,
+  "source_sha256": {
+    "/home/ubuntu/LPNDialect-glm47-compiler-v5/examples/opentpu/glm47_layer_hardware.py": "6c18b3bac18674a0141a7f5e160be16ac588da18b76a0c5b2ee342c7c2008eff",
+    "/home/ubuntu/LPNDialect-glm47-compiler-v5/examples/opentpu/glm47_kernels.py": "909ef9ad5881be3d5cd3659bae6bff2629a52f9d4e865c1ba49b34ca3c96f6fb",
+    "/home/ubuntu/LPNDialect-glm47-compiler-v5/examples/opentpu/glm47_hardware.py": "224e79cad5b06de90a32c6313b4a898b716f3d2b6780653146baaa04572c2182",
+    "/home/ubuntu/LPNDialect-glm47-compiler-v5/examples/opentpu/glm47_expert_hardware.py": "3e918cc293795080f162a389529535391b7d7cee6284f47685d3e4824e816584"
+  }
+}

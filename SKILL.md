@@ -66,6 +66,19 @@ calls to one runtime. `e2e --reuse-timing` avoids compiling per command stream.
 Full trained-model numerical execution remains Python/NumPy; do not describe
 the native scalar subset or linking demonstration as a complete neural model.
 
+The supported accelerator input is canonical hardware `input.json` plus
+`prog_N.hex`, shared with RTL. Read [HARDWARE_COMMANDS.md](examples/opentpu/HARDWARE_COMMANDS.md)
+for static replay and numerical control resolution; reject unresolved
+data-dependent instructions in weight-free replay. For GLM, use the actual
+[hardware compiler and retained-input validation](examples/opentpu/validation/glm47-flash/hardware-commands/README.md).
+Its MLA/router/expert programs and boundary kernels are component gates;
+complete 47-layer generation and whole-model memory mapping remain unfinished.
+Historical GLM tensor-DAG timings do not establish execution on this LPN.
+Use `glm47_target.component_timing()` for the two-column correctness profile:
+physical RTL defaults to one epilogue lane, whereas generic `Timing` defaults
+to two. Preserve old reports when correcting a physical profile. On icdslab2,
+fresh builds need Verilator 5.052 on `PATH` and its prefix in `VERILATOR_ROOT`.
+
 For weight-free FPGA architecture exploration, use
 `examples.opentpu.fpga_dse` and read
 [FPGA_DSE.md](examples/opentpu/FPGA_DSE.md). This compiles dense Qwen shapes and

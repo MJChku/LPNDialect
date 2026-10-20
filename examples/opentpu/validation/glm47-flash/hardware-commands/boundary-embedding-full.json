@@ -1,0 +1,90 @@
+{
+  "status": "complete",
+  "scope": "Compile actual GLM embedding, first dense FFN and final head hardware probes.\n\nThese are component programs, not a complete model or an inference scheduler.\nDefault probes use real model dimensions without weight allocation. Numerical\ntests execute the same kernels with small deterministic test weights.\n",
+  "stage": "embedding",
+  "rows": 4,
+  "hidden": 2048,
+  "ffn": 10240,
+  "vocab": 154880,
+  "timing": {
+    "dram_latency": 8,
+    "dram_bytes_per_cycle": 2816,
+    "window": 32,
+    "fifo_chunks": 256,
+    "chain_length": 8,
+    "epilogue_lanes": 1,
+    "quant_buffer_chunks": 1024,
+    "batch_rows": 2,
+    "matrix_engines": 1,
+    "matrix_row_lanes": 2,
+    "dram_port_bytes": 2816,
+    "scale_lanes": 2,
+    "unified_dram": true,
+    "scalar_store_bytes": 256,
+    "quant_row_banks": 8,
+    "quant_store_buffered": true,
+    "quant_scale_lookup": false,
+    "scalar_recip_lookup": false,
+    "reciprocal_lookup_lanes": 0,
+    "pinned_cache_bytes": 0,
+    "cache_read_bytes_per_cycle": 8192,
+    "vector_row_contexts": 4,
+    "vector_command_queue": 2,
+    "matrix_retirement": true,
+    "physical_scale_lines": true,
+    "scale_cache_entries": 0,
+    "vector_engines": 1,
+    "vector_issue_groups": 1,
+    "vector_result_chunks": 0,
+    "vector_compatible_issue": false,
+    "activation_streaming": false,
+    "fp_mul_latency": 2,
+    "fp_add_latency": 4
+  },
+  "hardware_instructions": {
+    "dynamic_instructions": 1605,
+    "opcode_counts": {
+      "LD": 1024,
+      "QACT": 256,
+      "MM": 256,
+      "VOP": 64,
+      "ST": 4,
+      "HALT": 1
+    },
+    "matrix_commands": 256,
+    "matrix_dot_macs": 2097152,
+    "matrix_dot_operations": 4194304,
+    "matrix_by_weight_format": {
+      "nvfp4": {
+        "commands": 256,
+        "dot_macs": 2097152,
+        "dot_operations": 4194304
+      }
+    },
+    "logical_fp32_vector_flops": 0,
+    "vector_function_elements": {
+      "copy": 8192
+    },
+    "special_function_evaluations": {},
+    "uncounted_vector_function_elements": {},
+    "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+    "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+    "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+    "exclusions": [
+      "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+      "Vector counts are mathematical operations, excluding physical reduction padding",
+      "Special functions, comparisons and copies are not converted into FLOPs"
+    ]
+  },
+  "lpn_cycles": 24933.0,
+  "lpn_seconds": 0.048452571,
+  "full_glm_model": false,
+  "numerical_validated": false,
+  "rtl_validated": false,
+  "physical_layout_bytes": 220715008,
+  "source_sha256": {
+    "/home/ubuntu/LPNDialect-glm47-compiler-boundary/examples/opentpu/glm47_boundary_hardware.py": "ee62a562684c1fece19546225f3bba0d6f17d88f1f24d54deee2cd6d43546bcd",
+    "/home/ubuntu/LPNDialect-glm47-compiler-boundary/examples/opentpu/glm47_kernels.py": "fc8701c7d5bcc4fc69c7cfcdb0de70365b0e991d6a186db0a74fbcc37cee8a26",
+    "/home/ubuntu/LPNDialect-glm47-compiler-boundary/examples/opentpu/glm47_target.py": "2067a6c1854d68660ddf003edf00fb70107a3081321c5fa7719a3135bb25cb90"
+  }
+}
