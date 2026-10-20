@@ -38,6 +38,10 @@ def main():
     for case in a.cases:
         report=json.loads((case/'report.json').read_text())
         if report['status']!='complete':raise ValueError('completed program case required')
+        flags=report.get('rtl_compile_flags',base['rtl_compile_flags'])
+        optimized=list(base['rtl_compile_flags']);optimized[optimized.index('-CFLAGS')+1]='-O3'
+        if flags not in (base['rtl_compile_flags'],optimized):raise ValueError('unrecognized physical build flags')
+        rtlsim.VFLAGS[:]=flags
         for f,h in report['source_sha256'].items():
             if digest(Path(f))!=h:raise ValueError('compiler-case source changed')
         integrated=bool(report.get('all_stages_numerically_executed'))
@@ -94,6 +98,7 @@ def main():
                 all_full_memories_bit_exact=observed is not None,
                 native_binary_sha256=digest(native.binary),input_tables_sha256=digest(native.inputs)))
         records.append(dict(case=str(case),report_sha256=digest(case/'report.json'),records=subrecords,
+            rtl_compile_flags=flags,
             shared_dram_stage_continuity_verified=integrated,routing_annotations_used=False,full_glm_model=False))
     if sources!={str(f):digest(f) for f in files}:raise ValueError('audit inputs changed')
     atomic_json(a.output/'report.json',dict(status='complete',scope=__doc__,source_sha256=sources,

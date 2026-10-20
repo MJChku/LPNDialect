@@ -38,7 +38,7 @@ def check_stage(task):
     final_dram_hash=hashlib.sha256(gold.dram.view('<u4').astype('>u4').tobytes()).hexdigest()
     timing=component_timing();native=ReusableTiming(Path(task['compiler']),directory/'native-cache',capacity=32768).prepare(
         replace(work,config=replace(work.config,MCOLS=2)),timing,directory/'timing.tables')
-    cycles,seconds,_,log=native.run();(directory/'lpn.log').write_text(log)
+    cycles,seconds,native_process,log=native.run();(directory/'lpn.log').write_text(log)
     atomic_json(directory/'worker.json',dict(status='building',pid=os.getpid()))
     before=time.perf_counter();binary=rtlsim.build_top(work.config,uarch=task['uarch']);build_seconds=time.perf_counter()-before
     cmd=[str(binary),f'+dir={directory}','+max_cycles=5000000','+trace','+lpn_wall']
@@ -57,9 +57,12 @@ def check_stage(task):
     for name,h in task['expected']['input_sha256'].items():
         if digest(directory/name)!=h:raise ValueError('RTL hardware input changed')
     observed=int(matched[1]);error=cycles/observed-1
+    wall=re.search(r'LPN_WALL seconds=([0-9.]+) cycles=(\d+)',text)
+    if not wall or int(wall[2])!=observed:raise ValueError('RTL clock-window timer missing or inconsistent')
     result=dict(name=source.name,status='complete',static_instructions=len(work.programs[0]),
         hardware_instructions=stats,input_sha256=task['expected']['input_sha256'],
-        lpn_cycles=cycles,lpn_seconds=seconds,rtl_cycles=observed,relative_cycle_error=error,
+        lpn_cycles=cycles,lpn_seconds=seconds,lpn_process_seconds=native_process,
+        rtl_cycles=observed,relative_cycle_error=error,rtl_cycle_window_seconds=float(wall[1]),
         timing_target_met=abs(error)<=.1,full_dram_and_tmem_bit_exact=True,
         final_dram_as_input_sha256=final_dram_hash,
         final_dram_sha256=digest(directory/'dram_out_0.bin'),final_tmem_sha256=digest(directory/'tmem_0.hex'),
@@ -74,10 +77,15 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ('opentpu-root','compiler','case','base-rtl-gate','output'):
         p.add_argument('--'+name,type=Path,required=True)
-    p.add_argument('--workers',type=int,default=3);a=p.parse_args()
+    p.add_argument('--workers',type=int,default=3)
+    p.add_argument('--cxx-opt',choices=('0','3'),default='0',help='Verilator C++ optimization; use 3 for performance comparisons')
+    a=p.parse_args()
     if not 1<=a.workers<=3:p.error('workers must be between one and three')
     a.output.mkdir(parents=True,exist_ok=False);root=use_checkout(a.opentpu_root)
     source=json.loads((a.case/'report.json').read_text());base=json.loads((a.base_rtl_gate/'report.json').read_text())
+    flags=list(base['rtl_compile_flags'])
+    if flags[flags.index('-CFLAGS')+1]!='-O0':raise ValueError('unexpected baseline C++ build flags')
+    flags[flags.index('-CFLAGS')+1]='-O'+a.cxx_opt
     if source['status']!='complete' or not source['all_stages_numerically_executed'] or source['routing_annotations_used']:
         raise ValueError('completed instruction-driven numerical layer required')
     files={**source['source_sha256'],**base['source_sha256']}
@@ -95,7 +103,7 @@ def main():
         ordered=sorted(records,key=lambda r:[s['name'] for s in source['records']].index(r['name']))
         return dict(status=status,scope=__doc__,records=ordered,timing=asdict(component_timing()),
             source_sha256=files,retained_case=str(a.case),retained_report_sha256=digest(a.case/'report.json'),
-            rtl_compile_flags=base['rtl_compile_flags'],uarch=base['uarch'],
+            rtl_compile_flags=flags,uarch=base['uarch'],
             shared_physical_dram=True,routing_annotations_used=False,all_stages_numerically_executed=True,
             weights=source['weights'],full_glm_model=False,rtl_validated=status=='complete',
             host_workers=a.workers,device_kernel_order=[r['name'] for r in source['records']],
@@ -105,7 +113,7 @@ def main():
         with ProcessPoolExecutor(max_workers=a.workers,mp_context=multiprocessing.get_context('spawn')) as pool:
             futures=[pool.submit(check_stage,dict(opentpu_root=str(root),compiler=str(a.compiler),
                 source=str(a.case/r['name']),directory=str(a.output/r['name']),expected=r,
-                rtl_compile_flags=base['rtl_compile_flags'],uarch=base['uarch'])) for r in source['records']]
+                rtl_compile_flags=flags,uarch=base['uarch'])) for r in source['records']]
             for future in as_completed(futures):
                 records.append(future.result());atomic_json(a.output/'report.json',report('running'))
         result=report('complete')
