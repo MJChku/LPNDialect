@@ -21,6 +21,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ('opentpu-root','compiler','output'):p.add_argument('--'+name,type=Path,required=True)
     p.add_argument('--small-test',action='store_true');p.add_argument('--rtl',action='store_true')
+    p.add_argument('--rows',type=int,help='Compiler tile rows, bounded by the physical 16-row ACT store')
     p.add_argument('--position',type=int,default=0)
     a=p.parse_args();use_checkout(a.opentpu_root);a.output.mkdir(parents=True,exist_ok=False)
     import numpy as np
@@ -33,7 +34,8 @@ def main():
     from .glm47_target import component_timing
     from .native_timing import ReusableTiming
     from .hardware_commands import instruction_statistics
-    started=time.perf_counter();R=2 if a.small_test else 4
+    started=time.perf_counter();R=a.rows if a.rows is not None else (2 if a.small_test else 4)
+    if not 1<=R<=16:p.error('rows must fit the physical 16-row ACT store')
     spec=Spec(128,2,256,128,64,64,128) if a.small_test else Spec.pinned()
     H=spec.hidden;E=4 if a.small_test else 64;F=512 if a.small_test else 1536
     capacity=max(256 if a.small_test else 1152,(a.position+R+127)//128*128)
