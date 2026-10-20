@@ -88,6 +88,8 @@ class DAGTest(unittest.TestCase):
         self.assertEqual(model.arithmetic['by_precision']['bf16']['matrix_flops'],200)
         shaped=[dict(command(0,macs=30),matrix_shape=dict(batch=1,m=3,n=2,k=5))]
         self.assertEqual(self.run_model(shaped,hw,ArrayGeometry(2,2,1),True),31)
+        self.assertEqual(self.run_model(shaped,replace(hw,weight_macs_per_cycle=4,
+            bf16_macs_per_cycle=4),ArrayGeometry(2,2,1),True),15)
 
 
 if __name__=='__main__':
