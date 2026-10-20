@@ -22,7 +22,7 @@ def main():
     from opentpu import Config,isa as I,quant as Q,rtlsim
     from opentpu.isasim import Machine
     cfg=Config(D=128,MCOLS=4,ACT_ROWS=16,LANES=64)
-    ua=dict(MXU_ROWS=2,MXU_COLS=2,MXU_PAIR_DOT=1,VPU_LANES=64,QST_LANES=64)
+    ua=dict(MXU_ROWS=2,MXU_COLS=2,MXU_PAIR_DOT=1,MXU_CL=8,VPU_LANES=64,QST_LANES=64)
     rtlsim.VFLAGS[rtlsim.VFLAGS.index('-j')+1]='8'
     rtlsim.VFLAGS+=['-CFLAGS','-O0','-DOTPU_FP_MUL_LAT=2','-DOTPU_FP_ADD_LAT=4']
     files=[rtlsim.RTL/name for name in rtlsim.RTL_SOURCES]+[rtlsim.TB/'tb_top.sv',rtlsim.TB/'lpn_wall.cpp',Path(__file__)]
@@ -63,7 +63,7 @@ def main():
         raw=re.search(r'RESULT cycles=(\d+) halted=1 error=0',stats['trace'])
         if not raw or int(raw[1])!=stats['cycles']:raise ValueError('raw completion differs')
         work=resolve_static(cfg,[program]);work=replace(work,config=replace(cfg,MCOLS=2))
-        timing=Timing(batch_rows=2,matrix_row_lanes=2,fifo_chunks=256,scale_lanes=2,
+        timing=Timing(batch_rows=2,matrix_row_lanes=2,fifo_chunks=256,scale_lanes=2,chain_length=8,
             dram_bytes_per_cycle=2816,dram_port_bytes=2816,unified_dram=True,scalar_store_bytes=256,
             quant_row_banks=8,quant_store_buffered=True,vector_row_contexts=4,
             vector_command_queue=2,matrix_retirement=True,physical_scale_lines=True)
