@@ -14,6 +14,17 @@ from examples.opentpu.collective_hardware import collective_case
 class CollectiveTest(unittest.TestCase):
     tool=None
 
+    def test_dma_store_phases_match_retained_rtl_measurements(self):
+        from examples.opentpu.model import buffered_store_cycles,Timing
+        # Actual router, MLA and expert traces, including partial chunks and
+        # the SRUN=32 boundary. These measurements predate this correction.
+        for words,address,cycles in ((1,0,10),(4,16,10),(256,0,24),
+                                    (258,8,26),(2048,0,105),(8192,0,303)):
+            self.assertEqual(buffered_store_cycles(words,address,128,64,2816),cycles)
+        self.assertFalse(Timing().dma_store_runs)
+        with self.assertRaises(ValueError):buffered_store_cycles(0,0,128,64,2816)
+        with self.assertRaises(ValueError):Timing(dma_store_runs=1)
+
     def test_native_and_python_wait_for_all_producers_and_repeated_collectives(self):
         import numpy as np
         from examples.opentpu.compact import CompactOpenTPU
@@ -28,7 +39,7 @@ class CollectiveTest(unittest.TestCase):
                         at=16384+stage*32768
                         got=machine.dram[at:at+expected.nbytes].view(np.float32).reshape(expected.shape)
                         np.testing.assert_array_equal(got,expected)
-                timing=component_timing();physical=replace(work,config=replace(cfg,MCOLS=2))
+                timing=replace(component_timing(),dma_store_runs=True);physical=replace(work,config=replace(cfg,MCOLS=2))
                 model=CompactOpenTPU(physical,timing);sim=model.net.python_simulator()
                 ticks=sim.run(max_time=100000)
                 self.assertEqual(sim.place_dicts('program_completed'),[{}])

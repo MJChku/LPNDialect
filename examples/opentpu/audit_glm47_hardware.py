@@ -20,6 +20,7 @@ def main():
     import numpy as np
     from opentpu import rtlsim
     from .glm47_target import component_timing
+    from .model import Timing
     from .native_timing import ReusableTiming
     from .hardware_commands import instruction_statistics
     from .rtl_evolution.parallel_inference import simulator_cache_key
@@ -81,7 +82,7 @@ def main():
                     replace(timing,epilogue_lanes=2),target/'legacy-timing.tables')
                 old_cycles,_,_,old_log=legacy.run();(target/'legacy-lpn.log').write_text(old_log)
                 if old_cycles!=expected['lpn_cycles']:raise ValueError('original legacy prediction not reproduced')
-            elif report.get('timing')!=asdict(timing):
+            elif report.get('timing') is None or Timing(**report['timing'])!=timing:
                 raise ValueError('explicit matching physical profile required; use legacy correction for old reports')
             native=runner.prepare(
                 replace(work,config=replace(work.config,MCOLS=2)),timing,target/'timing.tables')

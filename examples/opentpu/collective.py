@@ -1,7 +1,8 @@
 """Shared RTL BAR/GATHER unit with per-slice request and acknowledgement ports.
 
 otpu_coll waits for every slice, streams all source segments through one
-broadcast port, acknowledges them together, and cools down for two cycles.
+broadcast port and acknowledges them together. One cooldown cycle remains
+after the slices observe completion (the earlier ACK cycle is already spent).
 Memory-range dependencies stay in each slice's existing command interface.
 """
 
@@ -75,7 +76,7 @@ class CollectiveBus:
       idx=peek(requests[0]).get('id')
       latency=sitofp(array(latencies)[idx])
       credit=take(resource)
-      emit(resource,credit,delay=latency+2.0)
+      emit(resource,credit,delay=latency+1.0)
       for sid in range(len(requests)):
         token=take(array(requests)[sid])
         emit(array(replies)[sid],token,delay=latency)

@@ -108,6 +108,28 @@ def interleaved_sum_span(rows,chunks,contexts=4,adder_latency=4):
   return max(0,cycles-1)
 
 
+def buffered_store_cycles(words,address,depth,lanes,bandwidth):
+  """otpu_dma ST: TMEM gather, SRUN=32 chunk bursts, registered drain/ack.
+
+  Gather and write runs overlap through the real chunk buffer. A run waits
+  until its chunks are gathered; successive writes have one setup cycle.
+  The eight-cycle tail is the request/read/data/buffer and completion pipeline.
+  Addresses are bytes in DRAM; TMEM segments are aligned in DRAM (W=min(D/4,L)).
+  """
+  if min(words,depth,lanes,bandwidth)<1 or address<0 or address%4:
+    raise ValueError('positive ST dimensions and a word-aligned DRAM address required')
+  width=min(depth//4,lanes);segment=4*width
+  first=address//depth;last=ceil((address+4*words)/depth);chunks=last-first
+  read_base=address//segment*segment;finish=0
+  for begin in range(0,chunks,32):
+    end=min(chunks,begin+32)
+    end_address=min(address+4*words,(first+end)*depth)
+    gathered=ceil((end_address-read_base)/segment)
+    write=ceil((end-begin)*depth/min(depth,bandwidth))
+    finish=max(gathered,finish+(1 if begin else 0))+write
+  return finish+8
+
+
 @dataclass(frozen=True)
 class Timing:
   dram_latency: int = 8
@@ -146,8 +168,11 @@ class Timing:
   activation_streaming: bool = False
   fp_mul_latency: int = 2
   fp_add_latency: int = 4
+  dma_store_runs: bool = False # opt-in correction: buffered 32-chunk ST write runs
 
   def __post_init__(self):
+    if type(self.dma_store_runs) is not bool:
+      raise ValueError('dma_store_runs must be a boolean')
     if type(self.vector_issue_groups) is not int or self.vector_issue_groups not in (1,2,4,8):
       raise ValueError('vector issue groups must be 1/2/4/8')
     if self.vector_issue_groups>1 and (self.vector_engines!=1 or self.vector_result_chunks or self.vector_compatible_issue):
@@ -408,6 +433,8 @@ class OpenTPU:
     if ins.op in (I.LD,I.ST):
       service = max(ceil(w[2]/min(cfg.LANES,cfg.D//4)),ceil(4*w[2]/t.dram_bytes_per_cycle))
       latency = service+(t.dram_latency+6 if ins.op==I.LD else 5)
+      if ins.op==I.ST and t.dma_store_runs:
+        latency=buffered_store_cycles(w[2],w[0],cfg.D,cfg.LANES,t.dram_bytes_per_cycle)
       port = memory.b
     elif ins.op==I.QACT:
       rows,kb = w[1]&255,w[1]>>16

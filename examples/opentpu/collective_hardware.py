@@ -45,7 +45,8 @@ def main():
     from .compact import CompactOpenTPU
     from .glm47_target import component_timing
     from .native_timing import ReusableTiming
-    timing=component_timing();runner=ReusableTiming(a.compiler,a.output/'native-cache',capacity=64)
+    timing=replace(component_timing(),dma_store_runs=True)
+    runner=ReusableTiming(a.compiler,a.output/'native-cache',capacity=64)
     rtlsim.VFLAGS[rtlsim.VFLAGS.index('-j')+1]='8'
     rtlsim.VFLAGS+=['-CFLAGS','-O0','-DOTPU_FP_MUL_LAT=2','-DOTPU_FP_ADD_LAT=4']
     uarch=dict(MXU_ROWS=2,MXU_COLS=2,MXU_PAIR_DOT=1,MXU_CL=8,VPU_LANES=64,QST_LANES=64)

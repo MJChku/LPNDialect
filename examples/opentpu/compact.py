@@ -114,7 +114,7 @@ class CompactOpenTPU(OpenTPU):
       rows,cols=ins.w[2]&65535,ins.w[2]>>16
       # One registered read stream, broadcast to all slices, followed by
       # request/read/write pipeline drain (otpu_coll, default RQ=1).
-      latency=2 if ins.op==I.BAR or rows==0 or cols==0 else cfg.S*rows*ceil(cols/cfg.LANES)+4
+      latency=3 if ins.op==I.BAR or rows==0 or cols==0 else cfg.S*rows*ceil(cols/cfg.LANES)+6
       return latency,None,0
     return super()._simple_timing(ins,memory,I)
 
