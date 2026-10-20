@@ -77,3 +77,8 @@ control resolution, and a memory interface that can address or stream the
 model. Existing NVFP4 matrix component validation does not complete those
 steps. Real retained SmolLM2 inference programs remain the full-model workload
 for command-driven architecture experiments until that compiler path exists.
+
+The [completed hardware-input replay and full architecture study](rtl_evolution/validation/hardware-commands/README.md)
+preserve the direct hex-file controls, 33 passing tests, all 48-kernel runs,
+operation counts and the fresh hardware-input audit. No GLM timing is inferred
+from those results.

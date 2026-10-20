@@ -1,0 +1,55 @@
+{
+  "status": "complete",
+  "scope": "Bind actual-component LPN architecture results to retained RTL programs.",
+  "dse_report_sha256": "d34ae063c2cc30028f9286d4bb2c75ee84fc64326ebb7d59b8a5e2f12ec0b054",
+  "original_reference_sha256": "f037e875e73760f7c3d70b6851d0ce4f01bbdd9f0c62ef27ccd75ba5659f07fe",
+  "prior_cached_rtl_audit_sha256": "24439d555acd985b4d0baeb329b40861b14be9726763463948173e827b394bd0",
+  "audit_source_sha256": "77dd3e2d68d5e5e3fb78e9a6897f04e1924dd4c9d25f0a4dd1c1ec8bb06b2edf",
+  "records": [
+    {
+      "architecture": "proposal_commands_4x128x4_hbm572_lat120",
+      "full_inference_cycles": 18162384.0,
+      "matrix_dot_operations": 36936364032,
+      "native_simulation_seconds_sum": 247.520005043,
+      "all_hardware_hex_and_decoded_words_verified": true,
+      "all_native_logs_verified": true,
+      "all_actual_rtl_dynamic_instruction_counts_verified": true,
+      "new_architecture_rtl_validation": false
+    },
+    {
+      "architecture": "proposal_commands_1x512x4_hbm572_lat120",
+      "full_inference_cycles": 19181161.0,
+      "matrix_dot_operations": 36936364032,
+      "native_simulation_seconds_sum": 256.783895478,
+      "all_hardware_hex_and_decoded_words_verified": true,
+      "all_native_logs_verified": true,
+      "all_actual_rtl_dynamic_instruction_counts_verified": true,
+      "new_architecture_rtl_validation": false
+    },
+    {
+      "architecture": "proposal_commands_4x256x2_hbm572_lat120",
+      "full_inference_cycles": 18128591.0,
+      "matrix_dot_operations": 36936364032,
+      "native_simulation_seconds_sum": 245.600745421,
+      "all_hardware_hex_and_decoded_words_verified": true,
+      "all_native_logs_verified": true,
+      "all_actual_rtl_dynamic_instruction_counts_verified": true,
+      "new_architecture_rtl_validation": false
+    },
+    {
+      "architecture": "physical_scale16_128x1_add2",
+      "full_inference_cycles": 8142924.0,
+      "matrix_dot_operations": 36936364032,
+      "native_simulation_seconds_sum": 23.354742081,
+      "all_hardware_hex_and_decoded_words_verified": true,
+      "all_native_logs_verified": true,
+      "all_actual_rtl_dynamic_instruction_counts_verified": true,
+      "new_architecture_rtl_validation": null
+    }
+  ],
+  "unchanged_control_cycles": 8142924.0,
+  "control_actual_rtl_cycles": 8410568,
+  "control_worst_rtl_kernel_error": 0.04795978655362887,
+  "tensor_dag_used": false,
+  "glm_hardware_execution": false
+}

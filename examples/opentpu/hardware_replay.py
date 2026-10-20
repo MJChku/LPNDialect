@@ -21,8 +21,8 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ('input','opentpu-root','compiler','output'):p.add_argument('--'+name,type=Path,required=True)
     p.add_argument('--timing',type=Path,help='Explicit Timing fields; defaults use original hardware timing')
-    p.add_argument('--physical-matrix-columns',type=int,help='Physical MXU_COLS override, as in the RTL microarchitecture')
-    p.add_argument('--physical-vector-lanes',type=int,help='Physical TMEM/VPU lane count override')
+    p.add_argument('--physical-matrix-columns',type=int,choices=(1,2,4,8),help='Physical MXU_COLS override, as in the RTL microarchitecture')
+    p.add_argument('--physical-vector-lanes',type=int,choices=(8,16,32,64),help='Physical TMEM/VPU lane count override')
     p.add_argument('--clock-mhz',type=float,required=True,help='Assumed hardware clock, not host speed or achieved Fmax')
     p.add_argument('--runs',type=int,default=3);a=p.parse_args()
     if a.runs<1 or not 0<a.clock_mhz<1e6:p.error('positive repeat count and finite clock required')
@@ -33,6 +33,8 @@ def main():
     overrides={k:v for k,v in [('MCOLS',a.physical_matrix_columns),('LANES',a.physical_vector_lanes)] if v is not None}
     if any(v<1 for v in overrides.values()):p.error('positive physical dimensions required')
     if overrides:work=replace(work,config=replace(work.config,**overrides))
+    if work.config.LANES not in (8,16,32,64):
+        raise ValueError('the existing physical VPU/TMEM model supports 8/16/32/64 lanes; wider elementwise proposals retain 64 reduction lanes')
     timing=Timing(**json.loads(a.timing.read_text())) if a.timing else Timing(dram_bytes_per_cycle=min(work.config.D,128))
     files=[Path(__file__),Path(__file__).with_name('hardware_commands.py'),
         *[Path(__file__).with_name(n) for n in ('model.py','compact.py','components.py','shape_workload.py',
