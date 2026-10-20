@@ -190,3 +190,33 @@ def glm_resident_experts(m,ids):
     y=swiglu_down(ol.quantize(xn),shared.wg,shared.wu,shared.wd,loop=True)
     # GLM's shared expert is unconditional, without Qwen's extra sigmoid gate.
     ol.store(m.out,ol.load(m.out)+y+x)
+
+
+@ol.jit
+def glm_dense(m):
+    """The first decoder layer's ordinary SwiGLU, without MoE routing."""
+    from opentpu.kernels.mlp import swiglu_down
+    x=ol.load(m.x)
+    y=swiglu_down(ol.quantize(rmsnorm(x,ol.load(m.norm),m.eps)),
+        m.dense.wg,m.dense.wu,m.dense.wd,loop=True)
+    ol.store(m.out,x+y)
+
+
+@ol.jit
+def glm_embedding(m,tokens):
+    """Compiler-known token IDs gathered by real MXU instructions, without host dequantization."""
+    from opentpu.kernels.gather import operand,gather_row
+    onehot=operand(m.onehot)
+    for r,token in enumerate(tokens):
+        ol.store(m.out[r,:],gather_row(onehot,m.table,token,'nvfp4'))
+
+
+@ol.jit
+def glm_head(m):
+    """Final norm and untied vocabulary projection of the frontend's last row."""
+    rows=m.x.shape[0]
+    xs=ol.quantize(rmsnorm(ol.load(m.x[rows-1:rows,:]),ol.load(m.norm),m.eps))
+    chunk=min(8192,ol.tmem_words()//8)
+    for start in range(0,m.head.shape[0],chunk):
+        end=min(start+chunk,m.head.shape[0])
+        ol.store(m.out[:,start:end],ol.dot(xs,m.head[start:end,:]))

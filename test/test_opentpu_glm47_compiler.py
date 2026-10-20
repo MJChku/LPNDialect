@@ -17,6 +17,37 @@ class GLMCompilerTest(unittest.TestCase):
                 self.assertEqual(component_timing(columns=columns).epilogue_lanes,lanes)
         with self.assertRaises(ValueError):component_timing(columns=3)
 
+    def test_boundary_kernels_follow_numerical_equations(self):
+        import numpy as np
+        from examples.opentpu.glm47_boundary_hardware import Layout,numerical_inputs
+        for stage in ('embedding','dense','head'):
+            with self.subTest(stage=stage):
+                layout=Layout(stage,2,128,512,256);tokens=[38,7]
+                program=layout.compile(tokens);image,reference=numerical_inputs(layout,tokens)
+                work=execute(layout.cfg,[program],[image]);at=layout.m.out.base.static()
+                got=work.machine.slices[0].dram[at:at+reference.size*4].view(np.float32).reshape(reference.shape)
+                self.assertLess(float(np.linalg.norm(got-reference)/np.linalg.norm(reference)),.02)
+                if stage=='embedding':
+                    np.testing.assert_allclose(got,reference,atol=1e-7,rtol=1e-6)
+                    with self.assertRaises(ValueError):layout.compile([256,7])
+                if stage=='head':
+                    # Generation consumes only the last input row's logits.
+                    image[:128*4]=np.full(128,1e3,np.float32).view(np.uint8)
+                    other=execute(layout.cfg,[program],[image]).machine.slices[0].dram[at:at+reference.size*4]
+                    np.testing.assert_array_equal(other,got.view(np.uint8).ravel())
+
+    def test_full_dense_and_head_command_arithmetic_matches_dimensions(self):
+        from examples.opentpu.glm47_boundary_hardware import Layout
+        from examples.opentpu.shape_workload import resolve_static
+        from examples.opentpu.hardware_commands import instruction_statistics
+        H,F,V=2048,10240,154880
+        for stage,macs in (('dense',3*4*H*F),('head',H*V)):
+            with self.subTest(stage=stage):
+                layout=Layout(stage,4,H,F,V)
+                stats=instruction_statistics(resolve_static(layout.cfg,[layout.compile()]))
+                self.assertEqual(stats['matrix_dot_macs'],macs)
+                self.assertLess(layout.next,1<<32)
+
     def test_expert_dispatch_preserves_every_selected_token_and_rank(self):
         from examples.opentpu.glm47_kernels import expert_batches
         ids=[[7,1,3,0],[1,6,7,3],[7,2,1,0],[2,4,1,7]]
