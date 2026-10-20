@@ -18,6 +18,8 @@ def main():
   p.add_argument("--output",type=Path)
   p.add_argument("--batch-rows",type=int,default=1)
   p.add_argument("--compact",action="store_true")
+  p.add_argument("--timing-only",action="store_true",
+      help="Read the same hardware hex files, resolving static scalar control without tensor computation")
   p.add_argument("--matrix-engines",type=int,default=1,
       help="independent matrix engines sharing memory; requires --compact")
   a = p.parse_args()
@@ -27,7 +29,10 @@ def main():
     p.error("positive --matrix-engines requires --compact when greater than one")
   use_checkout(a.opentpu_root)
   before = time.perf_counter()
-  workload = load(a.input)
+  if a.timing_only:
+    from .hardware_commands import load_commands
+    workload=load_commands(a.input)
+  else:workload = load(a.input)
   from .compact import CompactOpenTPU
   cls = CompactOpenTPU if a.compact else OpenTPU
   model = cls(workload,Timing(batch_rows=a.batch_rows,dram_bytes_per_cycle=min(workload.config.D,128),

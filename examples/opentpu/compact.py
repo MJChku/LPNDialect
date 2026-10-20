@@ -118,6 +118,8 @@ class CompactOpenTPU(OpenTPU):
         "matrix_engines_per_slice":self.timing.matrix_engines,
         "instructions_per_slice":[len(c) for c in self.workload.commands]}
     if self.scale_cache_statistics:result['scale_cache']=self.scale_cache_statistics
+    from .hardware_commands import instruction_statistics
+    result['hardware_instructions']=instruction_statistics(self.workload)
     return result
 
   def _slice(self,sid,commands,I,W):

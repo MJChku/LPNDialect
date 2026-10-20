@@ -53,6 +53,14 @@ class Architecture:
 
 def architectures():
     return [
+        *[Architecture(f'proposal_commands_{engines}x{rows}x{cols}_hbm572_lat120',rows,cols,572,
+                       matrix_engines=engines,latency=120,buffered_quant=True,
+                       vector_row_contexts=4,activation_streaming=True,quant_scale_lookup=True,
+                       scalar_recip_lookup=True,fp_add_latency=2,matrix_retirement=True,
+                       physical_scale_lines=True,act_rows=16,act_blocks=64,fifo_per_core=64,
+                       vector_engines=4,vector_result_chunks=1024,vector_compatible_issue=True,
+                       window=128)
+          for engines,rows,cols in [(4,128,4),(1,512,4),(4,256,2)]],
         *[Architecture(f'proposal_wide_elementwise_g{groups}_96x2_scale16_add2',96,2,2816,
                        vector_issue_groups=groups,scale_cache_entries=16,paired_dsp=True,
                        buffered_quant=True,vector_row_contexts=4,activation_streaming=True,
@@ -370,6 +378,7 @@ def run_kernel(task):
         validated_evolved_rtl_cycles=record['rtl_cycles'],
         predicted_speedup_vs_original=record['baseline_rtl_cycles'] / cycles,
         native_seconds=core, host_seconds=time.perf_counter() - start,
+        statistics=prepared.statistics,
         canonical_program_json_verified=True,program_json_sha256=program_json_hashes,
         zero_rollbacks=True, original_program_hash_verified=True, args=record['args'], timing=asdict(timing))
     if point.name == 'validated_32x1':
@@ -418,7 +427,7 @@ def main():
     output.mkdir(parents=True, exist_ok=False)
     project = Path(__file__).resolve().parent
     files = [project / name for name in ('tpu_dse.py', 'model.py', 'compact.py', 'components.py',
-                                       'workload.py', 'shape_workload.py', 'native_timing.py', 'benchmark.py','activation_stream.py','vector_pool.py','vector_select.py','retained_inputs.py','storage_envelope.py','precise_tmem.py','scale_cache_timing.py')]
+                                       'workload.py', 'shape_workload.py', 'native_timing.py', 'benchmark.py','activation_stream.py','vector_pool.py','vector_select.py','retained_inputs.py','storage_envelope.py','precise_tmem.py','scale_cache_timing.py','hardware_commands.py')]
     if args.memory_profile_root:files.append(args.memory_profile_root.resolve()/'manifest.json')
     sources = {str(p): digest(p) for p in files}
     observations = {p.name: [] for p in points}
@@ -433,6 +442,13 @@ def main():
                         kernels=records, completed_kernels=len(records))
             if len(records) == len(indices):
                 item['selected_kernel_speedup'] = sum(r['original_rtl_cycles'] for r in records) / sum(r['cycles'] for r in records)
+                arithmetic=[r['statistics']['hardware_instructions'] for r in records]
+                dot_operations=sum(r['matrix_dot_operations'] for r in arithmetic)
+                item['hardware_instruction_arithmetic']=dict(matrix_dot_operations=dot_operations,
+                    logical_fp32_vector_flops=sum(r['logical_fp32_vector_flops'] for r in arithmetic),
+                    achieved_matrix_dot_tops=dot_operations/(sum(r['cycles'] for r in records)/(args.clock_mhz*1e6))/1e12,
+                    native_simulation_seconds_sum=sum(r['native_seconds'] for r in records),
+                    scope='Resolved canonical hardware instructions; integer-dot TOPS, not native BF16 TFLOP/s')
                 if indices == list(range(48)):
                     item['full_inference_cycles'] = sum(r['cycles'] for r in records)
                     item['predicted_full_speedup'] = reference['baseline_rtl_cycles'] / item['full_inference_cycles']
