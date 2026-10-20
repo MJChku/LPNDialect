@@ -40,7 +40,7 @@ class Spec:
 
 class Layout:
     """Bounded per-layer physical layout using actual packed weight/KV formats."""
-    def __init__(self,spec,rows,capacity,cfg):
+    def __init__(self,spec,rows,capacity,cfg,base=0):
         from opentpu import quant as Q
         from opentpu.compiler import Affine,KVDesc,QTensor,Tensor,k_scale_bytes
         if cfg.S!=1 or spec.value!=spec.nope+spec.rope:
@@ -49,7 +49,8 @@ class Layout:
             raise ValueError('tile must fit ACT rows and KV capacity must contain whole D blocks')
         if spec.rope%2 or any(n%cfg.D for n in (spec.hidden,spec.q_rank,spec.kv_rank,spec.nope+spec.rope,spec.heads*spec.value)):
             raise ValueError('hardware inner dimensions must be D-aligned and RoPE must be even')
-        self.regions=[];self.weights={};self.next=0;self.cfg=cfg;self.spec=spec
+        if base<0 or base%cfg.D:raise ValueError('layer base must be a nonnegative D-aligned byte address')
+        self.regions=[];self.weights={};self.next=base;self.cfg=cfg;self.spec=spec
         def alloc(name,n,kind,shape=None):
             at=(self.next+cfg.D-1)//cfg.D*cfg.D;self.next=at+n
             if self.next>cfg.DRAM_BYTES or self.next>1<<32:raise ValueError('per-layer layout exceeds hardware address/memory capacity')

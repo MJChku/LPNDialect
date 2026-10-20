@@ -97,9 +97,26 @@ class CompactOpenTPU(OpenTPU):
     self.input_capacity = input_capacity
     self.input_tables = {}
     self.components = {}
+    self.collective_interfaces=[]
+    self.collective_parameters=[]
     self.scale_cache_statistics={}
     self.prefetch_profile=prefetch_profile
     super().__init__(workload,timing)
+    if workload.config.S>1:
+      from opentpu import isa as I,waits as W
+      from .collective import CollectiveBus
+      self.collective=CollectiveBus(self.net,self.collective_interfaces,workload.commands,
+          self.collective_parameters,self._table,I,W)
+
+  def _simple_timing(self,ins,memory,I):
+    cfg=self.workload.config
+    if cfg.S>1 and ins.op in (I.BAR,I.GATHER):
+      rows,cols=ins.w[2]&65535,ins.w[2]>>16
+      # One registered read stream, broadcast to all slices, followed by
+      # request/read/write pipeline drain (otpu_coll, default RQ=1).
+      latency=2 if ins.op==I.BAR or rows==0 or cols==0 else cfg.S*rows*ceil(cols/cfg.LANES)+4
+      return latency,None,0
+    return super()._simple_timing(ins,memory,I)
 
   def _table(self,name,values):
     if self.input_capacity is None:
@@ -345,6 +362,9 @@ class CompactOpenTPU(OpenTPU):
 
     interface = CommandInterface(slots,pending,window,select_ready,is_done,publish,
         compute_offsets,compute_indices)
+    if cfg.S>1:
+      self.collective_interfaces.append(interface)
+      self.collective_parameters.append(parameters)
     if activation is not None:
       interface.activation=activation
       interface.activation_producers=producer_table
@@ -361,6 +381,7 @@ class CompactOpenTPU(OpenTPU):
                  vector_ranks if u==W.U_VPU else None,
                  command_queue=t.vector_command_queue if u==W.U_VPU else 0)
              for u in (W.U_DMA,W.U_Q,W.U_VPU,W.U_COLL,5)
+             if not (u==W.U_COLL and cfg.S>1)
              if not (u==W.U_VPU and t.vector_result_chunks)]
     vectors=[]
     if t.vector_result_chunks:

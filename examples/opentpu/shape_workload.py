@@ -23,7 +23,7 @@ def resolve_static(cfg,programs,args=None,max_steps=1_000_000):
   if len(args)>8 or len(programs)!=cfg.S or max_steps<1:
     raise ValueError('invalid static trace configuration')
   commands=[]
-  allowed={I.NOP,I.LI,I.ADDI,I.LOOP,I.BAR,I.LD,I.ST,I.MM,I.QACT,I.QST,I.VOP,I.HALT}
+  allowed={I.NOP,I.LI,I.ADDI,I.LOOP,I.BAR,I.GATHER,I.LD,I.ST,I.MM,I.QACT,I.QST,I.VOP,I.HALT}
   for program in programs:
     regs=[0]*16
     regs[8:8+len(args)]=[int(x)&0xffffffff for x in args]

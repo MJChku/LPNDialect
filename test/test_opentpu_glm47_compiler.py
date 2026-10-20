@@ -17,6 +17,20 @@ class GLMCompilerTest(unittest.TestCase):
                 self.assertEqual(component_timing(columns=columns).epilogue_lanes,lanes)
         with self.assertRaises(ValueError):component_timing(columns=3)
 
+    def test_resident_expert_partition_has_real_32_bit_addresses_for_all_layers(self):
+        from examples.opentpu.glm47_resident_layout import ResidentLayout
+        model=ResidentLayout(8)
+        self.assertEqual(len(model.layers),47)
+        self.assertEqual(sum(layer['kind']=='moe' for layer in model.layers),46)
+        self.assertEqual(model.experts_per_slice*model.slices,64)
+        self.assertLessEqual(model.next,1<<32)
+        self.assertLessEqual(model.next*8,32<<30)
+        for before,after in zip(model.regions,model.regions[1:]):
+            self.assertLessEqual(before['address']+before['bytes'],after['address'])
+        for region in model.regions:
+            self.assertTrue(0<=region['address']<region['address']+region['bytes']<=1<<32)
+        with self.assertRaises(ValueError):ResidentLayout(4)
+
     def test_boundary_kernels_follow_numerical_equations(self):
         import numpy as np
         from examples.opentpu.glm47_boundary_hardware import Layout,numerical_inputs
