@@ -21,7 +21,11 @@ def compile_router(cfg,x,norm,weight,bias,topk=4):
     if weight.shape[1]!=H or not 1<=topk<=E:raise ValueError('invalid router dimensions')
     memory,layout,bound=place(cfg,dict(x=Input(x),norm=Input(norm),router=Input(weight),bias=Input(bias),
         logits=Output((R,E)),ids=Output((R,topk)),weights=Output((R,topk)),eps=1e-5))
-    m=SimpleNamespace(**bound[0]);builder=glm_router.trace(cfg,0,dict(m=m,topk=topk,scale=1.8))
+    m=SimpleNamespace(**bound[0])
+    # Device workspace is written through an affine loop address. It is not
+    # a host-collected static store record; callers explicitly read its DRAM.
+    m.logits=replace(m.logits,host=None)
+    builder=glm_router.trace(cfg,0,dict(m=m,topk=topk,scale=1.8))
     program=builder.finish()
     if len(program)*8>cfg.IMEM_WORDS:raise ValueError('router program exceeds physical IMEM')
     return program,m,memory.images[0]
