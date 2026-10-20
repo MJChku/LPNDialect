@@ -77,11 +77,27 @@ def load(directory):
 
 def execute(cfg,programs,images,args=None,hashes=None):
   """Numerical execution and concrete control/address trace from shared inputs."""
-  from opentpu import isa as I, waits as W
   from opentpu.isasim import Machine
-
   args = list(args or [])
   machine = Machine(cfg,programs,images,args=args)
+  return _record_execution(machine,programs,images,args,hashes)
+
+
+def execute_on_machine(machine,programs,args=None,hashes=None):
+  """Launch commands on resident DRAM/TMEM/ACT, using the real Machine.load ABI.
+
+  No memory image is copied or serialized. The result borrows the machine:
+  inspect its state before the next launch. Command/footprint records remain
+  independent; images=[] explicitly indicates that no input snapshot exists.
+  """
+  args=list(args or [])
+  machine.load(programs,args=args)
+  return _record_execution(machine,programs,[],args,hashes)
+
+
+def _record_execution(machine,programs,images,args,hashes):
+  from opentpu import isa as I,waits as W
+  cfg=machine.cfg
   commands = [[] for _ in range(cfg.S)]
 
   def record_step(self):
@@ -94,7 +110,13 @@ def execute(cfg,programs,images,args=None,hashes=None):
     original[self.sid]()
 
   original = [s.step for s in machine.slices]
+  overridden = [('step' in s.__dict__,s.__dict__.get('step')) for s in machine.slices]
   for s in machine.slices:
     s.step = MethodType(record_step,s)
-  machine.run(max_steps=1<<40)
+  try:
+    machine.run(max_steps=1<<40)
+  finally:
+    for s,(had,value) in zip(machine.slices,overridden):
+      if had:s.step=value
+      else:del s.step
   return Workload(cfg,programs,images,commands,machine,hashes or {},args)
