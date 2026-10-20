@@ -40,6 +40,15 @@ validation. No recorded RTL cycle count is used as an LPN timing input.
 For the existing MLIR-only emission entry point, `examples.opentpu.run` also
 accepts `--timing-only`: the input remains the canonical hardware program.
 
+`hardware_sweep` reuses the same commands across a JSON list of named physical
+profiles. Each profile supplies `name`, `physical_matrix_columns`, and explicit
+`timing` fields. With `--functional`, canonical DRAM images are numerically
+executed once per input to resolve actual data-dependent instructions, including
+RLD. Each candidate then receives the same resolved commands and footprints.
+Functional preparation, native simulation and assumed hardware time are recorded
+separately. This enables architecture experiments on real routed programs;
+new profiles still need corresponding RTL validation.
+
 ## Operation accounting
 
 `CompactOpenTPU.statistics()['hardware_instructions']` counts the resolved
@@ -70,13 +79,12 @@ arithmetic counters and native LPN cycles as independent numerical ISA
 execution. Negative tests reject tensor records, invalid instruction words,
 manifest/IMEM mismatches, unresolved dynamic control and wide-address claims.
 
-GLM-4.7-Flash has no complete hardware program yet. The earlier tensor-graph
-experiment is excluded from this path. Building real GLM support requires a
-compiler/backend that emits hardware instructions for MLA/MoE, real functional
-control resolution, and a memory interface that can address or stream the
-model. Existing NVFP4 matrix component validation does not complete those
-steps. Real retained SmolLM2 inference programs remain the full-model workload
-for command-driven architecture experiments until that compiler path exists.
+GLM-4.7-Flash now has [actual component programs and a joined numerical layer](
+validation/glm47-flash/hardware-commands/README.md), with real functional router
+control. Dense FFN, NVFP4 embedding gathers and the vocabulary head compile too.
+Complete 47-layer inference scheduling and whole-model memory mapping remain
+unfinished. The earlier tensor-graph experiment is excluded from this path.
+Retained SmolLM2 programs remain the validated complete inference workload.
 
 The [completed hardware-input replay and full architecture study](rtl_evolution/validation/hardware-commands/README.md)
 preserve the direct hex-file controls, 33 passing tests, all 48-kernel runs,

@@ -1,0 +1,3093 @@
+{
+  "status": "complete",
+  "scope": "Replay unchanged canonical hardware programs across explicit physical profiles.\n\nThe optional functional frontend resolves actual data-dependent instructions\nonce per input. It supplies concrete control/memory footprints, never timing.\nEvery candidate then runs the existing native component LPN on those commands.\n",
+  "profiles": [
+    {
+      "name": "reference_2x2_gate",
+      "physical_matrix_columns": 2,
+      "timing": {
+        "dram_latency": 8,
+        "dram_bytes_per_cycle": 2816,
+        "window": 32,
+        "fifo_chunks": 256,
+        "chain_length": 8,
+        "epilogue_lanes": 1,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 2,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 2,
+        "dram_port_bytes": 2816,
+        "scale_lanes": 2,
+        "unified_dram": true,
+        "scalar_store_bytes": 256,
+        "quant_row_banks": 8,
+        "quant_store_buffered": true,
+        "quant_scale_lookup": false,
+        "scalar_recip_lookup": false,
+        "reciprocal_lookup_lanes": 0,
+        "pinned_cache_bytes": 0,
+        "cache_read_bytes_per_cycle": 8192,
+        "vector_row_contexts": 4,
+        "vector_command_queue": 2,
+        "matrix_retirement": true,
+        "physical_scale_lines": true,
+        "scale_cache_entries": 0,
+        "vector_engines": 1,
+        "vector_issue_groups": 1,
+        "vector_result_chunks": 0,
+        "vector_compatible_issue": false,
+        "activation_streaming": false,
+        "fp_mul_latency": 2,
+        "fp_add_latency": 4
+      }
+    },
+    {
+      "name": "proposal_hbm_2x2",
+      "physical_matrix_columns": 2,
+      "timing": {
+        "dram_latency": 120,
+        "dram_bytes_per_cycle": 572,
+        "window": 32,
+        "fifo_chunks": 256,
+        "chain_length": 8,
+        "epilogue_lanes": 1,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 2,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 2,
+        "dram_port_bytes": 572,
+        "scale_lanes": 2,
+        "unified_dram": true,
+        "scalar_store_bytes": 256,
+        "quant_row_banks": 8,
+        "quant_store_buffered": true,
+        "quant_scale_lookup": false,
+        "scalar_recip_lookup": false,
+        "reciprocal_lookup_lanes": 0,
+        "pinned_cache_bytes": 0,
+        "cache_read_bytes_per_cycle": 8192,
+        "vector_row_contexts": 4,
+        "vector_command_queue": 2,
+        "matrix_retirement": true,
+        "physical_scale_lines": true,
+        "scale_cache_entries": 0,
+        "vector_engines": 1,
+        "vector_issue_groups": 1,
+        "vector_result_chunks": 0,
+        "vector_compatible_issue": false,
+        "activation_streaming": false,
+        "fp_mul_latency": 2,
+        "fp_add_latency": 4
+      }
+    },
+    {
+      "name": "proposal_hbm_96x2",
+      "physical_matrix_columns": 2,
+      "timing": {
+        "dram_latency": 120,
+        "dram_bytes_per_cycle": 572,
+        "window": 32,
+        "fifo_chunks": 12288,
+        "chain_length": 8,
+        "epilogue_lanes": 1,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 96,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 96,
+        "dram_port_bytes": 572,
+        "scale_lanes": 96,
+        "unified_dram": true,
+        "scalar_store_bytes": 256,
+        "quant_row_banks": 8,
+        "quant_store_buffered": true,
+        "quant_scale_lookup": false,
+        "scalar_recip_lookup": false,
+        "reciprocal_lookup_lanes": 0,
+        "pinned_cache_bytes": 0,
+        "cache_read_bytes_per_cycle": 8192,
+        "vector_row_contexts": 4,
+        "vector_command_queue": 2,
+        "matrix_retirement": true,
+        "physical_scale_lines": true,
+        "scale_cache_entries": 0,
+        "vector_engines": 1,
+        "vector_issue_groups": 1,
+        "vector_result_chunks": 0,
+        "vector_compatible_issue": false,
+        "activation_streaming": false,
+        "fp_mul_latency": 2,
+        "fp_add_latency": 4
+      }
+    },
+    {
+      "name": "proposal_hbm_128x8",
+      "physical_matrix_columns": 8,
+      "timing": {
+        "dram_latency": 120,
+        "dram_bytes_per_cycle": 572,
+        "window": 32,
+        "fifo_chunks": 16384,
+        "chain_length": 8,
+        "epilogue_lanes": 4,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 128,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 128,
+        "dram_port_bytes": 572,
+        "scale_lanes": 128,
+        "unified_dram": true,
+        "scalar_store_bytes": 256,
+        "quant_row_banks": 8,
+        "quant_store_buffered": true,
+        "quant_scale_lookup": false,
+        "scalar_recip_lookup": false,
+        "reciprocal_lookup_lanes": 0,
+        "pinned_cache_bytes": 0,
+        "cache_read_bytes_per_cycle": 8192,
+        "vector_row_contexts": 4,
+        "vector_command_queue": 2,
+        "matrix_retirement": true,
+        "physical_scale_lines": true,
+        "scale_cache_entries": 0,
+        "vector_engines": 1,
+        "vector_issue_groups": 1,
+        "vector_result_chunks": 0,
+        "vector_compatible_issue": false,
+        "activation_streaming": false,
+        "fp_mul_latency": 2,
+        "fp_add_latency": 4
+      }
+    },
+    {
+      "name": "proposal_hbm_128x8_v256",
+      "physical_matrix_columns": 8,
+      "timing": {
+        "dram_latency": 120,
+        "dram_bytes_per_cycle": 572,
+        "window": 32,
+        "fifo_chunks": 16384,
+        "chain_length": 8,
+        "epilogue_lanes": 4,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 128,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 128,
+        "dram_port_bytes": 572,
+        "scale_lanes": 128,
+        "unified_dram": true,
+        "scalar_store_bytes": 256,
+        "quant_row_banks": 8,
+        "quant_store_buffered": true,
+        "quant_scale_lookup": false,
+        "scalar_recip_lookup": false,
+        "reciprocal_lookup_lanes": 0,
+        "pinned_cache_bytes": 0,
+        "cache_read_bytes_per_cycle": 8192,
+        "vector_row_contexts": 4,
+        "vector_command_queue": 2,
+        "matrix_retirement": true,
+        "physical_scale_lines": true,
+        "scale_cache_entries": 0,
+        "vector_engines": 1,
+        "vector_issue_groups": 4,
+        "vector_result_chunks": 0,
+        "vector_compatible_issue": false,
+        "activation_streaming": false,
+        "fp_mul_latency": 2,
+        "fp_add_latency": 4
+      }
+    }
+  ],
+  "records": [
+    {
+      "profile": "reference_2x2_gate",
+      "input": "/home/ubuntu/lpn-runs/glm47-flash/layer-shared-full-v5/mla",
+      "input_index": 0,
+      "input_sha256": {
+        "input.json": "06a8a383f6be4f636a77d75b780b5d984aea178ffdac0a9a65b259452d2f9bf7",
+        "prog_0.hex": "a9e487cab26540b6d6cc325387687319f0d47b132d3425095b1241d09023f2a9",
+        "dram_0.bin": "4b717a04a434c5bbbe5fdc1421256fda10792bbf4985f9c10c543baf8a9a2b9b"
+      },
+      "original_config": {
+        "S": 1,
+        "D": 128,
+        "MCOLS": 4,
+        "ACT_BLOCKS": 64,
+        "TMEM_WORDS": 65536,
+        "DRAM_BYTES": 536870912,
+        "IMEM_WORDS": 65536,
+        "LANES": 64,
+        "PAIR": false,
+        "DSTEP": false,
+        "STREAM": false,
+        "ACT_ROWS": 16,
+        "SEQ_WC": false
+      },
+      "physical_config": {
+        "S": 1,
+        "D": 128,
+        "MCOLS": 2,
+        "ACT_BLOCKS": 64,
+        "TMEM_WORDS": 65536,
+        "DRAM_BYTES": 536870912,
+        "IMEM_WORDS": 65536,
+        "LANES": 64,
+        "PAIR": false,
+        "DSTEP": false,
+        "STREAM": false,
+        "ACT_ROWS": 16,
+        "SEQ_WC": false
+      },
+      "timing": {
+        "dram_latency": 8,
+        "dram_bytes_per_cycle": 2816,
+        "window": 32,
+        "fifo_chunks": 256,
+        "chain_length": 8,
+        "epilogue_lanes": 1,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 2,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 2,
+        "dram_port_bytes": 2816,
+        "scale_lanes": 2,
+        "unified_dram": true,
+        "scalar_store_bytes": 256,
+        "quant_row_banks": 8,
+        "quant_store_buffered": true,
+        "quant_scale_lookup": false,
+        "scalar_recip_lookup": false,
+        "reciprocal_lookup_lanes": 0,
+        "pinned_cache_bytes": 0,
+        "cache_read_bytes_per_cycle": 8192,
+        "vector_row_contexts": 4,
+        "vector_command_queue": 2,
+        "matrix_retirement": true,
+        "physical_scale_lines": true,
+        "scale_cache_entries": 0,
+        "vector_engines": 1,
+        "vector_issue_groups": 1,
+        "vector_result_chunks": 0,
+        "vector_compatible_issue": false,
+        "activation_streaming": false,
+        "fp_mul_latency": 2,
+        "fp_add_latency": 4
+      },
+      "hardware_instructions": {
+        "dynamic_instructions": 2366,
+        "opcode_counts": {
+          "LD": 108,
+          "VOP": 1929,
+          "QACT": 44,
+          "MM": 83,
+          "QST": 40,
+          "ST": 161,
+          "HALT": 1
+        },
+        "matrix_commands": 83,
+        "matrix_dot_macs": 89735168,
+        "matrix_dot_operations": 179470336,
+        "matrix_by_weight_format": {
+          "nvfp4": {
+            "commands": 43,
+            "dot_macs": 87031808,
+            "dot_operations": 174063616
+          },
+          "int8": {
+            "commands": 40,
+            "dot_macs": 2703360,
+            "dot_operations": 5406720
+          }
+        },
+        "logical_fp32_vector_flops": 99180,
+        "vector_function_elements": {
+          "rssq": 13312,
+          "mul": 58268,
+          "add": 10972,
+          "rsqrt": 12,
+          "copy": 31056,
+          "sub": 2688,
+          "fill": 36440,
+          "max": 80,
+          "exp2sub": 400,
+          "rsum": 320,
+          "recip": 80
+        },
+        "special_function_evaluations": {
+          "rsqrt": 12,
+          "exp2sub": 400,
+          "recip": 80
+        },
+        "uncounted_vector_function_elements": {},
+        "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+        "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+        "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+        "exclusions": [
+          "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+          "Vector counts are mathematical operations, excluding physical reduction padding",
+          "Special functions, comparisons and copies are not converted into FLOPs"
+        ]
+      },
+      "cycles": 193035.0,
+      "native_seconds": 0.174714534,
+      "assumed_hardware_seconds": 0.00012869,
+      "statistics": {
+        "transitions": 19,
+        "places": 583,
+        "completion_flag_banks": 513,
+        "command_slots": 34,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          2366
+        ],
+        "hardware_instructions": {
+          "dynamic_instructions": 2366,
+          "opcode_counts": {
+            "LD": 108,
+            "VOP": 1929,
+            "QACT": 44,
+            "MM": 83,
+            "QST": 40,
+            "ST": 161,
+            "HALT": 1
+          },
+          "matrix_commands": 83,
+          "matrix_dot_macs": 89735168,
+          "matrix_dot_operations": 179470336,
+          "matrix_by_weight_format": {
+            "nvfp4": {
+              "commands": 43,
+              "dot_macs": 87031808,
+              "dot_operations": 174063616
+            },
+            "int8": {
+              "commands": 40,
+              "dot_macs": 2703360,
+              "dot_operations": 5406720
+            }
+          },
+          "logical_fp32_vector_flops": 99180,
+          "vector_function_elements": {
+            "rssq": 13312,
+            "mul": 58268,
+            "add": 10972,
+            "rsqrt": 12,
+            "copy": 31056,
+            "sub": 2688,
+            "fill": 36440,
+            "max": 80,
+            "exp2sub": 400,
+            "rsum": 320,
+            "recip": 80
+          },
+          "special_function_evaluations": {
+            "rsqrt": 12,
+            "exp2sub": 400,
+            "recip": 80
+          },
+          "uncounted_vector_function_elements": {},
+          "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+          "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+          "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+          "exclusions": [
+            "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+            "Vector counts are mathematical operations, excluding physical reduction padding",
+            "Special functions, comparisons and copies are not converted into FLOPs"
+          ]
+        }
+      },
+      "native_binary_sha256": "855afd78e4e62082cd12bd639fd2e826b673b0b4764aea7d583689f1b8e014c1",
+      "input_tables_sha256": "afa7b0de0acd26f73d34faf15170b1d86f19483f6d4a8ba88d644b397939b94a"
+    },
+    {
+      "profile": "proposal_hbm_2x2",
+      "input": "/home/ubuntu/lpn-runs/glm47-flash/layer-shared-full-v5/mla",
+      "input_index": 0,
+      "input_sha256": {
+        "input.json": "06a8a383f6be4f636a77d75b780b5d984aea178ffdac0a9a65b259452d2f9bf7",
+        "prog_0.hex": "a9e487cab26540b6d6cc325387687319f0d47b132d3425095b1241d09023f2a9",
+        "dram_0.bin": "4b717a04a434c5bbbe5fdc1421256fda10792bbf4985f9c10c543baf8a9a2b9b"
+      },
+      "original_config": {
+        "S": 1,
+        "D": 128,
+        "MCOLS": 4,
+        "ACT_BLOCKS": 64,
+        "TMEM_WORDS": 65536,
+        "DRAM_BYTES": 536870912,
+        "IMEM_WORDS": 65536,
+        "LANES": 64,
+        "PAIR": false,
+        "DSTEP": false,
+        "STREAM": false,
+        "ACT_ROWS": 16,
+        "SEQ_WC": false
+      },
+      "physical_config": {
+        "S": 1,
+        "D": 128,
+        "MCOLS": 2,
+        "ACT_BLOCKS": 64,
+        "TMEM_WORDS": 65536,
+        "DRAM_BYTES": 536870912,
+        "IMEM_WORDS": 65536,
+        "LANES": 64,
+        "PAIR": false,
+        "DSTEP": false,
+        "STREAM": false,
+        "ACT_ROWS": 16,
+        "SEQ_WC": false
+      },
+      "timing": {
+        "dram_latency": 120,
+        "dram_bytes_per_cycle": 572,
+        "window": 32,
+        "fifo_chunks": 256,
+        "chain_length": 8,
+        "epilogue_lanes": 1,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 2,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 2,
+        "dram_port_bytes": 572,
+        "scale_lanes": 2,
+        "unified_dram": true,
+        "scalar_store_bytes": 256,
+        "quant_row_banks": 8,
+        "quant_store_buffered": true,
+        "quant_scale_lookup": false,
+        "scalar_recip_lookup": false,
+        "reciprocal_lookup_lanes": 0,
+        "pinned_cache_bytes": 0,
+        "cache_read_bytes_per_cycle": 8192,
+        "vector_row_contexts": 4,
+        "vector_command_queue": 2,
+        "matrix_retirement": true,
+        "physical_scale_lines": true,
+        "scale_cache_entries": 0,
+        "vector_engines": 1,
+        "vector_issue_groups": 1,
+        "vector_result_chunks": 0,
+        "vector_compatible_issue": false,
+        "activation_streaming": false,
+        "fp_mul_latency": 2,
+        "fp_add_latency": 4
+      },
+      "hardware_instructions": {
+        "dynamic_instructions": 2366,
+        "opcode_counts": {
+          "LD": 108,
+          "VOP": 1929,
+          "QACT": 44,
+          "MM": 83,
+          "QST": 40,
+          "ST": 161,
+          "HALT": 1
+        },
+        "matrix_commands": 83,
+        "matrix_dot_macs": 89735168,
+        "matrix_dot_operations": 179470336,
+        "matrix_by_weight_format": {
+          "nvfp4": {
+            "commands": 43,
+            "dot_macs": 87031808,
+            "dot_operations": 174063616
+          },
+          "int8": {
+            "commands": 40,
+            "dot_macs": 2703360,
+            "dot_operations": 5406720
+          }
+        },
+        "logical_fp32_vector_flops": 99180,
+        "vector_function_elements": {
+          "rssq": 13312,
+          "mul": 58268,
+          "add": 10972,
+          "rsqrt": 12,
+          "copy": 31056,
+          "sub": 2688,
+          "fill": 36440,
+          "max": 80,
+          "exp2sub": 400,
+          "rsum": 320,
+          "recip": 80
+        },
+        "special_function_evaluations": {
+          "rsqrt": 12,
+          "exp2sub": 400,
+          "recip": 80
+        },
+        "uncounted_vector_function_elements": {},
+        "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+        "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+        "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+        "exclusions": [
+          "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+          "Vector counts are mathematical operations, excluding physical reduction padding",
+          "Special functions, comparisons and copies are not converted into FLOPs"
+        ]
+      },
+      "cycles": 197954.0,
+      "native_seconds": 0.181874676,
+      "assumed_hardware_seconds": 0.00013196933333333333,
+      "statistics": {
+        "transitions": 19,
+        "places": 583,
+        "completion_flag_banks": 513,
+        "command_slots": 34,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          2366
+        ],
+        "hardware_instructions": {
+          "dynamic_instructions": 2366,
+          "opcode_counts": {
+            "LD": 108,
+            "VOP": 1929,
+            "QACT": 44,
+            "MM": 83,
+            "QST": 40,
+            "ST": 161,
+            "HALT": 1
+          },
+          "matrix_commands": 83,
+          "matrix_dot_macs": 89735168,
+          "matrix_dot_operations": 179470336,
+          "matrix_by_weight_format": {
+            "nvfp4": {
+              "commands": 43,
+              "dot_macs": 87031808,
+              "dot_operations": 174063616
+            },
+            "int8": {
+              "commands": 40,
+              "dot_macs": 2703360,
+              "dot_operations": 5406720
+            }
+          },
+          "logical_fp32_vector_flops": 99180,
+          "vector_function_elements": {
+            "rssq": 13312,
+            "mul": 58268,
+            "add": 10972,
+            "rsqrt": 12,
+            "copy": 31056,
+            "sub": 2688,
+            "fill": 36440,
+            "max": 80,
+            "exp2sub": 400,
+            "rsum": 320,
+            "recip": 80
+          },
+          "special_function_evaluations": {
+            "rsqrt": 12,
+            "exp2sub": 400,
+            "recip": 80
+          },
+          "uncounted_vector_function_elements": {},
+          "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+          "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+          "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+          "exclusions": [
+            "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+            "Vector counts are mathematical operations, excluding physical reduction padding",
+            "Special functions, comparisons and copies are not converted into FLOPs"
+          ]
+        }
+      },
+      "native_binary_sha256": "6ddf32bec4fb789144e5d2340e80422dc8f60f2b54cf09f6427378f90cdf6b84",
+      "input_tables_sha256": "ff89f5ff07160f26f552d5aa7621c9861760c47f552e9cc0a7c4812a7facc6eb"
+    },
+    {
+      "profile": "proposal_hbm_96x2",
+      "input": "/home/ubuntu/lpn-runs/glm47-flash/layer-shared-full-v5/mla",
+      "input_index": 0,
+      "input_sha256": {
+        "input.json": "06a8a383f6be4f636a77d75b780b5d984aea178ffdac0a9a65b259452d2f9bf7",
+        "prog_0.hex": "a9e487cab26540b6d6cc325387687319f0d47b132d3425095b1241d09023f2a9",
+        "dram_0.bin": "4b717a04a434c5bbbe5fdc1421256fda10792bbf4985f9c10c543baf8a9a2b9b"
+      },
+      "original_config": {
+        "S": 1,
+        "D": 128,
+        "MCOLS": 4,
+        "ACT_BLOCKS": 64,
+        "TMEM_WORDS": 65536,
+        "DRAM_BYTES": 536870912,
+        "IMEM_WORDS": 65536,
+        "LANES": 64,
+        "PAIR": false,
+        "DSTEP": false,
+        "STREAM": false,
+        "ACT_ROWS": 16,
+        "SEQ_WC": false
+      },
+      "physical_config": {
+        "S": 1,
+        "D": 128,
+        "MCOLS": 2,
+        "ACT_BLOCKS": 64,
+        "TMEM_WORDS": 65536,
+        "DRAM_BYTES": 536870912,
+        "IMEM_WORDS": 65536,
+        "LANES": 64,
+        "PAIR": false,
+        "DSTEP": false,
+        "STREAM": false,
+        "ACT_ROWS": 16,
+        "SEQ_WC": false
+      },
+      "timing": {
+        "dram_latency": 120,
+        "dram_bytes_per_cycle": 572,
+        "window": 32,
+        "fifo_chunks": 12288,
+        "chain_length": 8,
+        "epilogue_lanes": 1,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 96,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 96,
+        "dram_port_bytes": 572,
+        "scale_lanes": 96,
+        "unified_dram": true,
+        "scalar_store_bytes": 256,
+        "quant_row_banks": 8,
+        "quant_store_buffered": true,
+        "quant_scale_lookup": false,
+        "scalar_recip_lookup": false,
+        "reciprocal_lookup_lanes": 0,
+        "pinned_cache_bytes": 0,
+        "cache_read_bytes_per_cycle": 8192,
+        "vector_row_contexts": 4,
+        "vector_command_queue": 2,
+        "matrix_retirement": true,
+        "physical_scale_lines": true,
+        "scale_cache_entries": 0,
+        "vector_engines": 1,
+        "vector_issue_groups": 1,
+        "vector_result_chunks": 0,
+        "vector_compatible_issue": false,
+        "activation_streaming": false,
+        "fp_mul_latency": 2,
+        "fp_add_latency": 4
+      },
+      "hardware_instructions": {
+        "dynamic_instructions": 2366,
+        "opcode_counts": {
+          "LD": 108,
+          "VOP": 1929,
+          "QACT": 44,
+          "MM": 83,
+          "QST": 40,
+          "ST": 161,
+          "HALT": 1
+        },
+        "matrix_commands": 83,
+        "matrix_dot_macs": 89735168,
+        "matrix_dot_operations": 179470336,
+        "matrix_by_weight_format": {
+          "nvfp4": {
+            "commands": 43,
+            "dot_macs": 87031808,
+            "dot_operations": 174063616
+          },
+          "int8": {
+            "commands": 40,
+            "dot_macs": 2703360,
+            "dot_operations": 5406720
+          }
+        },
+        "logical_fp32_vector_flops": 99180,
+        "vector_function_elements": {
+          "rssq": 13312,
+          "mul": 58268,
+          "add": 10972,
+          "rsqrt": 12,
+          "copy": 31056,
+          "sub": 2688,
+          "fill": 36440,
+          "max": 80,
+          "exp2sub": 400,
+          "rsum": 320,
+          "recip": 80
+        },
+        "special_function_evaluations": {
+          "rsqrt": 12,
+          "exp2sub": 400,
+          "recip": 80
+        },
+        "uncounted_vector_function_elements": {},
+        "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+        "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+        "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+        "exclusions": [
+          "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+          "Vector counts are mathematical operations, excluding physical reduction padding",
+          "Special functions, comparisons and copies are not converted into FLOPs"
+        ]
+      },
+      "cycles": 57669.0,
+      "native_seconds": 0.068399005,
+      "assumed_hardware_seconds": 3.8446e-05,
+      "statistics": {
+        "transitions": 19,
+        "places": 583,
+        "completion_flag_banks": 513,
+        "command_slots": 34,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          2366
+        ],
+        "hardware_instructions": {
+          "dynamic_instructions": 2366,
+          "opcode_counts": {
+            "LD": 108,
+            "VOP": 1929,
+            "QACT": 44,
+            "MM": 83,
+            "QST": 40,
+            "ST": 161,
+            "HALT": 1
+          },
+          "matrix_commands": 83,
+          "matrix_dot_macs": 89735168,
+          "matrix_dot_operations": 179470336,
+          "matrix_by_weight_format": {
+            "nvfp4": {
+              "commands": 43,
+              "dot_macs": 87031808,
+              "dot_operations": 174063616
+            },
+            "int8": {
+              "commands": 40,
+              "dot_macs": 2703360,
+              "dot_operations": 5406720
+            }
+          },
+          "logical_fp32_vector_flops": 99180,
+          "vector_function_elements": {
+            "rssq": 13312,
+            "mul": 58268,
+            "add": 10972,
+            "rsqrt": 12,
+            "copy": 31056,
+            "sub": 2688,
+            "fill": 36440,
+            "max": 80,
+            "exp2sub": 400,
+            "rsum": 320,
+            "recip": 80
+          },
+          "special_function_evaluations": {
+            "rsqrt": 12,
+            "exp2sub": 400,
+            "recip": 80
+          },
+          "uncounted_vector_function_elements": {},
+          "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+          "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+          "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+          "exclusions": [
+            "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+            "Vector counts are mathematical operations, excluding physical reduction padding",
+            "Special functions, comparisons and copies are not converted into FLOPs"
+          ]
+        }
+      },
+      "native_binary_sha256": "e1647c99d6960a23c4031fea4a1de519f255e32dbd442e32cc6b66f6b8ab8694",
+      "input_tables_sha256": "7a11d9ccd1a66aec232f6cd4819baf163ec5b84e72449f58ec3534c5353fd4f3"
+    },
+    {
+      "profile": "proposal_hbm_128x8",
+      "input": "/home/ubuntu/lpn-runs/glm47-flash/layer-shared-full-v5/mla",
+      "input_index": 0,
+      "input_sha256": {
+        "input.json": "06a8a383f6be4f636a77d75b780b5d984aea178ffdac0a9a65b259452d2f9bf7",
+        "prog_0.hex": "a9e487cab26540b6d6cc325387687319f0d47b132d3425095b1241d09023f2a9",
+        "dram_0.bin": "4b717a04a434c5bbbe5fdc1421256fda10792bbf4985f9c10c543baf8a9a2b9b"
+      },
+      "original_config": {
+        "S": 1,
+        "D": 128,
+        "MCOLS": 4,
+        "ACT_BLOCKS": 64,
+        "TMEM_WORDS": 65536,
+        "DRAM_BYTES": 536870912,
+        "IMEM_WORDS": 65536,
+        "LANES": 64,
+        "PAIR": false,
+        "DSTEP": false,
+        "STREAM": false,
+        "ACT_ROWS": 16,
+        "SEQ_WC": false
+      },
+      "physical_config": {
+        "S": 1,
+        "D": 128,
+        "MCOLS": 8,
+        "ACT_BLOCKS": 64,
+        "TMEM_WORDS": 65536,
+        "DRAM_BYTES": 536870912,
+        "IMEM_WORDS": 65536,
+        "LANES": 64,
+        "PAIR": false,
+        "DSTEP": false,
+        "STREAM": false,
+        "ACT_ROWS": 16,
+        "SEQ_WC": false
+      },
+      "timing": {
+        "dram_latency": 120,
+        "dram_bytes_per_cycle": 572,
+        "window": 32,
+        "fifo_chunks": 16384,
+        "chain_length": 8,
+        "epilogue_lanes": 4,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 128,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 128,
+        "dram_port_bytes": 572,
+        "scale_lanes": 128,
+        "unified_dram": true,
+        "scalar_store_bytes": 256,
+        "quant_row_banks": 8,
+        "quant_store_buffered": true,
+        "quant_scale_lookup": false,
+        "scalar_recip_lookup": false,
+        "reciprocal_lookup_lanes": 0,
+        "pinned_cache_bytes": 0,
+        "cache_read_bytes_per_cycle": 8192,
+        "vector_row_contexts": 4,
+        "vector_command_queue": 2,
+        "matrix_retirement": true,
+        "physical_scale_lines": true,
+        "scale_cache_entries": 0,
+        "vector_engines": 1,
+        "vector_issue_groups": 1,
+        "vector_result_chunks": 0,
+        "vector_compatible_issue": false,
+        "activation_streaming": false,
+        "fp_mul_latency": 2,
+        "fp_add_latency": 4
+      },
+      "hardware_instructions": {
+        "dynamic_instructions": 2366,
+        "opcode_counts": {
+          "LD": 108,
+          "VOP": 1929,
+          "QACT": 44,
+          "MM": 83,
+          "QST": 40,
+          "ST": 161,
+          "HALT": 1
+        },
+        "matrix_commands": 83,
+        "matrix_dot_macs": 89735168,
+        "matrix_dot_operations": 179470336,
+        "matrix_by_weight_format": {
+          "nvfp4": {
+            "commands": 43,
+            "dot_macs": 87031808,
+            "dot_operations": 174063616
+          },
+          "int8": {
+            "commands": 40,
+            "dot_macs": 2703360,
+            "dot_operations": 5406720
+          }
+        },
+        "logical_fp32_vector_flops": 99180,
+        "vector_function_elements": {
+          "rssq": 13312,
+          "mul": 58268,
+          "add": 10972,
+          "rsqrt": 12,
+          "copy": 31056,
+          "sub": 2688,
+          "fill": 36440,
+          "max": 80,
+          "exp2sub": 400,
+          "rsum": 320,
+          "recip": 80
+        },
+        "special_function_evaluations": {
+          "rsqrt": 12,
+          "exp2sub": 400,
+          "recip": 80
+        },
+        "uncounted_vector_function_elements": {},
+        "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+        "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+        "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+        "exclusions": [
+          "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+          "Vector counts are mathematical operations, excluding physical reduction padding",
+          "Special functions, comparisons and copies are not converted into FLOPs"
+        ]
+      },
+      "cycles": 56920.0,
+      "native_seconds": 0.07409205,
+      "assumed_hardware_seconds": 3.794666666666667e-05,
+      "statistics": {
+        "transitions": 19,
+        "places": 583,
+        "completion_flag_banks": 513,
+        "command_slots": 34,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          2366
+        ],
+        "hardware_instructions": {
+          "dynamic_instructions": 2366,
+          "opcode_counts": {
+            "LD": 108,
+            "VOP": 1929,
+            "QACT": 44,
+            "MM": 83,
+            "QST": 40,
+            "ST": 161,
+            "HALT": 1
+          },
+          "matrix_commands": 83,
+          "matrix_dot_macs": 89735168,
+          "matrix_dot_operations": 179470336,
+          "matrix_by_weight_format": {
+            "nvfp4": {
+              "commands": 43,
+              "dot_macs": 87031808,
+              "dot_operations": 174063616
+            },
+            "int8": {
+              "commands": 40,
+              "dot_macs": 2703360,
+              "dot_operations": 5406720
+            }
+          },
+          "logical_fp32_vector_flops": 99180,
+          "vector_function_elements": {
+            "rssq": 13312,
+            "mul": 58268,
+            "add": 10972,
+            "rsqrt": 12,
+            "copy": 31056,
+            "sub": 2688,
+            "fill": 36440,
+            "max": 80,
+            "exp2sub": 400,
+            "rsum": 320,
+            "recip": 80
+          },
+          "special_function_evaluations": {
+            "rsqrt": 12,
+            "exp2sub": 400,
+            "recip": 80
+          },
+          "uncounted_vector_function_elements": {},
+          "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+          "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+          "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+          "exclusions": [
+            "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+            "Vector counts are mathematical operations, excluding physical reduction padding",
+            "Special functions, comparisons and copies are not converted into FLOPs"
+          ]
+        }
+      },
+      "native_binary_sha256": "8e542df789159ae362c136e9c24df80b9d2433f2fa17e2fc36267591846ed83d",
+      "input_tables_sha256": "cff66b0f47e74a269ad7f5bbbf0c78e0e5705e2d6e69aef970156094c29de37d"
+    },
+    {
+      "profile": "proposal_hbm_128x8_v256",
+      "input": "/home/ubuntu/lpn-runs/glm47-flash/layer-shared-full-v5/mla",
+      "input_index": 0,
+      "input_sha256": {
+        "input.json": "06a8a383f6be4f636a77d75b780b5d984aea178ffdac0a9a65b259452d2f9bf7",
+        "prog_0.hex": "a9e487cab26540b6d6cc325387687319f0d47b132d3425095b1241d09023f2a9",
+        "dram_0.bin": "4b717a04a434c5bbbe5fdc1421256fda10792bbf4985f9c10c543baf8a9a2b9b"
+      },
+      "original_config": {
+        "S": 1,
+        "D": 128,
+        "MCOLS": 4,
+        "ACT_BLOCKS": 64,
+        "TMEM_WORDS": 65536,
+        "DRAM_BYTES": 536870912,
+        "IMEM_WORDS": 65536,
+        "LANES": 64,
+        "PAIR": false,
+        "DSTEP": false,
+        "STREAM": false,
+        "ACT_ROWS": 16,
+        "SEQ_WC": false
+      },
+      "physical_config": {
+        "S": 1,
+        "D": 128,
+        "MCOLS": 8,
+        "ACT_BLOCKS": 64,
+        "TMEM_WORDS": 65536,
+        "DRAM_BYTES": 536870912,
+        "IMEM_WORDS": 65536,
+        "LANES": 64,
+        "PAIR": false,
+        "DSTEP": false,
+        "STREAM": false,
+        "ACT_ROWS": 16,
+        "SEQ_WC": false
+      },
+      "timing": {
+        "dram_latency": 120,
+        "dram_bytes_per_cycle": 572,
+        "window": 32,
+        "fifo_chunks": 16384,
+        "chain_length": 8,
+        "epilogue_lanes": 4,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 128,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 128,
+        "dram_port_bytes": 572,
+        "scale_lanes": 128,
+        "unified_dram": true,
+        "scalar_store_bytes": 256,
+        "quant_row_banks": 8,
+        "quant_store_buffered": true,
+        "quant_scale_lookup": false,
+        "scalar_recip_lookup": false,
+        "reciprocal_lookup_lanes": 0,
+        "pinned_cache_bytes": 0,
+        "cache_read_bytes_per_cycle": 8192,
+        "vector_row_contexts": 4,
+        "vector_command_queue": 2,
+        "matrix_retirement": true,
+        "physical_scale_lines": true,
+        "scale_cache_entries": 0,
+        "vector_engines": 1,
+        "vector_issue_groups": 4,
+        "vector_result_chunks": 0,
+        "vector_compatible_issue": false,
+        "activation_streaming": false,
+        "fp_mul_latency": 2,
+        "fp_add_latency": 4
+      },
+      "hardware_instructions": {
+        "dynamic_instructions": 2366,
+        "opcode_counts": {
+          "LD": 108,
+          "VOP": 1929,
+          "QACT": 44,
+          "MM": 83,
+          "QST": 40,
+          "ST": 161,
+          "HALT": 1
+        },
+        "matrix_commands": 83,
+        "matrix_dot_macs": 89735168,
+        "matrix_dot_operations": 179470336,
+        "matrix_by_weight_format": {
+          "nvfp4": {
+            "commands": 43,
+            "dot_macs": 87031808,
+            "dot_operations": 174063616
+          },
+          "int8": {
+            "commands": 40,
+            "dot_macs": 2703360,
+            "dot_operations": 5406720
+          }
+        },
+        "logical_fp32_vector_flops": 99180,
+        "vector_function_elements": {
+          "rssq": 13312,
+          "mul": 58268,
+          "add": 10972,
+          "rsqrt": 12,
+          "copy": 31056,
+          "sub": 2688,
+          "fill": 36440,
+          "max": 80,
+          "exp2sub": 400,
+          "rsum": 320,
+          "recip": 80
+        },
+        "special_function_evaluations": {
+          "rsqrt": 12,
+          "exp2sub": 400,
+          "recip": 80
+        },
+        "uncounted_vector_function_elements": {},
+        "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+        "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+        "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+        "exclusions": [
+          "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+          "Vector counts are mathematical operations, excluding physical reduction padding",
+          "Special functions, comparisons and copies are not converted into FLOPs"
+        ]
+      },
+      "cycles": 56776.0,
+      "native_seconds": 0.073674679,
+      "assumed_hardware_seconds": 3.7850666666666667e-05,
+      "statistics": {
+        "transitions": 19,
+        "places": 583,
+        "completion_flag_banks": 513,
+        "command_slots": 34,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          2366
+        ],
+        "hardware_instructions": {
+          "dynamic_instructions": 2366,
+          "opcode_counts": {
+            "LD": 108,
+            "VOP": 1929,
+            "QACT": 44,
+            "MM": 83,
+            "QST": 40,
+            "ST": 161,
+            "HALT": 1
+          },
+          "matrix_commands": 83,
+          "matrix_dot_macs": 89735168,
+          "matrix_dot_operations": 179470336,
+          "matrix_by_weight_format": {
+            "nvfp4": {
+              "commands": 43,
+              "dot_macs": 87031808,
+              "dot_operations": 174063616
+            },
+            "int8": {
+              "commands": 40,
+              "dot_macs": 2703360,
+              "dot_operations": 5406720
+            }
+          },
+          "logical_fp32_vector_flops": 99180,
+          "vector_function_elements": {
+            "rssq": 13312,
+            "mul": 58268,
+            "add": 10972,
+            "rsqrt": 12,
+            "copy": 31056,
+            "sub": 2688,
+            "fill": 36440,
+            "max": 80,
+            "exp2sub": 400,
+            "rsum": 320,
+            "recip": 80
+          },
+          "special_function_evaluations": {
+            "rsqrt": 12,
+            "exp2sub": 400,
+            "recip": 80
+          },
+          "uncounted_vector_function_elements": {},
+          "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+          "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+          "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+          "exclusions": [
+            "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+            "Vector counts are mathematical operations, excluding physical reduction padding",
+            "Special functions, comparisons and copies are not converted into FLOPs"
+          ]
+        }
+      },
+      "native_binary_sha256": "8e542df789159ae362c136e9c24df80b9d2433f2fa17e2fc36267591846ed83d",
+      "input_tables_sha256": "87dbb77a31df4e8dd6545bf1df0b28c44aee356e73518f1619edebf41ea26497"
+    },
+    {
+      "profile": "reference_2x2_gate",
+      "input": "/home/ubuntu/lpn-runs/glm47-flash/layer-shared-full-v5/router",
+      "input_index": 1,
+      "input_sha256": {
+        "input.json": "c786e92441761cfbffd239b850be23751eaa19aa2a456a677f264ee05ead9571",
+        "prog_0.hex": "1db67007e866da56973bbd1c8138e6ebc6eff48652ba3a425c38b8fd7a91ffdd",
+        "dram_0.bin": "b271851ccae2006fb3dc9e18a04de418432f01a7bb22ee3ff00bffff4e680c3e"
+      },
+      "original_config": {
+        "S": 1,
+        "D": 128,
+        "MCOLS": 4,
+        "ACT_BLOCKS": 64,
+        "TMEM_WORDS": 65536,
+        "DRAM_BYTES": 536870912,
+        "IMEM_WORDS": 65536,
+        "LANES": 64,
+        "PAIR": false,
+        "DSTEP": false,
+        "STREAM": false,
+        "ACT_ROWS": 16,
+        "SEQ_WC": false
+      },
+      "physical_config": {
+        "S": 1,
+        "D": 128,
+        "MCOLS": 2,
+        "ACT_BLOCKS": 64,
+        "TMEM_WORDS": 65536,
+        "DRAM_BYTES": 536870912,
+        "IMEM_WORDS": 65536,
+        "LANES": 64,
+        "PAIR": false,
+        "DSTEP": false,
+        "STREAM": false,
+        "ACT_ROWS": 16,
+        "SEQ_WC": false
+      },
+      "timing": {
+        "dram_latency": 8,
+        "dram_bytes_per_cycle": 2816,
+        "window": 32,
+        "fifo_chunks": 256,
+        "chain_length": 8,
+        "epilogue_lanes": 1,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 2,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 2,
+        "dram_port_bytes": 2816,
+        "scale_lanes": 2,
+        "unified_dram": true,
+        "scalar_store_bytes": 256,
+        "quant_row_banks": 8,
+        "quant_store_buffered": true,
+        "quant_scale_lookup": false,
+        "scalar_recip_lookup": false,
+        "reciprocal_lookup_lanes": 0,
+        "pinned_cache_bytes": 0,
+        "cache_read_bytes_per_cycle": 8192,
+        "vector_row_contexts": 4,
+        "vector_command_queue": 2,
+        "matrix_retirement": true,
+        "physical_scale_lines": true,
+        "scale_cache_entries": 0,
+        "vector_engines": 1,
+        "vector_issue_groups": 1,
+        "vector_result_chunks": 0,
+        "vector_compatible_issue": false,
+        "activation_streaming": false,
+        "fp_mul_latency": 2,
+        "fp_add_latency": 4
+      },
+      "hardware_instructions": {
+        "dynamic_instructions": 1105,
+        "opcode_counts": {
+          "LI": 3,
+          "LD": 68,
+          "VOP": 622,
+          "LOOP": 1,
+          "ST": 264,
+          "ADDI": 130,
+          "RLD": 16,
+          "HALT": 1
+        },
+        "matrix_commands": 0,
+        "matrix_dot_macs": 0,
+        "matrix_dot_operations": 0,
+        "matrix_by_weight_format": {},
+        "logical_fp32_vector_flops": 1081908,
+        "vector_function_elements": {
+          "rssq": 8192,
+          "mul": 16676,
+          "add": 520,
+          "rsqrt": 4,
+          "rdot": 524288,
+          "copy": 288,
+          "exp2": 256,
+          "recip": 260,
+          "argmax": 1024,
+          "fill": 16,
+          "rsum": 16
+        },
+        "special_function_evaluations": {
+          "rsqrt": 4,
+          "exp2": 256,
+          "recip": 260
+        },
+        "uncounted_vector_function_elements": {},
+        "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+        "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+        "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+        "exclusions": [
+          "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+          "Vector counts are mathematical operations, excluding physical reduction padding",
+          "Special functions, comparisons and copies are not converted into FLOPs"
+        ]
+      },
+      "cycles": 49964.0,
+      "native_seconds": 0.031989456,
+      "assumed_hardware_seconds": 3.3309333333333337e-05,
+      "statistics": {
+        "transitions": 19,
+        "places": 583,
+        "completion_flag_banks": 513,
+        "command_slots": 34,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          1105
+        ],
+        "hardware_instructions": {
+          "dynamic_instructions": 1105,
+          "opcode_counts": {
+            "LI": 3,
+            "LD": 68,
+            "VOP": 622,
+            "LOOP": 1,
+            "ST": 264,
+            "ADDI": 130,
+            "RLD": 16,
+            "HALT": 1
+          },
+          "matrix_commands": 0,
+          "matrix_dot_macs": 0,
+          "matrix_dot_operations": 0,
+          "matrix_by_weight_format": {},
+          "logical_fp32_vector_flops": 1081908,
+          "vector_function_elements": {
+            "rssq": 8192,
+            "mul": 16676,
+            "add": 520,
+            "rsqrt": 4,
+            "rdot": 524288,
+            "copy": 288,
+            "exp2": 256,
+            "recip": 260,
+            "argmax": 1024,
+            "fill": 16,
+            "rsum": 16
+          },
+          "special_function_evaluations": {
+            "rsqrt": 4,
+            "exp2": 256,
+            "recip": 260
+          },
+          "uncounted_vector_function_elements": {},
+          "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+          "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+          "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+          "exclusions": [
+            "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+            "Vector counts are mathematical operations, excluding physical reduction padding",
+            "Special functions, comparisons and copies are not converted into FLOPs"
+          ]
+        }
+      },
+      "native_binary_sha256": "855afd78e4e62082cd12bd639fd2e826b673b0b4764aea7d583689f1b8e014c1",
+      "input_tables_sha256": "393c7ad1c5c84018dc212ffded1281e31160af749b005c0bcb6d526e581c4189"
+    },
+    {
+      "profile": "proposal_hbm_2x2",
+      "input": "/home/ubuntu/lpn-runs/glm47-flash/layer-shared-full-v5/router",
+      "input_index": 1,
+      "input_sha256": {
+        "input.json": "c786e92441761cfbffd239b850be23751eaa19aa2a456a677f264ee05ead9571",
+        "prog_0.hex": "1db67007e866da56973bbd1c8138e6ebc6eff48652ba3a425c38b8fd7a91ffdd",
+        "dram_0.bin": "b271851ccae2006fb3dc9e18a04de418432f01a7bb22ee3ff00bffff4e680c3e"
+      },
+      "original_config": {
+        "S": 1,
+        "D": 128,
+        "MCOLS": 4,
+        "ACT_BLOCKS": 64,
+        "TMEM_WORDS": 65536,
+        "DRAM_BYTES": 536870912,
+        "IMEM_WORDS": 65536,
+        "LANES": 64,
+        "PAIR": false,
+        "DSTEP": false,
+        "STREAM": false,
+        "ACT_ROWS": 16,
+        "SEQ_WC": false
+      },
+      "physical_config": {
+        "S": 1,
+        "D": 128,
+        "MCOLS": 2,
+        "ACT_BLOCKS": 64,
+        "TMEM_WORDS": 65536,
+        "DRAM_BYTES": 536870912,
+        "IMEM_WORDS": 65536,
+        "LANES": 64,
+        "PAIR": false,
+        "DSTEP": false,
+        "STREAM": false,
+        "ACT_ROWS": 16,
+        "SEQ_WC": false
+      },
+      "timing": {
+        "dram_latency": 120,
+        "dram_bytes_per_cycle": 572,
+        "window": 32,
+        "fifo_chunks": 256,
+        "chain_length": 8,
+        "epilogue_lanes": 1,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 2,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 2,
+        "dram_port_bytes": 572,
+        "scale_lanes": 2,
+        "unified_dram": true,
+        "scalar_store_bytes": 256,
+        "quant_row_banks": 8,
+        "quant_store_buffered": true,
+        "quant_scale_lookup": false,
+        "scalar_recip_lookup": false,
+        "reciprocal_lookup_lanes": 0,
+        "pinned_cache_bytes": 0,
+        "cache_read_bytes_per_cycle": 8192,
+        "vector_row_contexts": 4,
+        "vector_command_queue": 2,
+        "matrix_retirement": true,
+        "physical_scale_lines": true,
+        "scale_cache_entries": 0,
+        "vector_engines": 1,
+        "vector_issue_groups": 1,
+        "vector_result_chunks": 0,
+        "vector_compatible_issue": false,
+        "activation_streaming": false,
+        "fp_mul_latency": 2,
+        "fp_add_latency": 4
+      },
+      "hardware_instructions": {
+        "dynamic_instructions": 1105,
+        "opcode_counts": {
+          "LI": 3,
+          "LD": 68,
+          "VOP": 622,
+          "LOOP": 1,
+          "ST": 264,
+          "ADDI": 130,
+          "RLD": 16,
+          "HALT": 1
+        },
+        "matrix_commands": 0,
+        "matrix_dot_macs": 0,
+        "matrix_dot_operations": 0,
+        "matrix_by_weight_format": {},
+        "logical_fp32_vector_flops": 1081908,
+        "vector_function_elements": {
+          "rssq": 8192,
+          "mul": 16676,
+          "add": 520,
+          "rsqrt": 4,
+          "rdot": 524288,
+          "copy": 288,
+          "exp2": 256,
+          "recip": 260,
+          "argmax": 1024,
+          "fill": 16,
+          "rsum": 16
+        },
+        "special_function_evaluations": {
+          "rsqrt": 4,
+          "exp2": 256,
+          "recip": 260
+        },
+        "uncounted_vector_function_elements": {},
+        "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+        "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+        "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+        "exclusions": [
+          "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+          "Vector counts are mathematical operations, excluding physical reduction padding",
+          "Special functions, comparisons and copies are not converted into FLOPs"
+        ]
+      },
+      "cycles": 57244.0,
+      "native_seconds": 0.032628557,
+      "assumed_hardware_seconds": 3.8162666666666666e-05,
+      "statistics": {
+        "transitions": 19,
+        "places": 583,
+        "completion_flag_banks": 513,
+        "command_slots": 34,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          1105
+        ],
+        "hardware_instructions": {
+          "dynamic_instructions": 1105,
+          "opcode_counts": {
+            "LI": 3,
+            "LD": 68,
+            "VOP": 622,
+            "LOOP": 1,
+            "ST": 264,
+            "ADDI": 130,
+            "RLD": 16,
+            "HALT": 1
+          },
+          "matrix_commands": 0,
+          "matrix_dot_macs": 0,
+          "matrix_dot_operations": 0,
+          "matrix_by_weight_format": {},
+          "logical_fp32_vector_flops": 1081908,
+          "vector_function_elements": {
+            "rssq": 8192,
+            "mul": 16676,
+            "add": 520,
+            "rsqrt": 4,
+            "rdot": 524288,
+            "copy": 288,
+            "exp2": 256,
+            "recip": 260,
+            "argmax": 1024,
+            "fill": 16,
+            "rsum": 16
+          },
+          "special_function_evaluations": {
+            "rsqrt": 4,
+            "exp2": 256,
+            "recip": 260
+          },
+          "uncounted_vector_function_elements": {},
+          "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+          "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+          "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+          "exclusions": [
+            "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+            "Vector counts are mathematical operations, excluding physical reduction padding",
+            "Special functions, comparisons and copies are not converted into FLOPs"
+          ]
+        }
+      },
+      "native_binary_sha256": "6ddf32bec4fb789144e5d2340e80422dc8f60f2b54cf09f6427378f90cdf6b84",
+      "input_tables_sha256": "ff362afc3bff77c6f28e4ef76882f92aa4bca0da3699101923fbbc6f8c55a02e"
+    },
+    {
+      "profile": "proposal_hbm_96x2",
+      "input": "/home/ubuntu/lpn-runs/glm47-flash/layer-shared-full-v5/router",
+      "input_index": 1,
+      "input_sha256": {
+        "input.json": "c786e92441761cfbffd239b850be23751eaa19aa2a456a677f264ee05ead9571",
+        "prog_0.hex": "1db67007e866da56973bbd1c8138e6ebc6eff48652ba3a425c38b8fd7a91ffdd",
+        "dram_0.bin": "b271851ccae2006fb3dc9e18a04de418432f01a7bb22ee3ff00bffff4e680c3e"
+      },
+      "original_config": {
+        "S": 1,
+        "D": 128,
+        "MCOLS": 4,
+        "ACT_BLOCKS": 64,
+        "TMEM_WORDS": 65536,
+        "DRAM_BYTES": 536870912,
+        "IMEM_WORDS": 65536,
+        "LANES": 64,
+        "PAIR": false,
+        "DSTEP": false,
+        "STREAM": false,
+        "ACT_ROWS": 16,
+        "SEQ_WC": false
+      },
+      "physical_config": {
+        "S": 1,
+        "D": 128,
+        "MCOLS": 2,
+        "ACT_BLOCKS": 64,
+        "TMEM_WORDS": 65536,
+        "DRAM_BYTES": 536870912,
+        "IMEM_WORDS": 65536,
+        "LANES": 64,
+        "PAIR": false,
+        "DSTEP": false,
+        "STREAM": false,
+        "ACT_ROWS": 16,
+        "SEQ_WC": false
+      },
+      "timing": {
+        "dram_latency": 120,
+        "dram_bytes_per_cycle": 572,
+        "window": 32,
+        "fifo_chunks": 12288,
+        "chain_length": 8,
+        "epilogue_lanes": 1,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 96,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 96,
+        "dram_port_bytes": 572,
+        "scale_lanes": 96,
+        "unified_dram": true,
+        "scalar_store_bytes": 256,
+        "quant_row_banks": 8,
+        "quant_store_buffered": true,
+        "quant_scale_lookup": false,
+        "scalar_recip_lookup": false,
+        "reciprocal_lookup_lanes": 0,
+        "pinned_cache_bytes": 0,
+        "cache_read_bytes_per_cycle": 8192,
+        "vector_row_contexts": 4,
+        "vector_command_queue": 2,
+        "matrix_retirement": true,
+        "physical_scale_lines": true,
+        "scale_cache_entries": 0,
+        "vector_engines": 1,
+        "vector_issue_groups": 1,
+        "vector_result_chunks": 0,
+        "vector_compatible_issue": false,
+        "activation_streaming": false,
+        "fp_mul_latency": 2,
+        "fp_add_latency": 4
+      },
+      "hardware_instructions": {
+        "dynamic_instructions": 1105,
+        "opcode_counts": {
+          "LI": 3,
+          "LD": 68,
+          "VOP": 622,
+          "LOOP": 1,
+          "ST": 264,
+          "ADDI": 130,
+          "RLD": 16,
+          "HALT": 1
+        },
+        "matrix_commands": 0,
+        "matrix_dot_macs": 0,
+        "matrix_dot_operations": 0,
+        "matrix_by_weight_format": {},
+        "logical_fp32_vector_flops": 1081908,
+        "vector_function_elements": {
+          "rssq": 8192,
+          "mul": 16676,
+          "add": 520,
+          "rsqrt": 4,
+          "rdot": 524288,
+          "copy": 288,
+          "exp2": 256,
+          "recip": 260,
+          "argmax": 1024,
+          "fill": 16,
+          "rsum": 16
+        },
+        "special_function_evaluations": {
+          "rsqrt": 4,
+          "exp2": 256,
+          "recip": 260
+        },
+        "uncounted_vector_function_elements": {},
+        "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+        "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+        "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+        "exclusions": [
+          "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+          "Vector counts are mathematical operations, excluding physical reduction padding",
+          "Special functions, comparisons and copies are not converted into FLOPs"
+        ]
+      },
+      "cycles": 57244.0,
+      "native_seconds": 0.03343316,
+      "assumed_hardware_seconds": 3.8162666666666666e-05,
+      "statistics": {
+        "transitions": 19,
+        "places": 583,
+        "completion_flag_banks": 513,
+        "command_slots": 34,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          1105
+        ],
+        "hardware_instructions": {
+          "dynamic_instructions": 1105,
+          "opcode_counts": {
+            "LI": 3,
+            "LD": 68,
+            "VOP": 622,
+            "LOOP": 1,
+            "ST": 264,
+            "ADDI": 130,
+            "RLD": 16,
+            "HALT": 1
+          },
+          "matrix_commands": 0,
+          "matrix_dot_macs": 0,
+          "matrix_dot_operations": 0,
+          "matrix_by_weight_format": {},
+          "logical_fp32_vector_flops": 1081908,
+          "vector_function_elements": {
+            "rssq": 8192,
+            "mul": 16676,
+            "add": 520,
+            "rsqrt": 4,
+            "rdot": 524288,
+            "copy": 288,
+            "exp2": 256,
+            "recip": 260,
+            "argmax": 1024,
+            "fill": 16,
+            "rsum": 16
+          },
+          "special_function_evaluations": {
+            "rsqrt": 4,
+            "exp2": 256,
+            "recip": 260
+          },
+          "uncounted_vector_function_elements": {},
+          "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+          "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+          "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+          "exclusions": [
+            "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+            "Vector counts are mathematical operations, excluding physical reduction padding",
+            "Special functions, comparisons and copies are not converted into FLOPs"
+          ]
+        }
+      },
+      "native_binary_sha256": "e1647c99d6960a23c4031fea4a1de519f255e32dbd442e32cc6b66f6b8ab8694",
+      "input_tables_sha256": "ff362afc3bff77c6f28e4ef76882f92aa4bca0da3699101923fbbc6f8c55a02e"
+    },
+    {
+      "profile": "proposal_hbm_128x8",
+      "input": "/home/ubuntu/lpn-runs/glm47-flash/layer-shared-full-v5/router",
+      "input_index": 1,
+      "input_sha256": {
+        "input.json": "c786e92441761cfbffd239b850be23751eaa19aa2a456a677f264ee05ead9571",
+        "prog_0.hex": "1db67007e866da56973bbd1c8138e6ebc6eff48652ba3a425c38b8fd7a91ffdd",
+        "dram_0.bin": "b271851ccae2006fb3dc9e18a04de418432f01a7bb22ee3ff00bffff4e680c3e"
+      },
+      "original_config": {
+        "S": 1,
+        "D": 128,
+        "MCOLS": 4,
+        "ACT_BLOCKS": 64,
+        "TMEM_WORDS": 65536,
+        "DRAM_BYTES": 536870912,
+        "IMEM_WORDS": 65536,
+        "LANES": 64,
+        "PAIR": false,
+        "DSTEP": false,
+        "STREAM": false,
+        "ACT_ROWS": 16,
+        "SEQ_WC": false
+      },
+      "physical_config": {
+        "S": 1,
+        "D": 128,
+        "MCOLS": 8,
+        "ACT_BLOCKS": 64,
+        "TMEM_WORDS": 65536,
+        "DRAM_BYTES": 536870912,
+        "IMEM_WORDS": 65536,
+        "LANES": 64,
+        "PAIR": false,
+        "DSTEP": false,
+        "STREAM": false,
+        "ACT_ROWS": 16,
+        "SEQ_WC": false
+      },
+      "timing": {
+        "dram_latency": 120,
+        "dram_bytes_per_cycle": 572,
+        "window": 32,
+        "fifo_chunks": 16384,
+        "chain_length": 8,
+        "epilogue_lanes": 4,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 128,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 128,
+        "dram_port_bytes": 572,
+        "scale_lanes": 128,
+        "unified_dram": true,
+        "scalar_store_bytes": 256,
+        "quant_row_banks": 8,
+        "quant_store_buffered": true,
+        "quant_scale_lookup": false,
+        "scalar_recip_lookup": false,
+        "reciprocal_lookup_lanes": 0,
+        "pinned_cache_bytes": 0,
+        "cache_read_bytes_per_cycle": 8192,
+        "vector_row_contexts": 4,
+        "vector_command_queue": 2,
+        "matrix_retirement": true,
+        "physical_scale_lines": true,
+        "scale_cache_entries": 0,
+        "vector_engines": 1,
+        "vector_issue_groups": 1,
+        "vector_result_chunks": 0,
+        "vector_compatible_issue": false,
+        "activation_streaming": false,
+        "fp_mul_latency": 2,
+        "fp_add_latency": 4
+      },
+      "hardware_instructions": {
+        "dynamic_instructions": 1105,
+        "opcode_counts": {
+          "LI": 3,
+          "LD": 68,
+          "VOP": 622,
+          "LOOP": 1,
+          "ST": 264,
+          "ADDI": 130,
+          "RLD": 16,
+          "HALT": 1
+        },
+        "matrix_commands": 0,
+        "matrix_dot_macs": 0,
+        "matrix_dot_operations": 0,
+        "matrix_by_weight_format": {},
+        "logical_fp32_vector_flops": 1081908,
+        "vector_function_elements": {
+          "rssq": 8192,
+          "mul": 16676,
+          "add": 520,
+          "rsqrt": 4,
+          "rdot": 524288,
+          "copy": 288,
+          "exp2": 256,
+          "recip": 260,
+          "argmax": 1024,
+          "fill": 16,
+          "rsum": 16
+        },
+        "special_function_evaluations": {
+          "rsqrt": 4,
+          "exp2": 256,
+          "recip": 260
+        },
+        "uncounted_vector_function_elements": {},
+        "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+        "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+        "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+        "exclusions": [
+          "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+          "Vector counts are mathematical operations, excluding physical reduction padding",
+          "Special functions, comparisons and copies are not converted into FLOPs"
+        ]
+      },
+      "cycles": 57244.0,
+      "native_seconds": 0.03287828,
+      "assumed_hardware_seconds": 3.8162666666666666e-05,
+      "statistics": {
+        "transitions": 19,
+        "places": 583,
+        "completion_flag_banks": 513,
+        "command_slots": 34,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          1105
+        ],
+        "hardware_instructions": {
+          "dynamic_instructions": 1105,
+          "opcode_counts": {
+            "LI": 3,
+            "LD": 68,
+            "VOP": 622,
+            "LOOP": 1,
+            "ST": 264,
+            "ADDI": 130,
+            "RLD": 16,
+            "HALT": 1
+          },
+          "matrix_commands": 0,
+          "matrix_dot_macs": 0,
+          "matrix_dot_operations": 0,
+          "matrix_by_weight_format": {},
+          "logical_fp32_vector_flops": 1081908,
+          "vector_function_elements": {
+            "rssq": 8192,
+            "mul": 16676,
+            "add": 520,
+            "rsqrt": 4,
+            "rdot": 524288,
+            "copy": 288,
+            "exp2": 256,
+            "recip": 260,
+            "argmax": 1024,
+            "fill": 16,
+            "rsum": 16
+          },
+          "special_function_evaluations": {
+            "rsqrt": 4,
+            "exp2": 256,
+            "recip": 260
+          },
+          "uncounted_vector_function_elements": {},
+          "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+          "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+          "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+          "exclusions": [
+            "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+            "Vector counts are mathematical operations, excluding physical reduction padding",
+            "Special functions, comparisons and copies are not converted into FLOPs"
+          ]
+        }
+      },
+      "native_binary_sha256": "8e542df789159ae362c136e9c24df80b9d2433f2fa17e2fc36267591846ed83d",
+      "input_tables_sha256": "ff362afc3bff77c6f28e4ef76882f92aa4bca0da3699101923fbbc6f8c55a02e"
+    },
+    {
+      "profile": "proposal_hbm_128x8_v256",
+      "input": "/home/ubuntu/lpn-runs/glm47-flash/layer-shared-full-v5/router",
+      "input_index": 1,
+      "input_sha256": {
+        "input.json": "c786e92441761cfbffd239b850be23751eaa19aa2a456a677f264ee05ead9571",
+        "prog_0.hex": "1db67007e866da56973bbd1c8138e6ebc6eff48652ba3a425c38b8fd7a91ffdd",
+        "dram_0.bin": "b271851ccae2006fb3dc9e18a04de418432f01a7bb22ee3ff00bffff4e680c3e"
+      },
+      "original_config": {
+        "S": 1,
+        "D": 128,
+        "MCOLS": 4,
+        "ACT_BLOCKS": 64,
+        "TMEM_WORDS": 65536,
+        "DRAM_BYTES": 536870912,
+        "IMEM_WORDS": 65536,
+        "LANES": 64,
+        "PAIR": false,
+        "DSTEP": false,
+        "STREAM": false,
+        "ACT_ROWS": 16,
+        "SEQ_WC": false
+      },
+      "physical_config": {
+        "S": 1,
+        "D": 128,
+        "MCOLS": 8,
+        "ACT_BLOCKS": 64,
+        "TMEM_WORDS": 65536,
+        "DRAM_BYTES": 536870912,
+        "IMEM_WORDS": 65536,
+        "LANES": 64,
+        "PAIR": false,
+        "DSTEP": false,
+        "STREAM": false,
+        "ACT_ROWS": 16,
+        "SEQ_WC": false
+      },
+      "timing": {
+        "dram_latency": 120,
+        "dram_bytes_per_cycle": 572,
+        "window": 32,
+        "fifo_chunks": 16384,
+        "chain_length": 8,
+        "epilogue_lanes": 4,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 128,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 128,
+        "dram_port_bytes": 572,
+        "scale_lanes": 128,
+        "unified_dram": true,
+        "scalar_store_bytes": 256,
+        "quant_row_banks": 8,
+        "quant_store_buffered": true,
+        "quant_scale_lookup": false,
+        "scalar_recip_lookup": false,
+        "reciprocal_lookup_lanes": 0,
+        "pinned_cache_bytes": 0,
+        "cache_read_bytes_per_cycle": 8192,
+        "vector_row_contexts": 4,
+        "vector_command_queue": 2,
+        "matrix_retirement": true,
+        "physical_scale_lines": true,
+        "scale_cache_entries": 0,
+        "vector_engines": 1,
+        "vector_issue_groups": 4,
+        "vector_result_chunks": 0,
+        "vector_compatible_issue": false,
+        "activation_streaming": false,
+        "fp_mul_latency": 2,
+        "fp_add_latency": 4
+      },
+      "hardware_instructions": {
+        "dynamic_instructions": 1105,
+        "opcode_counts": {
+          "LI": 3,
+          "LD": 68,
+          "VOP": 622,
+          "LOOP": 1,
+          "ST": 264,
+          "ADDI": 130,
+          "RLD": 16,
+          "HALT": 1
+        },
+        "matrix_commands": 0,
+        "matrix_dot_macs": 0,
+        "matrix_dot_operations": 0,
+        "matrix_by_weight_format": {},
+        "logical_fp32_vector_flops": 1081908,
+        "vector_function_elements": {
+          "rssq": 8192,
+          "mul": 16676,
+          "add": 520,
+          "rsqrt": 4,
+          "rdot": 524288,
+          "copy": 288,
+          "exp2": 256,
+          "recip": 260,
+          "argmax": 1024,
+          "fill": 16,
+          "rsum": 16
+        },
+        "special_function_evaluations": {
+          "rsqrt": 4,
+          "exp2": 256,
+          "recip": 260
+        },
+        "uncounted_vector_function_elements": {},
+        "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+        "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+        "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+        "exclusions": [
+          "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+          "Vector counts are mathematical operations, excluding physical reduction padding",
+          "Special functions, comparisons and copies are not converted into FLOPs"
+        ]
+      },
+      "cycles": 57046.0,
+      "native_seconds": 0.033031279,
+      "assumed_hardware_seconds": 3.803066666666667e-05,
+      "statistics": {
+        "transitions": 19,
+        "places": 583,
+        "completion_flag_banks": 513,
+        "command_slots": 34,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          1105
+        ],
+        "hardware_instructions": {
+          "dynamic_instructions": 1105,
+          "opcode_counts": {
+            "LI": 3,
+            "LD": 68,
+            "VOP": 622,
+            "LOOP": 1,
+            "ST": 264,
+            "ADDI": 130,
+            "RLD": 16,
+            "HALT": 1
+          },
+          "matrix_commands": 0,
+          "matrix_dot_macs": 0,
+          "matrix_dot_operations": 0,
+          "matrix_by_weight_format": {},
+          "logical_fp32_vector_flops": 1081908,
+          "vector_function_elements": {
+            "rssq": 8192,
+            "mul": 16676,
+            "add": 520,
+            "rsqrt": 4,
+            "rdot": 524288,
+            "copy": 288,
+            "exp2": 256,
+            "recip": 260,
+            "argmax": 1024,
+            "fill": 16,
+            "rsum": 16
+          },
+          "special_function_evaluations": {
+            "rsqrt": 4,
+            "exp2": 256,
+            "recip": 260
+          },
+          "uncounted_vector_function_elements": {},
+          "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+          "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+          "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+          "exclusions": [
+            "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+            "Vector counts are mathematical operations, excluding physical reduction padding",
+            "Special functions, comparisons and copies are not converted into FLOPs"
+          ]
+        }
+      },
+      "native_binary_sha256": "8e542df789159ae362c136e9c24df80b9d2433f2fa17e2fc36267591846ed83d",
+      "input_tables_sha256": "d2aa52dd6a2949607f6bcfe7386f2d9a148bc7a701d71e7063d25dd2e7a00419"
+    },
+    {
+      "profile": "reference_2x2_gate",
+      "input": "/home/ubuntu/lpn-runs/glm47-flash/layer-shared-full-v5/experts",
+      "input_index": 2,
+      "input_sha256": {
+        "input.json": "168f21fd6516b6edf945ac13204d685aeee6b4b4da8040bc901e1928191a578c",
+        "prog_0.hex": "4e3a1a64159c182e5bb0fc32a3a90ad7545cd528779ac9445504e52d6660e823",
+        "dram_0.bin": "cccd96c63d5922efba37b2e3e18c3391092af85ab1cfc1581c8da5f83749af9d"
+      },
+      "original_config": {
+        "S": 1,
+        "D": 128,
+        "MCOLS": 4,
+        "ACT_BLOCKS": 64,
+        "TMEM_WORDS": 65536,
+        "DRAM_BYTES": 536870912,
+        "IMEM_WORDS": 65536,
+        "LANES": 64,
+        "PAIR": false,
+        "DSTEP": false,
+        "STREAM": false,
+        "ACT_ROWS": 16,
+        "SEQ_WC": false
+      },
+      "physical_config": {
+        "S": 1,
+        "D": 128,
+        "MCOLS": 2,
+        "ACT_BLOCKS": 64,
+        "TMEM_WORDS": 65536,
+        "DRAM_BYTES": 536870912,
+        "IMEM_WORDS": 65536,
+        "LANES": 64,
+        "PAIR": false,
+        "DSTEP": false,
+        "STREAM": false,
+        "ACT_ROWS": 16,
+        "SEQ_WC": false
+      },
+      "timing": {
+        "dram_latency": 8,
+        "dram_bytes_per_cycle": 2816,
+        "window": 32,
+        "fifo_chunks": 256,
+        "chain_length": 8,
+        "epilogue_lanes": 1,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 2,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 2,
+        "dram_port_bytes": 2816,
+        "scale_lanes": 2,
+        "unified_dram": true,
+        "scalar_store_bytes": 256,
+        "quant_row_banks": 8,
+        "quant_store_buffered": true,
+        "quant_scale_lookup": false,
+        "scalar_recip_lookup": false,
+        "reciprocal_lookup_lanes": 0,
+        "pinned_cache_bytes": 0,
+        "cache_read_bytes_per_cycle": 8192,
+        "vector_row_contexts": 4,
+        "vector_command_queue": 2,
+        "matrix_retirement": true,
+        "physical_scale_lines": true,
+        "scale_cache_entries": 0,
+        "vector_engines": 1,
+        "vector_issue_groups": 1,
+        "vector_result_chunks": 0,
+        "vector_compatible_issue": false,
+        "activation_streaming": false,
+        "fp_mul_latency": 2,
+        "fp_add_latency": 4
+      },
+      "hardware_instructions": {
+        "dynamic_instructions": 1040,
+        "opcode_counts": {
+          "LI": 3,
+          "LD": 35,
+          "VOP": 525,
+          "ST": 21,
+          "QACT": 91,
+          "MM": 234,
+          "LOOP": 13,
+          "ADDI": 117,
+          "HALT": 1
+        },
+        "matrix_commands": 234,
+        "matrix_dot_macs": 188743680,
+        "matrix_dot_operations": 377487360,
+        "matrix_by_weight_format": {
+          "nvfp4": {
+            "commands": 234,
+            "dot_macs": 188743680,
+            "dot_operations": 377487360
+          }
+        },
+        "logical_fp32_vector_flops": 237572,
+        "vector_function_elements": {
+          "rssq": 8192,
+          "mul": 141316,
+          "add": 79876,
+          "rsqrt": 4,
+          "fill": 8192,
+          "copy": 32768,
+          "exp2": 30720,
+          "recip": 30720
+        },
+        "special_function_evaluations": {
+          "rsqrt": 4,
+          "exp2": 30720,
+          "recip": 30720
+        },
+        "uncounted_vector_function_elements": {},
+        "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+        "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+        "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+        "exclusions": [
+          "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+          "Vector counts are mathematical operations, excluding physical reduction padding",
+          "Special functions, comparisons and copies are not converted into FLOPs"
+        ]
+      },
+      "cycles": 572568.0,
+      "native_seconds": 0.884456464,
+      "assumed_hardware_seconds": 0.000381712,
+      "statistics": {
+        "transitions": 19,
+        "places": 583,
+        "completion_flag_banks": 513,
+        "command_slots": 34,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          1040
+        ],
+        "hardware_instructions": {
+          "dynamic_instructions": 1040,
+          "opcode_counts": {
+            "LI": 3,
+            "LD": 35,
+            "VOP": 525,
+            "ST": 21,
+            "QACT": 91,
+            "MM": 234,
+            "LOOP": 13,
+            "ADDI": 117,
+            "HALT": 1
+          },
+          "matrix_commands": 234,
+          "matrix_dot_macs": 188743680,
+          "matrix_dot_operations": 377487360,
+          "matrix_by_weight_format": {
+            "nvfp4": {
+              "commands": 234,
+              "dot_macs": 188743680,
+              "dot_operations": 377487360
+            }
+          },
+          "logical_fp32_vector_flops": 237572,
+          "vector_function_elements": {
+            "rssq": 8192,
+            "mul": 141316,
+            "add": 79876,
+            "rsqrt": 4,
+            "fill": 8192,
+            "copy": 32768,
+            "exp2": 30720,
+            "recip": 30720
+          },
+          "special_function_evaluations": {
+            "rsqrt": 4,
+            "exp2": 30720,
+            "recip": 30720
+          },
+          "uncounted_vector_function_elements": {},
+          "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+          "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+          "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+          "exclusions": [
+            "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+            "Vector counts are mathematical operations, excluding physical reduction padding",
+            "Special functions, comparisons and copies are not converted into FLOPs"
+          ]
+        }
+      },
+      "native_binary_sha256": "855afd78e4e62082cd12bd639fd2e826b673b0b4764aea7d583689f1b8e014c1",
+      "input_tables_sha256": "694186b11a2dff8552caf48e946b0e714a35efcfb4be30c325329d74e44a76c1"
+    },
+    {
+      "profile": "proposal_hbm_2x2",
+      "input": "/home/ubuntu/lpn-runs/glm47-flash/layer-shared-full-v5/experts",
+      "input_index": 2,
+      "input_sha256": {
+        "input.json": "168f21fd6516b6edf945ac13204d685aeee6b4b4da8040bc901e1928191a578c",
+        "prog_0.hex": "4e3a1a64159c182e5bb0fc32a3a90ad7545cd528779ac9445504e52d6660e823",
+        "dram_0.bin": "cccd96c63d5922efba37b2e3e18c3391092af85ab1cfc1581c8da5f83749af9d"
+      },
+      "original_config": {
+        "S": 1,
+        "D": 128,
+        "MCOLS": 4,
+        "ACT_BLOCKS": 64,
+        "TMEM_WORDS": 65536,
+        "DRAM_BYTES": 536870912,
+        "IMEM_WORDS": 65536,
+        "LANES": 64,
+        "PAIR": false,
+        "DSTEP": false,
+        "STREAM": false,
+        "ACT_ROWS": 16,
+        "SEQ_WC": false
+      },
+      "physical_config": {
+        "S": 1,
+        "D": 128,
+        "MCOLS": 2,
+        "ACT_BLOCKS": 64,
+        "TMEM_WORDS": 65536,
+        "DRAM_BYTES": 536870912,
+        "IMEM_WORDS": 65536,
+        "LANES": 64,
+        "PAIR": false,
+        "DSTEP": false,
+        "STREAM": false,
+        "ACT_ROWS": 16,
+        "SEQ_WC": false
+      },
+      "timing": {
+        "dram_latency": 120,
+        "dram_bytes_per_cycle": 572,
+        "window": 32,
+        "fifo_chunks": 256,
+        "chain_length": 8,
+        "epilogue_lanes": 1,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 2,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 2,
+        "dram_port_bytes": 572,
+        "scale_lanes": 2,
+        "unified_dram": true,
+        "scalar_store_bytes": 256,
+        "quant_row_banks": 8,
+        "quant_store_buffered": true,
+        "quant_scale_lookup": false,
+        "scalar_recip_lookup": false,
+        "reciprocal_lookup_lanes": 0,
+        "pinned_cache_bytes": 0,
+        "cache_read_bytes_per_cycle": 8192,
+        "vector_row_contexts": 4,
+        "vector_command_queue": 2,
+        "matrix_retirement": true,
+        "physical_scale_lines": true,
+        "scale_cache_entries": 0,
+        "vector_engines": 1,
+        "vector_issue_groups": 1,
+        "vector_result_chunks": 0,
+        "vector_compatible_issue": false,
+        "activation_streaming": false,
+        "fp_mul_latency": 2,
+        "fp_add_latency": 4
+      },
+      "hardware_instructions": {
+        "dynamic_instructions": 1040,
+        "opcode_counts": {
+          "LI": 3,
+          "LD": 35,
+          "VOP": 525,
+          "ST": 21,
+          "QACT": 91,
+          "MM": 234,
+          "LOOP": 13,
+          "ADDI": 117,
+          "HALT": 1
+        },
+        "matrix_commands": 234,
+        "matrix_dot_macs": 188743680,
+        "matrix_dot_operations": 377487360,
+        "matrix_by_weight_format": {
+          "nvfp4": {
+            "commands": 234,
+            "dot_macs": 188743680,
+            "dot_operations": 377487360
+          }
+        },
+        "logical_fp32_vector_flops": 237572,
+        "vector_function_elements": {
+          "rssq": 8192,
+          "mul": 141316,
+          "add": 79876,
+          "rsqrt": 4,
+          "fill": 8192,
+          "copy": 32768,
+          "exp2": 30720,
+          "recip": 30720
+        },
+        "special_function_evaluations": {
+          "rsqrt": 4,
+          "exp2": 30720,
+          "recip": 30720
+        },
+        "uncounted_vector_function_elements": {},
+        "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+        "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+        "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+        "exclusions": [
+          "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+          "Vector counts are mathematical operations, excluding physical reduction padding",
+          "Special functions, comparisons and copies are not converted into FLOPs"
+        ]
+      },
+      "cycles": 573019.0,
+      "native_seconds": 0.883323969,
+      "assumed_hardware_seconds": 0.0003820126666666667,
+      "statistics": {
+        "transitions": 19,
+        "places": 583,
+        "completion_flag_banks": 513,
+        "command_slots": 34,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          1040
+        ],
+        "hardware_instructions": {
+          "dynamic_instructions": 1040,
+          "opcode_counts": {
+            "LI": 3,
+            "LD": 35,
+            "VOP": 525,
+            "ST": 21,
+            "QACT": 91,
+            "MM": 234,
+            "LOOP": 13,
+            "ADDI": 117,
+            "HALT": 1
+          },
+          "matrix_commands": 234,
+          "matrix_dot_macs": 188743680,
+          "matrix_dot_operations": 377487360,
+          "matrix_by_weight_format": {
+            "nvfp4": {
+              "commands": 234,
+              "dot_macs": 188743680,
+              "dot_operations": 377487360
+            }
+          },
+          "logical_fp32_vector_flops": 237572,
+          "vector_function_elements": {
+            "rssq": 8192,
+            "mul": 141316,
+            "add": 79876,
+            "rsqrt": 4,
+            "fill": 8192,
+            "copy": 32768,
+            "exp2": 30720,
+            "recip": 30720
+          },
+          "special_function_evaluations": {
+            "rsqrt": 4,
+            "exp2": 30720,
+            "recip": 30720
+          },
+          "uncounted_vector_function_elements": {},
+          "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+          "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+          "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+          "exclusions": [
+            "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+            "Vector counts are mathematical operations, excluding physical reduction padding",
+            "Special functions, comparisons and copies are not converted into FLOPs"
+          ]
+        }
+      },
+      "native_binary_sha256": "6ddf32bec4fb789144e5d2340e80422dc8f60f2b54cf09f6427378f90cdf6b84",
+      "input_tables_sha256": "98bd5dc3840e143ecee9311e24693cc751b743c354c1b28e510fda6583367cbb"
+    },
+    {
+      "profile": "proposal_hbm_96x2",
+      "input": "/home/ubuntu/lpn-runs/glm47-flash/layer-shared-full-v5/experts",
+      "input_index": 2,
+      "input_sha256": {
+        "input.json": "168f21fd6516b6edf945ac13204d685aeee6b4b4da8040bc901e1928191a578c",
+        "prog_0.hex": "4e3a1a64159c182e5bb0fc32a3a90ad7545cd528779ac9445504e52d6660e823",
+        "dram_0.bin": "cccd96c63d5922efba37b2e3e18c3391092af85ab1cfc1581c8da5f83749af9d"
+      },
+      "original_config": {
+        "S": 1,
+        "D": 128,
+        "MCOLS": 4,
+        "ACT_BLOCKS": 64,
+        "TMEM_WORDS": 65536,
+        "DRAM_BYTES": 536870912,
+        "IMEM_WORDS": 65536,
+        "LANES": 64,
+        "PAIR": false,
+        "DSTEP": false,
+        "STREAM": false,
+        "ACT_ROWS": 16,
+        "SEQ_WC": false
+      },
+      "physical_config": {
+        "S": 1,
+        "D": 128,
+        "MCOLS": 2,
+        "ACT_BLOCKS": 64,
+        "TMEM_WORDS": 65536,
+        "DRAM_BYTES": 536870912,
+        "IMEM_WORDS": 65536,
+        "LANES": 64,
+        "PAIR": false,
+        "DSTEP": false,
+        "STREAM": false,
+        "ACT_ROWS": 16,
+        "SEQ_WC": false
+      },
+      "timing": {
+        "dram_latency": 120,
+        "dram_bytes_per_cycle": 572,
+        "window": 32,
+        "fifo_chunks": 12288,
+        "chain_length": 8,
+        "epilogue_lanes": 1,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 96,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 96,
+        "dram_port_bytes": 572,
+        "scale_lanes": 96,
+        "unified_dram": true,
+        "scalar_store_bytes": 256,
+        "quant_row_banks": 8,
+        "quant_store_buffered": true,
+        "quant_scale_lookup": false,
+        "scalar_recip_lookup": false,
+        "reciprocal_lookup_lanes": 0,
+        "pinned_cache_bytes": 0,
+        "cache_read_bytes_per_cycle": 8192,
+        "vector_row_contexts": 4,
+        "vector_command_queue": 2,
+        "matrix_retirement": true,
+        "physical_scale_lines": true,
+        "scale_cache_entries": 0,
+        "vector_engines": 1,
+        "vector_issue_groups": 1,
+        "vector_result_chunks": 0,
+        "vector_compatible_issue": false,
+        "activation_streaming": false,
+        "fp_mul_latency": 2,
+        "fp_add_latency": 4
+      },
+      "hardware_instructions": {
+        "dynamic_instructions": 1040,
+        "opcode_counts": {
+          "LI": 3,
+          "LD": 35,
+          "VOP": 525,
+          "ST": 21,
+          "QACT": 91,
+          "MM": 234,
+          "LOOP": 13,
+          "ADDI": 117,
+          "HALT": 1
+        },
+        "matrix_commands": 234,
+        "matrix_dot_macs": 188743680,
+        "matrix_dot_operations": 377487360,
+        "matrix_by_weight_format": {
+          "nvfp4": {
+            "commands": 234,
+            "dot_macs": 188743680,
+            "dot_operations": 377487360
+          }
+        },
+        "logical_fp32_vector_flops": 237572,
+        "vector_function_elements": {
+          "rssq": 8192,
+          "mul": 141316,
+          "add": 79876,
+          "rsqrt": 4,
+          "fill": 8192,
+          "copy": 32768,
+          "exp2": 30720,
+          "recip": 30720
+        },
+        "special_function_evaluations": {
+          "rsqrt": 4,
+          "exp2": 30720,
+          "recip": 30720
+        },
+        "uncounted_vector_function_elements": {},
+        "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+        "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+        "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+        "exclusions": [
+          "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+          "Vector counts are mathematical operations, excluding physical reduction padding",
+          "Special functions, comparisons and copies are not converted into FLOPs"
+        ]
+      },
+      "cycles": 167102.0,
+      "native_seconds": 0.051092983,
+      "assumed_hardware_seconds": 0.00011140133333333333,
+      "statistics": {
+        "transitions": 19,
+        "places": 583,
+        "completion_flag_banks": 513,
+        "command_slots": 34,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          1040
+        ],
+        "hardware_instructions": {
+          "dynamic_instructions": 1040,
+          "opcode_counts": {
+            "LI": 3,
+            "LD": 35,
+            "VOP": 525,
+            "ST": 21,
+            "QACT": 91,
+            "MM": 234,
+            "LOOP": 13,
+            "ADDI": 117,
+            "HALT": 1
+          },
+          "matrix_commands": 234,
+          "matrix_dot_macs": 188743680,
+          "matrix_dot_operations": 377487360,
+          "matrix_by_weight_format": {
+            "nvfp4": {
+              "commands": 234,
+              "dot_macs": 188743680,
+              "dot_operations": 377487360
+            }
+          },
+          "logical_fp32_vector_flops": 237572,
+          "vector_function_elements": {
+            "rssq": 8192,
+            "mul": 141316,
+            "add": 79876,
+            "rsqrt": 4,
+            "fill": 8192,
+            "copy": 32768,
+            "exp2": 30720,
+            "recip": 30720
+          },
+          "special_function_evaluations": {
+            "rsqrt": 4,
+            "exp2": 30720,
+            "recip": 30720
+          },
+          "uncounted_vector_function_elements": {},
+          "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+          "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+          "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+          "exclusions": [
+            "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+            "Vector counts are mathematical operations, excluding physical reduction padding",
+            "Special functions, comparisons and copies are not converted into FLOPs"
+          ]
+        }
+      },
+      "native_binary_sha256": "e1647c99d6960a23c4031fea4a1de519f255e32dbd442e32cc6b66f6b8ab8694",
+      "input_tables_sha256": "5b03b8488426afd43849a9bd2711723b82e65077d808fd3833c3b510ed66e21a"
+    },
+    {
+      "profile": "proposal_hbm_128x8",
+      "input": "/home/ubuntu/lpn-runs/glm47-flash/layer-shared-full-v5/experts",
+      "input_index": 2,
+      "input_sha256": {
+        "input.json": "168f21fd6516b6edf945ac13204d685aeee6b4b4da8040bc901e1928191a578c",
+        "prog_0.hex": "4e3a1a64159c182e5bb0fc32a3a90ad7545cd528779ac9445504e52d6660e823",
+        "dram_0.bin": "cccd96c63d5922efba37b2e3e18c3391092af85ab1cfc1581c8da5f83749af9d"
+      },
+      "original_config": {
+        "S": 1,
+        "D": 128,
+        "MCOLS": 4,
+        "ACT_BLOCKS": 64,
+        "TMEM_WORDS": 65536,
+        "DRAM_BYTES": 536870912,
+        "IMEM_WORDS": 65536,
+        "LANES": 64,
+        "PAIR": false,
+        "DSTEP": false,
+        "STREAM": false,
+        "ACT_ROWS": 16,
+        "SEQ_WC": false
+      },
+      "physical_config": {
+        "S": 1,
+        "D": 128,
+        "MCOLS": 8,
+        "ACT_BLOCKS": 64,
+        "TMEM_WORDS": 65536,
+        "DRAM_BYTES": 536870912,
+        "IMEM_WORDS": 65536,
+        "LANES": 64,
+        "PAIR": false,
+        "DSTEP": false,
+        "STREAM": false,
+        "ACT_ROWS": 16,
+        "SEQ_WC": false
+      },
+      "timing": {
+        "dram_latency": 120,
+        "dram_bytes_per_cycle": 572,
+        "window": 32,
+        "fifo_chunks": 16384,
+        "chain_length": 8,
+        "epilogue_lanes": 4,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 128,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 128,
+        "dram_port_bytes": 572,
+        "scale_lanes": 128,
+        "unified_dram": true,
+        "scalar_store_bytes": 256,
+        "quant_row_banks": 8,
+        "quant_store_buffered": true,
+        "quant_scale_lookup": false,
+        "scalar_recip_lookup": false,
+        "reciprocal_lookup_lanes": 0,
+        "pinned_cache_bytes": 0,
+        "cache_read_bytes_per_cycle": 8192,
+        "vector_row_contexts": 4,
+        "vector_command_queue": 2,
+        "matrix_retirement": true,
+        "physical_scale_lines": true,
+        "scale_cache_entries": 0,
+        "vector_engines": 1,
+        "vector_issue_groups": 1,
+        "vector_result_chunks": 0,
+        "vector_compatible_issue": false,
+        "activation_streaming": false,
+        "fp_mul_latency": 2,
+        "fp_add_latency": 4
+      },
+      "hardware_instructions": {
+        "dynamic_instructions": 1040,
+        "opcode_counts": {
+          "LI": 3,
+          "LD": 35,
+          "VOP": 525,
+          "ST": 21,
+          "QACT": 91,
+          "MM": 234,
+          "LOOP": 13,
+          "ADDI": 117,
+          "HALT": 1
+        },
+        "matrix_commands": 234,
+        "matrix_dot_macs": 188743680,
+        "matrix_dot_operations": 377487360,
+        "matrix_by_weight_format": {
+          "nvfp4": {
+            "commands": 234,
+            "dot_macs": 188743680,
+            "dot_operations": 377487360
+          }
+        },
+        "logical_fp32_vector_flops": 237572,
+        "vector_function_elements": {
+          "rssq": 8192,
+          "mul": 141316,
+          "add": 79876,
+          "rsqrt": 4,
+          "fill": 8192,
+          "copy": 32768,
+          "exp2": 30720,
+          "recip": 30720
+        },
+        "special_function_evaluations": {
+          "rsqrt": 4,
+          "exp2": 30720,
+          "recip": 30720
+        },
+        "uncounted_vector_function_elements": {},
+        "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+        "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+        "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+        "exclusions": [
+          "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+          "Vector counts are mathematical operations, excluding physical reduction padding",
+          "Special functions, comparisons and copies are not converted into FLOPs"
+        ]
+      },
+      "cycles": 165861.0,
+      "native_seconds": 0.044906795,
+      "assumed_hardware_seconds": 0.000110574,
+      "statistics": {
+        "transitions": 19,
+        "places": 583,
+        "completion_flag_banks": 513,
+        "command_slots": 34,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          1040
+        ],
+        "hardware_instructions": {
+          "dynamic_instructions": 1040,
+          "opcode_counts": {
+            "LI": 3,
+            "LD": 35,
+            "VOP": 525,
+            "ST": 21,
+            "QACT": 91,
+            "MM": 234,
+            "LOOP": 13,
+            "ADDI": 117,
+            "HALT": 1
+          },
+          "matrix_commands": 234,
+          "matrix_dot_macs": 188743680,
+          "matrix_dot_operations": 377487360,
+          "matrix_by_weight_format": {
+            "nvfp4": {
+              "commands": 234,
+              "dot_macs": 188743680,
+              "dot_operations": 377487360
+            }
+          },
+          "logical_fp32_vector_flops": 237572,
+          "vector_function_elements": {
+            "rssq": 8192,
+            "mul": 141316,
+            "add": 79876,
+            "rsqrt": 4,
+            "fill": 8192,
+            "copy": 32768,
+            "exp2": 30720,
+            "recip": 30720
+          },
+          "special_function_evaluations": {
+            "rsqrt": 4,
+            "exp2": 30720,
+            "recip": 30720
+          },
+          "uncounted_vector_function_elements": {},
+          "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+          "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+          "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+          "exclusions": [
+            "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+            "Vector counts are mathematical operations, excluding physical reduction padding",
+            "Special functions, comparisons and copies are not converted into FLOPs"
+          ]
+        }
+      },
+      "native_binary_sha256": "8e542df789159ae362c136e9c24df80b9d2433f2fa17e2fc36267591846ed83d",
+      "input_tables_sha256": "c221bd94f53f8e23839cb7ae5a9f143ae2416af1fc2f41c7ba4678cce2889465"
+    },
+    {
+      "profile": "proposal_hbm_128x8_v256",
+      "input": "/home/ubuntu/lpn-runs/glm47-flash/layer-shared-full-v5/experts",
+      "input_index": 2,
+      "input_sha256": {
+        "input.json": "168f21fd6516b6edf945ac13204d685aeee6b4b4da8040bc901e1928191a578c",
+        "prog_0.hex": "4e3a1a64159c182e5bb0fc32a3a90ad7545cd528779ac9445504e52d6660e823",
+        "dram_0.bin": "cccd96c63d5922efba37b2e3e18c3391092af85ab1cfc1581c8da5f83749af9d"
+      },
+      "original_config": {
+        "S": 1,
+        "D": 128,
+        "MCOLS": 4,
+        "ACT_BLOCKS": 64,
+        "TMEM_WORDS": 65536,
+        "DRAM_BYTES": 536870912,
+        "IMEM_WORDS": 65536,
+        "LANES": 64,
+        "PAIR": false,
+        "DSTEP": false,
+        "STREAM": false,
+        "ACT_ROWS": 16,
+        "SEQ_WC": false
+      },
+      "physical_config": {
+        "S": 1,
+        "D": 128,
+        "MCOLS": 8,
+        "ACT_BLOCKS": 64,
+        "TMEM_WORDS": 65536,
+        "DRAM_BYTES": 536870912,
+        "IMEM_WORDS": 65536,
+        "LANES": 64,
+        "PAIR": false,
+        "DSTEP": false,
+        "STREAM": false,
+        "ACT_ROWS": 16,
+        "SEQ_WC": false
+      },
+      "timing": {
+        "dram_latency": 120,
+        "dram_bytes_per_cycle": 572,
+        "window": 32,
+        "fifo_chunks": 16384,
+        "chain_length": 8,
+        "epilogue_lanes": 4,
+        "quant_buffer_chunks": 1024,
+        "batch_rows": 128,
+        "matrix_engines": 1,
+        "matrix_row_lanes": 128,
+        "dram_port_bytes": 572,
+        "scale_lanes": 128,
+        "unified_dram": true,
+        "scalar_store_bytes": 256,
+        "quant_row_banks": 8,
+        "quant_store_buffered": true,
+        "quant_scale_lookup": false,
+        "scalar_recip_lookup": false,
+        "reciprocal_lookup_lanes": 0,
+        "pinned_cache_bytes": 0,
+        "cache_read_bytes_per_cycle": 8192,
+        "vector_row_contexts": 4,
+        "vector_command_queue": 2,
+        "matrix_retirement": true,
+        "physical_scale_lines": true,
+        "scale_cache_entries": 0,
+        "vector_engines": 1,
+        "vector_issue_groups": 4,
+        "vector_result_chunks": 0,
+        "vector_compatible_issue": false,
+        "activation_streaming": false,
+        "fp_mul_latency": 2,
+        "fp_add_latency": 4
+      },
+      "hardware_instructions": {
+        "dynamic_instructions": 1040,
+        "opcode_counts": {
+          "LI": 3,
+          "LD": 35,
+          "VOP": 525,
+          "ST": 21,
+          "QACT": 91,
+          "MM": 234,
+          "LOOP": 13,
+          "ADDI": 117,
+          "HALT": 1
+        },
+        "matrix_commands": 234,
+        "matrix_dot_macs": 188743680,
+        "matrix_dot_operations": 377487360,
+        "matrix_by_weight_format": {
+          "nvfp4": {
+            "commands": 234,
+            "dot_macs": 188743680,
+            "dot_operations": 377487360
+          }
+        },
+        "logical_fp32_vector_flops": 237572,
+        "vector_function_elements": {
+          "rssq": 8192,
+          "mul": 141316,
+          "add": 79876,
+          "rsqrt": 4,
+          "fill": 8192,
+          "copy": 32768,
+          "exp2": 30720,
+          "recip": 30720
+        },
+        "special_function_evaluations": {
+          "rsqrt": 4,
+          "exp2": 30720,
+          "recip": 30720
+        },
+        "uncounted_vector_function_elements": {},
+        "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+        "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+        "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+        "exclusions": [
+          "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+          "Vector counts are mathematical operations, excluding physical reduction padding",
+          "Special functions, comparisons and copies are not converted into FLOPs"
+        ]
+      },
+      "cycles": 165669.0,
+      "native_seconds": 0.044818577,
+      "assumed_hardware_seconds": 0.000110446,
+      "statistics": {
+        "transitions": 19,
+        "places": 583,
+        "completion_flag_banks": 513,
+        "command_slots": 34,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          1040
+        ],
+        "hardware_instructions": {
+          "dynamic_instructions": 1040,
+          "opcode_counts": {
+            "LI": 3,
+            "LD": 35,
+            "VOP": 525,
+            "ST": 21,
+            "QACT": 91,
+            "MM": 234,
+            "LOOP": 13,
+            "ADDI": 117,
+            "HALT": 1
+          },
+          "matrix_commands": 234,
+          "matrix_dot_macs": 188743680,
+          "matrix_dot_operations": 377487360,
+          "matrix_by_weight_format": {
+            "nvfp4": {
+              "commands": 234,
+              "dot_macs": 188743680,
+              "dot_operations": 377487360
+            }
+          },
+          "logical_fp32_vector_flops": 237572,
+          "vector_function_elements": {
+            "rssq": 8192,
+            "mul": 141316,
+            "add": 79876,
+            "rsqrt": 4,
+            "fill": 8192,
+            "copy": 32768,
+            "exp2": 30720,
+            "recip": 30720
+          },
+          "special_function_evaluations": {
+            "rsqrt": 4,
+            "exp2": 30720,
+            "recip": 30720
+          },
+          "uncounted_vector_function_elements": {},
+          "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+          "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+          "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+          "exclusions": [
+            "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+            "Vector counts are mathematical operations, excluding physical reduction padding",
+            "Special functions, comparisons and copies are not converted into FLOPs"
+          ]
+        }
+      },
+      "native_binary_sha256": "8e542df789159ae362c136e9c24df80b9d2433f2fa17e2fc36267591846ed83d",
+      "input_tables_sha256": "6d042a4310f6067fe1d0946954fb3f18705a3189b0355b5e8cba45061893ed83"
+    }
+  ],
+  "source_sha256": {
+    "/home/ubuntu/LPNDialect-glm47-hardware-sweep/examples/opentpu/hardware_sweep.py": "c35006702ee70bc592522a5344ea1feecc2981a814b97663443c8b90322f430d",
+    "/home/ubuntu/LPNDialect-glm47-hardware-sweep/examples/opentpu/model.py": "7c7656762b7a672c1d8dba2dd0f3064895f4f6ff0d19c206039a704d714f4068",
+    "/home/ubuntu/LPNDialect-glm47-hardware-sweep/examples/opentpu/compact.py": "8c3810f5771022f08aabfbff5d849f6104c36b04dc0c676a2effa7a52f9351d9",
+    "/home/ubuntu/LPNDialect-glm47-hardware-sweep/examples/opentpu/components.py": "c64a8d2ef6b067da7fd277f64464ba1ef8d386083c5b53c5c4c09f2b8616824c",
+    "/home/ubuntu/LPNDialect-glm47-hardware-sweep/examples/opentpu/workload.py": "1381a9859c9da158bc3675398cfa3edc4432672998927fa3e69b6cf05fa6a2fc",
+    "/home/ubuntu/LPNDialect-glm47-hardware-sweep/examples/opentpu/hardware_commands.py": "1f99da9bdd52dbfe0446a6c2304c6bf964003ed901dad4ff5403a2f8e1afbc9d",
+    "/home/ubuntu/LPNDialect-glm47-hardware-sweep/examples/opentpu/shape_workload.py": "d0f1db9e2bba7f3b1b1b119e9483b7ebc7ce17823d343ac135b26e5e51b91169",
+    "/home/ubuntu/LPNDialect-glm47-hardware-sweep/examples/opentpu/native_timing.py": "b48b2bded7b7c112f5d837572002472904bad80478315524fb1d13563c3a3989",
+    "/home/ubuntu/LPNDialect-glm47-hardware-sweep/examples/opentpu/benchmark.py": "271f116924ee90bed5dbf3b7d8cda3f53bdb156a1086105ca8cf837517355943",
+    "/home/ubuntu/LPNDialect-glm47-hardware-sweep/examples/opentpu/activation_stream.py": "83446e2b0a14629f734d3496b8f9e6b34afa6eeecd1d28f1a3996a01d9127aaa",
+    "/home/ubuntu/LPNDialect-glm47-hardware-sweep/examples/opentpu/scale_cache_timing.py": "4903e755f51485f5e76dfb9d0dc7c1070b0fa6e0f3f191b6d8c08f8042142ca4",
+    "/home/ubuntu/LPNDialect-glm47-hardware-sweep/examples/opentpu/vector_pool.py": "63726e1f3afe3baeccbc0d146f20b76286ae3e208193b3c517d9f1ef62b85ecb",
+    "/home/ubuntu/LPNDialect-glm47-hardware-sweep/examples/opentpu/vector_select.py": "cb0dff593a410025a09c6fc665d79014ae30481e7a91ccdbbd98c6c516f67e5e"
+  },
+  "profile_sha256": "8f58f07f216c0a509cba131e8c25662cc46cfbf965d4d74c954126b473e4269c",
+  "assumed_clock_mhz": 1500.0,
+  "numerical_control_resolved": true,
+  "functional_frontend_seconds": 5.174134699627757,
+  "tensor_dag_used": false,
+  "architecture_rtl_validated_by_this_run": false,
+  "full_model_inference_established_by_this_run": false,
+  "host_seconds": 15.784647723659873,
+  "totals": [
+    {
+      "profile": "reference_2x2_gate",
+      "cycles": 815567.0,
+      "native_seconds": 1.091160454
+    },
+    {
+      "profile": "proposal_hbm_2x2",
+      "cycles": 828217.0,
+      "native_seconds": 1.097827202
+    },
+    {
+      "profile": "proposal_hbm_96x2",
+      "cycles": 282015.0,
+      "native_seconds": 0.152925148
+    },
+    {
+      "profile": "proposal_hbm_128x8",
+      "cycles": 280025.0,
+      "native_seconds": 0.151877125
+    },
+    {
+      "profile": "proposal_hbm_128x8_v256",
+      "cycles": 279491.0,
+      "native_seconds": 0.15152453500000002
+    }
+  ]
+}

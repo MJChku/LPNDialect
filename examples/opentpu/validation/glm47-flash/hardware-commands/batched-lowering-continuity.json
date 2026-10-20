@@ -1,0 +1,23 @@
+{
+  "status": "complete",
+  "records": [
+    {
+      "rows": 4,
+      "original": "layer-shared-full-v5",
+      "optimized": "layer-batched-full-fourrows",
+      "all_stage_input_dram_bit_identical": true,
+      "all_expert_ids_identical": true,
+      "mla_and_expert_hardware_inputs_identical": true,
+      "dot_and_vector_arithmetic_preserved": true
+    },
+    {
+      "rows": 16,
+      "original": "layer-shared-full-16rows-capacity",
+      "optimized": "layer-batched-full-sixteenrows",
+      "all_stage_input_dram_bit_identical": true,
+      "all_expert_ids_identical": true,
+      "mla_and_expert_hardware_inputs_identical": true,
+      "dot_and_vector_arithmetic_preserved": true
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "status": "complete",
+  "records": [
+    {
+      "case": "layer-hardware-sweep",
+      "report_sha256": "ca147938cf814946e705cb91d3b5b5c22c9fa109f892dd9e9aaa54b4c06f3d0e",
+      "all_native_logs_and_input_tables_verified": true,
+      "all_source_and_canonical_input_hashes_verified": true,
+      "all_instruction_arithmetic_preserved": true,
+      "reference_control_reproduced": 815567,
+      "points": 5,
+      "inputs": 3,
+      "no_new_architecture_rtl_validation": true
+    },
+    {
+      "case": "layer-hardware-sweep-16rows",
+      "report_sha256": "dc8fb747b7fc48fa649e3ad4e85472724b134ce47a42abe0c289a5d33378f77c",
+      "all_native_logs_and_input_tables_verified": true,
+      "all_source_and_canonical_input_hashes_verified": true,
+      "all_instruction_arithmetic_preserved": true,
+      "reference_control_reproduced": 2697899.0,
+      "points": 5,
+      "inputs": 3,
+      "no_new_architecture_rtl_validation": true
+    },
+    {
+      "case": "layer-batched-sweep-4rows",
+      "report_sha256": "8124da65364fb02b90b308094b7eaab7b8141cfc5817ecdf7db5fd57871c3dba",
+      "all_native_logs_and_input_tables_verified": true,
+      "all_source_and_canonical_input_hashes_verified": true,
+      "all_instruction_arithmetic_preserved": true,
+      "reference_control_reproduced": 785147.0,
+      "points": 5,
+      "inputs": 3,
+      "no_new_architecture_rtl_validation": true
+    },
+    {
+      "case": "layer-batched-sweep-16rows",
+      "report_sha256": "a426a1fcc7c43650d6971c7e858f1bad4c134a4c9a661d643326f0b54542394c",
+      "all_native_logs_and_input_tables_verified": true,
+      "all_source_and_canonical_input_hashes_verified": true,
+      "all_instruction_arithmetic_preserved": true,
+      "reference_control_reproduced": 2568151.0,
+      "points": 5,
+      "inputs": 3,
+      "no_new_architecture_rtl_validation": true
+    }
+  ],
+  "full_glm_model": false
+}

@@ -1,0 +1,162 @@
+{
+  "status": "complete",
+  "scope": "Compile and validate GLM's real FP32 router hardware instructions.\n\nExpert IDs are computed by ARGMAX/RLD from numerical input, never supplied as\nannotations. This tests the router component, not full GLM text generation.\n",
+  "timing": {
+    "dram_latency": 8,
+    "dram_bytes_per_cycle": 2816,
+    "window": 32,
+    "fifo_chunks": 256,
+    "chain_length": 8,
+    "epilogue_lanes": 1,
+    "quant_buffer_chunks": 1024,
+    "batch_rows": 2,
+    "matrix_engines": 1,
+    "matrix_row_lanes": 2,
+    "dram_port_bytes": 2816,
+    "scale_lanes": 2,
+    "unified_dram": true,
+    "scalar_store_bytes": 256,
+    "quant_row_banks": 8,
+    "quant_store_buffered": true,
+    "quant_scale_lookup": false,
+    "scalar_recip_lookup": false,
+    "reciprocal_lookup_lanes": 0,
+    "pinned_cache_bytes": 0,
+    "cache_read_bytes_per_cycle": 8192,
+    "vector_row_contexts": 4,
+    "vector_command_queue": 2,
+    "matrix_retirement": true,
+    "physical_scale_lines": true,
+    "scale_cache_entries": 0,
+    "vector_engines": 1,
+    "vector_issue_groups": 1,
+    "vector_result_chunks": 0,
+    "vector_compatible_issue": false,
+    "activation_streaming": false,
+    "fp_mul_latency": 2,
+    "fp_add_latency": 4
+  },
+  "physical_epilogue_lanes": 1,
+  "rows": 4,
+  "hidden": 2048,
+  "experts": 64,
+  "hardware_instructions": {
+    "dynamic_instructions": 657,
+    "opcode_counts": {
+      "LI": 3,
+      "LD": 68,
+      "VOP": 174,
+      "LOOP": 1,
+      "ST": 264,
+      "ADDI": 130,
+      "RLD": 16,
+      "HALT": 1
+    },
+    "matrix_commands": 0,
+    "matrix_dot_macs": 0,
+    "matrix_dot_operations": 0,
+    "matrix_by_weight_format": {},
+    "logical_fp32_vector_flops": 1081908,
+    "vector_function_elements": {
+      "rssq": 8192,
+      "mul": 16676,
+      "add": 520,
+      "rsqrt": 4,
+      "rdot": 524288,
+      "exp2": 256,
+      "recip": 260,
+      "argmax": 1024,
+      "fill": 16,
+      "copy": 32,
+      "rsum": 16
+    },
+    "special_function_evaluations": {
+      "rsqrt": 4,
+      "exp2": 256,
+      "recip": 260
+    },
+    "uncounted_vector_function_elements": {},
+    "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+    "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+    "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+    "exclusions": [
+      "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+      "Vector counts are mathematical operations, excluding physical reduction padding",
+      "Special functions, comparisons and copies are not converted into FLOPs"
+    ]
+  },
+  "ids": [
+    [
+      63,
+      29,
+      28,
+      3
+    ],
+    [
+      63,
+      44,
+      52,
+      59
+    ],
+    [
+      63,
+      59,
+      44,
+      50
+    ],
+    [
+      63,
+      29,
+      32,
+      56
+    ]
+  ],
+  "weights": [
+    [
+      0.10943824052810669,
+      0.5897279977798462,
+      0.5064576864242554,
+      0.5943759083747864
+    ],
+    [
+      0.238602414727211,
+      0.5630838871002197,
+      0.5584022998809814,
+      0.4399113059043884
+    ],
+    [
+      0.487817645072937,
+      0.48388513922691345,
+      0.4236217737197876,
+      0.4046752452850342
+    ],
+    [
+      0.193158358335495,
+      0.5815401077270508,
+      0.5894532799720764,
+      0.4358481764793396
+    ]
+  ],
+  "logits_max_absolute_error": 9.5367431640625e-07,
+  "weights_max_absolute_error": 1.7881393432617188e-07,
+  "numerical_expert_selection_exact": true,
+  "routing_annotations_used": false,
+  "router_reduction": "batched",
+  "lpn_cycles": 19544.0,
+  "lpn_seconds": 0.016925952,
+  "rtl_validated": true,
+  "full_glm_model": false,
+  "input_sha256": {
+    "prog_0.hex": "7b2ba3ac3cdf5297d70dfde05ca907a2896a86974d8d89bff19dfc65b77151d2",
+    "dram_0.bin": "2f1146b2f20753fd36cb50bf6db4f6b2c629cdc19e6ea0ea1ef4194aacd74eba"
+  },
+  "source_sha256": {
+    "/home/ubuntu/LPNDialect-glm47-batched-router/examples/opentpu/glm47_router_hardware.py": "293a8b2ef360790021f7271c4ce7648bece2ca4bd189ad721e561fc978ffa64d",
+    "/home/ubuntu/LPNDialect-glm47-batched-router/examples/opentpu/glm47_kernels.py": "ad3249687b504fe21c716f5d1ea30462641b963be03c28578fa0158af37bc99d"
+  },
+  "rtl_cycles": 20885,
+  "relative_cycle_error": -0.0642087622695715,
+  "full_dram_and_tmem_bit_exact": true,
+  "timing_target_met": true,
+  "host_seconds": 56.75195506773889
+}

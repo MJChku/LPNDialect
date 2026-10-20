@@ -21,8 +21,13 @@ need the functional frontend, and are rejected by static replay.
 MLA, FP32 routing and resident experts run as three hardware programs sharing
 physical DRAM, including a numerical layer with the real model dimensions.
 Dense FFN, NVFP4 embedding gathers and the untied vocabulary head also compile.
-Completed small RTL gates match complete DRAM/TMEM states; timing errors are
-within 7.5%. See the [actual hardware evidence and remaining integration work](
+The full-width layer and small RTL gates match complete DRAM/TMEM states;
+the optimized full-width layer has 0.17% total timing error, 6.42% worst stage.
+Its native timing replay takes 1.091 seconds versus 266.784 seconds summed
+across optimized Verilator simulation windows, about 245x; preparation and
+compilation are excluded. This is one four-row MoE layer, not full inference.
+The batched FP32 router lowers its actual RTL cycles by 2.34x. See the
+[actual hardware evidence and remaining integration work](
 validation/glm47-flash/hardware-commands/README.md). Full 47-layer generation
 and whole-model memory mapping are unfinished. The separate tensor-DAG
 experiment's 1–2-second graph replay must not be presented as GLM execution
