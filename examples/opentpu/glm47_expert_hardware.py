@@ -48,11 +48,11 @@ def resolved_router(directory):
 
 
 class Layout:
-    def __init__(self,H,F,E,R,k=4):
+    def __init__(self,H,F,E,R,k=4,base=0):
         from opentpu import Config
         from opentpu.compiler import Affine,Tensor
         from opentpu.llm.moe import ExpertFormat
-        self.fmt=fmt=ExpertFormat(H,F,128,'nvfp4');self.regions=[];self.next=0
+        self.fmt=fmt=ExpertFormat(H,F,128,'nvfp4');self.regions=[];self.next=base
         def alloc(name,n):
             a=(self.next+127)//128*128;self.next=a+n
             self.regions.append(dict(name=name,address=a,bytes=n));return a
