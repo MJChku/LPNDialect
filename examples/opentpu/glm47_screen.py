@@ -15,7 +15,7 @@ def main():
     a=p.parse_args();a.output=a.output.resolve();a.compiler=a.compiler.resolve()
     a.output.mkdir(parents=True,exist_ok=False)
     from .e2e import atomic_json,digest
-    root=Path(__file__).resolve().parents[2]
+    root=Path(__file__).resolve().parents[1]
     files=[Path(__file__),Path(__file__).with_name('glm47_trace.py'),Path(__file__).with_name('glm47.py'),root/'tensor_dag.py']
     sources={str(f):digest(f) for f in files};started=time.perf_counter();records=[];failures=[];traces={}
     def save(status):
