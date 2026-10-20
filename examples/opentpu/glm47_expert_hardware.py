@@ -48,7 +48,7 @@ def resolved_router(directory):
 
 
 class Layout:
-    def __init__(self,H,F,E,R,k=4,base=0):
+    def __init__(self,H,F,E,R,k=4,base=0,tmem_words=65536,logical_columns=4):
         from opentpu import Config
         from opentpu.compiler import Affine,Tensor
         from opentpu.llm.moe import ExpertFormat
@@ -64,7 +64,7 @@ class Layout:
             weights=tensor('router_weights',(R,k)),out=tensor('output',(R,H)),eps=1e-5,experts=E,fmt=fmt)
         m.expert_base=alloc('resident_experts',E*fmt.nbytes);m.shared_base=alloc('shared_expert',fmt.nbytes)
         if self.next>1<<32:raise ValueError('one resident layer exceeds the current hardware address space')
-        self.cfg=Config(D=128,MCOLS=4,ACT_ROWS=16,LANES=64,IMEM_WORDS=65536,
+        self.cfg=Config(D=128,MCOLS=logical_columns,ACT_ROWS=16,LANES=64,IMEM_WORDS=65536,TMEM_WORDS=tmem_words,
             DRAM_BYTES=1<<max(20,(self.next-1).bit_length()))
         self.m=m
 

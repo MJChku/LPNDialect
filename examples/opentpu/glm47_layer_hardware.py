@@ -22,6 +22,7 @@ def main():
     for name in ('opentpu-root','compiler','output'):p.add_argument('--'+name,type=Path,required=True)
     p.add_argument('--small-test',action='store_true');p.add_argument('--rtl',action='store_true')
     p.add_argument('--rows',type=int,help='Compiler tile rows, bounded by the physical 16-row ACT store')
+    p.add_argument('--tmem-words',type=int,default=65536,help='Physical scratchpad capacity; larger tiles may need more SRAM')
     p.add_argument('--position',type=int,default=0)
     a=p.parse_args();use_checkout(a.opentpu_root);a.output.mkdir(parents=True,exist_ok=False)
     import numpy as np
@@ -36,10 +37,15 @@ def main():
     from .hardware_commands import instruction_statistics
     started=time.perf_counter();R=a.rows if a.rows is not None else (2 if a.small_test else 4)
     if not 1<=R<=16:p.error('rows must fit the physical 16-row ACT store')
+    if a.tmem_words<65536 or a.tmem_words>1<<20 or a.tmem_words&(a.tmem_words-1):
+        p.error('scratchpad words must be a power of two between 65536 and 1048576')
     spec=Spec(128,2,256,128,64,64,128) if a.small_test else Spec.pinned()
     H=spec.hidden;E=4 if a.small_test else 64;F=512 if a.small_test else 1536
     capacity=max(256 if a.small_test else 1152,(a.position+R+127)//128*128)
-    provisional=Config(D=128,MCOLS=4,ACT_ROWS=16,LANES=64,DRAM_BYTES=64<<20,IMEM_WORDS=65536)
+    # MCOLS also sizes the logical MM row-max area. Physical MXU_COLS is
+    # separate; increasing this capacity does not invent additional dot units.
+    logical_columns=1<<max(2,(R-1).bit_length())
+    provisional=Config(D=128,MCOLS=logical_columns,ACT_ROWS=16,LANES=64,DRAM_BYTES=64<<20,IMEM_WORDS=65536,TMEM_WORDS=a.tmem_words)
     mla=MLA(spec,R,capacity,provisional);cursor=mla.next
     def tensor(shape):
         nonlocal cursor
@@ -48,7 +54,7 @@ def main():
         cursor=base+4*n;return Tensor(Affine(base),tuple(shape),tuple(strides))
     router=SimpleNamespace(x=mla.m.out,norm=tensor((H,)),router=tensor((E,H)),bias=tensor((E,)),
         logits=tensor((R,E)),ids=tensor((R,4)),weights=tensor((R,4)),eps=1e-5)
-    experts=Experts(H,F,E,R,base=cursor)
+    experts=Experts(H,F,E,R,base=cursor,tmem_words=a.tmem_words,logical_columns=logical_columns)
     experts.m.x=mla.m.out;experts.m.norm=router.norm;experts.m.weights=router.weights
     cfg=experts.cfg;mla.cfg=cfg
     program_mla=mla.compile(a.position)

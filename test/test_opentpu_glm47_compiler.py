@@ -48,6 +48,26 @@ class GLMCompilerTest(unittest.TestCase):
                 self.assertEqual(stats['matrix_dot_macs'],macs)
                 self.assertLess(layout.next,1<<32)
 
+    def test_large_mla_tile_requires_real_scratchpad_and_rowmax_capacity(self):
+        from dataclasses import replace
+        from opentpu import Config,waits as W
+        from opentpu.compiler import CompileError
+        from examples.opentpu.glm47_hardware import Layout,Spec
+        from examples.opentpu.shape_workload import resolve_static
+        cfg=Config(D=128,MCOLS=4,ACT_ROWS=16,LANES=64,DRAM_BYTES=64<<20,IMEM_WORDS=65536)
+        with self.assertRaisesRegex(CompileError,'TMEM exhausted'):
+            Layout(Spec.pinned(),16,1152,cfg).compile(0)
+        cfg=replace(cfg,TMEM_WORDS=262144)
+        with self.assertRaisesRegex(CompileError,'rowmax'):
+            Layout(Spec.pinned(),16,1152,cfg).compile(0)
+        cfg=replace(cfg,MCOLS=16)
+        program=Layout(Spec.pinned(),16,1152,cfg).compile(0)
+        self.assertLess(len(program)*8,cfg.IMEM_WORDS)
+        work=resolve_static(cfg,[program])
+        for command in work.commands[0]:
+            for space,lo,hi in command.footprint.rd+command.footprint.wr:
+                if space==W.SP_TMEM:self.assertTrue(0<=lo<=hi<=cfg.TMEM_WORDS)
+
     def test_expert_dispatch_preserves_every_selected_token_and_rank(self):
         from examples.opentpu.glm47_kernels import expert_batches
         ids=[[7,1,3,0],[1,6,7,3],[7,2,1,0],[2,4,1,7]]
