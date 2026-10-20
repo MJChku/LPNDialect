@@ -20,6 +20,30 @@ from lpnlang_mlir.native_inputs import write_input_tables
 
 
 @dataclass(frozen=True)
+class ArrayGeometry:
+    """Proposed output-stationary arrays; not a claim about mapped TPU RTL.
+
+    A wave computes one R-by-C output tile per array, streaming the full K.
+    Tiles are zero padded. Each wave pays R+C-2 fill/drain cycles. Different
+    operations cannot share the cluster in this first bounded model.
+    """
+    rows: int
+    columns: int
+    arrays: int
+
+    def __post_init__(self):
+        if any(type(x) is not int or x<1 for x in asdict(self).values()):
+            raise ValueError('positive integer array dimensions required')
+
+    @property
+    def macs_per_cycle(self):return self.rows*self.columns*self.arrays
+
+    def cycles(self,shape):
+        tiles=shape['batch']*ceil(shape['m']/self.rows)*ceil(shape['n']/self.columns)
+        return ceil(tiles/self.arrays)*(shape['k']+self.rows+self.columns-2)
+
+
+@dataclass(frozen=True)
 class Hardware:
     clock_mhz: int = 1500
     weight_macs_per_cycle: int = 12288
@@ -58,8 +82,11 @@ def checked_commands(document):
 
 
 class TensorDAGScreen:
-    def __init__(self,document,hardware):
-        commands=checked_commands(document);self.hardware=hardware
+    def __init__(self,document,hardware,geometry=None,shared_matrix_unit=False):
+        commands=checked_commands(document);self.hardware=hardware;self.geometry=geometry
+        self.shared_matrix_unit=shared_matrix_unit
+        if geometry and max(hardware.weight_macs_per_cycle,hardware.bf16_macs_per_cycle)>geometry.macs_per_cycle:
+            raise ValueError('arithmetic budgets exceed physical array MAC sites')
         self.net=net=NetBuilder();self.tables={}
         def table(name,values):
             self.tables[name]=list(values);return InputArray(name,self.tables[name])
@@ -71,18 +98,23 @@ class TensorDAGScreen:
             precision=c.get('matrix_precision') or ('nvfp4' if c['weight_bytes'] else 'bf16')
             if c['unit']=='matrix' and precision not in ('nvfp4','bf16','fp32'):
                 raise ValueError('unknown matrix arithmetic format')
-            kind=0 if c['unit']=='matrix' and precision=='nvfp4' else 1 if c['unit']=='matrix' else 2
+            kind=0 if c['unit']=='matrix' and (precision=='nvfp4' or shared_matrix_unit) else 1 if c['unit']=='matrix' else 2
             kinds.append(kind)
-            throughput=(hardware.weight_macs_per_cycle if kind==0 else
+            throughput=(hardware.weight_macs_per_cycle if precision=='nvfp4' else
                 hardware.fp32_macs_per_cycle if precision=='fp32' else hardware.bf16_macs_per_cycle)
-            compute.append(max(1,ceil(c['macs']/throughput) if kind<2 else
-                ceil(c['vector_elements']/hardware.vector_elements_per_cycle)))
+            service=max(1,ceil(c['macs']/throughput) if kind<2 else
+                ceil(c['vector_elements']/hardware.vector_elements_per_cycle))
+            if geometry and kind<2:
+                if not c.get('matrix_shape'):raise ValueError('array model requires matrix shapes')
+                service=max(service,geometry.cycles(c['matrix_shape']))
+            compute.append(service)
             traffic=c['weight_bytes']+c['activation_read_bytes']+c['activation_write_bytes']
             self.total_hbm_bytes+=traffic
             memory.append(max(1,ceil(traffic/(hardware.hbm_gbs*1000/hardware.clock_mhz))))
             indices.extend(c['deps']);offsets.append(len(indices))
         kinds=table('kinds',kinds);compute=table('compute_cycles',compute)
         memory=table('memory_cycles',memory);offsets=table('dependency_offsets',offsets)
+        self.arithmetic=arithmetic_statistics(commands,hardware,self.tables['compute_cycles'])
         indices=table('dependency_indices',indices or [0]);n=len(commands)
         # Completion state is compressed into immutable 64-bit flag latches.
         banks=[net.place(f'flags_{i}',initial_tokens=1) for i in range((n+63)//64)]
@@ -169,6 +201,25 @@ class TensorDAGScreen:
             hbm_transfer_bytes=self.total_hbm_bytes)
 
 
+def arithmetic_statistics(commands,hardware,compute_cycles):
+    """Count useful matrix math, never padded work or vector elements as FLOPs."""
+    formats={}
+    calls={}
+    for c,service in zip(commands,compute_cycles):
+        if c['unit']!='matrix':continue
+        precision=c.get('matrix_precision') or ('nvfp4' if c['weight_bytes'] else 'bf16')
+        entry=formats.setdefault(precision,dict(macs=0,matrix_flops=0,compute_service_cycles=0))
+        entry['macs']+=c['macs'];entry['matrix_flops']+=2*c['macs'];entry['compute_service_cycles']+=service
+        key=str(c.get('call',0));calls[key]=calls.get(key,0)+2*c['macs']
+    return dict(matrix_macs=sum(x['macs'] for x in formats.values()),
+        matrix_flops=sum(x['matrix_flops'] for x in formats.values()),by_precision=formats,
+        matrix_flops_by_call=calls,
+        counting_convention='One mathematical matrix multiply-add is 2 FLOPs, including NVFP4-weight mixed arithmetic; vector/SFU/routing work excluded, not zero',
+        vector_work_elements=sum(c['vector_elements'] for c in commands if c['unit']=='vector'),
+        peak_matrix_tflops_by_precision={p:2*v*hardware.clock_mhz/1e6 for p,v in
+            [('nvfp4',hardware.weight_macs_per_cycle),('bf16',hardware.bf16_macs_per_cycle),('fp32',hardware.fp32_macs_per_cycle)]})
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--commands',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
@@ -176,23 +227,47 @@ def main():
     p.add_argument('--clock-mhz',type=int,default=1500);p.add_argument('--hbm-gbs',type=float,default=858.9934592)
     p.add_argument('--weight-macs-per-cycle',type=int,default=12288)
     p.add_argument('--bf16-macs-per-cycle',type=int,default=1024)
+    p.add_argument('--fp32-macs-per-cycle',type=int,default=256)
+    p.add_argument('--vector-elements-per-cycle',type=int,default=256)
+    p.add_argument('--array-rows',type=int);p.add_argument('--array-columns',type=int)
+    p.add_argument('--arrays',type=int);p.add_argument('--shared-matrix-unit',action='store_true')
+    p.add_argument('--hbm-capacity-bytes',type=int,default=32_000_000_000)
+    p.add_argument('--tile-buffer-bytes-per-unit',type=int,default=65536)
+    p.add_argument('--runs',type=int,default=1,help='Repeat the same compiled native simulation')
     a=p.parse_args();a.output=a.output.resolve();a.output.mkdir(parents=True,exist_ok=False)
     from examples.opentpu.e2e import atomic_json,digest
     from examples.opentpu.benchmark import native_observation
     document=json.loads(a.commands.read_text())
     hw=Hardware(clock_mhz=a.clock_mhz,hbm_gbs=a.hbm_gbs,
-        weight_macs_per_cycle=a.weight_macs_per_cycle,bf16_macs_per_cycle=a.bf16_macs_per_cycle)
-    start=time.perf_counter();model=TensorDAGScreen(document,hw)
+        weight_macs_per_cycle=a.weight_macs_per_cycle,bf16_macs_per_cycle=a.bf16_macs_per_cycle,
+        fp32_macs_per_cycle=a.fp32_macs_per_cycle,vector_elements_per_cycle=a.vector_elements_per_cycle,
+        hbm_capacity_bytes=a.hbm_capacity_bytes,tile_buffer_bytes_per_unit=a.tile_buffer_bytes_per_unit)
+    dims=(a.array_rows,a.array_columns,a.arrays)
+    if any(x is not None for x in dims) and not all(x is not None for x in dims):p.error('specify all array dimensions')
+    if a.runs<1:p.error('positive native sample count required')
+    geometry=ArrayGeometry(*dims) if all(x is not None for x in dims) else None
+    start=time.perf_counter();model=TensorDAGScreen(document,hw,geometry,a.shared_matrix_unit)
     ir=a.output/'model.mlir';ir.write_text(model.net.build());inputs=a.output/'timing.tables'
     write_input_tables(inputs,model.tables);binary=a.output/'timing.native'
+    build_seconds=time.perf_counter()-start;before=time.perf_counter()
     with (a.output/'compile.log').open('w') as log:
         subprocess.run([str(a.compiler.resolve()),str(ir),'-o',str(binary)],stdout=log,stderr=subprocess.STDOUT,check=True)
-    cycles,core,process,log=native_observation(binary,inputs=inputs)
+    compile_seconds=time.perf_counter()-before
+    samples=[native_observation(binary,inputs=inputs) for _ in range(a.runs)]
+    cycles,core,process,log=samples[0]
+    if any(s[0]!=cycles for s in samples):raise ValueError('native cycle count changed between repetitions')
+    seconds=cycles/(hw.clock_mhz*1e6)
+    arithmetic=dict(model.arithmetic,achieved_matrix_tflops=model.arithmetic['matrix_flops']/seconds/1e12,
+        achieved_matrix_tflops_by_precision={k:v['matrix_flops']/seconds/1e12 for k,v in model.arithmetic['by_precision'].items()})
     (a.output/'lpn.log').write_text(log)
     atomic_json(a.output/'report.json',dict(status='complete',scope=__doc__,hardware=asdict(hw),
         commands_sha256=digest(a.commands),source_sha256=digest(Path(__file__)),binary_sha256=digest(binary),
         input_tables_sha256=digest(inputs),command_count=len(document['commands']),statistics=model.statistics(),
         cycles=cycles,assumed_hardware_seconds=cycles/(hw.clock_mhz*1e6),native_seconds=core,
+        native_seconds_samples=[s[1] for s in samples],native_process_seconds_samples=[s[2] for s in samples],
+        model_build_seconds=build_seconds,native_compile_seconds=compile_seconds,
+        arithmetic=arithmetic,array_geometry=asdict(geometry) if geometry else None,
+        shared_matrix_unit=a.shared_matrix_unit,
         host_total_seconds=time.perf_counter()-start,zero_rollbacks=True,
         rtl_calibrated=False,numerical_validated=False,fpga_mapping_proven=False,
         existing_opentpu_isa=False,implementation='Hypothetical streaming tensor-operation accelerator',
