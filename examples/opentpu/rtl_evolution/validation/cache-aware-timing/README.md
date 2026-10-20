@@ -30,8 +30,24 @@ before prediction. Every original scale-request count matches exactly:
 | 47 | Decode | 100,468 | 98,422 | −2.0365% |
 
 Miss counts are 1.3–3.8% below RTL, consistent with the asynchronous coherence
-limitation. The timing target is met for these four kernels; full-inference
-cache timing and FPGA mapping/clock remain to be established.
+limitation. These were the first four kernels. FPGA mapping/clock remain
+unproven; the subsequent full-inference result is recorded below.
+
+## Completed 128-row cached RTL full inference
+
+`full-rtl.json` and `full-audit.json` preserve all 48 kernels of the same
+normal upstream SmolLM2-135M 128-input / 32-output inference. The completed
+cached RTL takes **8,410,568 cycles**, versus original RTL's 132,828,263:
+**15.7930x fewer cycles**. Native LPN predicts **8,142,924 cycles**, −3.1822%
+overall and **4.7960% worst kernel**. Every full DRAM/TMEM state matches; the
+fresh audit verifies input/program/binary/source hashes, raw logs, instruction
+counts and preservation of the upstream schedule/generated IDs.
+
+The interrupted original run was confirmed dead before recovery. Its 32
+completed simulations were freshly audited and reused; only 16 missing RTL
+simulations ran in the resumed directory. Completed evidence was preserved.
+This is the 128x1 physical point, which exceeds the provisional FPGA integer
+DSP reserve budget; its timing validation does not establish FPGA fit.
 
 Four focused tests verify pending hits, invalidation, exact int8 request
 sequences, bounded replacement and independent HBM/decoder service. The

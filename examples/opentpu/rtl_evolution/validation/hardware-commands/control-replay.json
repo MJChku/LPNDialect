@@ -1,0 +1,200 @@
+{
+  "status": "complete",
+  "scope": "Run the actual openTPU component LPN directly from canonical RTL commands.\n\nNo tensor-DAG input or numerical matrix execution. The ISA and timing components\nare those used by the existing openTPU validation path. New timing parameters\nremain proposals until validated against corresponding RTL.\n",
+  "input_directory": "/home/ubuntu/lpn-runs/rtl-architecture-128x32/evolved-pipeline-final/kernels/0000",
+  "input_sha256": {
+    "input.json": "459ad62bba159ca0b35a17649c89f86beaa00daeaae8386c0500d306a25034ec",
+    "prog_0.hex": "715520e9463ef4394a81fd408cc34c0423701c0905593cc90a625fe2c46d9323"
+  },
+  "input_config": {
+    "S": 1,
+    "D": 64,
+    "MCOLS": 4,
+    "ACT_BLOCKS": 64,
+    "TMEM_WORDS": 65536,
+    "DRAM_BYTES": 268435456,
+    "IMEM_WORDS": 32768,
+    "LANES": 8,
+    "PAIR": false,
+    "DSTEP": false,
+    "STREAM": false,
+    "ACT_ROWS": 16,
+    "SEQ_WC": false
+  },
+  "hardware_config": {
+    "S": 1,
+    "D": 64,
+    "MCOLS": 1,
+    "ACT_BLOCKS": 64,
+    "TMEM_WORDS": 65536,
+    "DRAM_BYTES": 268435456,
+    "IMEM_WORDS": 32768,
+    "LANES": 64,
+    "PAIR": false,
+    "DSTEP": false,
+    "STREAM": false,
+    "ACT_ROWS": 16,
+    "SEQ_WC": false
+  },
+  "explicit_physical_overrides": {
+    "MCOLS": 1,
+    "LANES": 64
+  },
+  "timing": {
+    "dram_latency": 8,
+    "dram_bytes_per_cycle": 2816,
+    "window": 32,
+    "fifo_chunks": 16384,
+    "chain_length": 16,
+    "epilogue_lanes": 1,
+    "quant_buffer_chunks": 1024,
+    "batch_rows": 128,
+    "matrix_engines": 1,
+    "matrix_row_lanes": 128,
+    "dram_port_bytes": 2816,
+    "scale_lanes": 128,
+    "unified_dram": true,
+    "scalar_store_bytes": 256,
+    "quant_row_banks": 8,
+    "quant_store_buffered": true,
+    "quant_scale_lookup": true,
+    "scalar_recip_lookup": true,
+    "reciprocal_lookup_lanes": 0,
+    "pinned_cache_bytes": 0,
+    "cache_read_bytes_per_cycle": 8192,
+    "vector_row_contexts": 4,
+    "vector_command_queue": 2,
+    "matrix_retirement": true,
+    "physical_scale_lines": true,
+    "scale_cache_entries": 16,
+    "vector_engines": 1,
+    "vector_issue_groups": 1,
+    "vector_result_chunks": 0,
+    "vector_compatible_issue": false,
+    "activation_streaming": true,
+    "fp_mul_latency": 2,
+    "fp_add_latency": 2
+  },
+  "assumed_clock_mhz": 200.0,
+  "cycles": 302421.0,
+  "assumed_hardware_seconds": 0.001512105,
+  "statistics": {
+    "transitions": 22,
+    "places": 385,
+    "completion_flag_banks": 310,
+    "command_slots": 34,
+    "matrix_engines_per_slice": 1,
+    "instructions_per_slice": [
+      19776
+    ],
+    "scale_cache": {
+      "0": {
+        "requests": 1663272,
+        "backing_reads": 279792,
+        "data_bytes": 65536,
+        "coherence_scope": "Canonical-order invalidation; overlapping write timing is approximate"
+      }
+    },
+    "hardware_instructions": {
+      "dynamic_instructions": 19776,
+      "opcode_counts": {
+        "LI": 1,
+        "LD": 783,
+        "QACT": 1771,
+        "MM": 2408,
+        "VOP": 14600,
+        "LOOP": 1,
+        "QST": 180,
+        "ADDI": 31,
+        "HALT": 1
+      },
+      "matrix_commands": 2408,
+      "matrix_dot_macs": 859110912,
+      "matrix_dot_operations": 1718221824,
+      "matrix_by_weight_format": {
+        "int8": {
+          "commands": 2408,
+          "dot_macs": 859110912,
+          "dot_operations": 1718221824
+        }
+      },
+      "logical_fp32_vector_flops": 3029160,
+      "vector_function_elements": {
+        "copy": 11376,
+        "rssq": 276480,
+        "mul": 1625160,
+        "add": 739920,
+        "rsqrt": 480,
+        "sub": 92160,
+        "fill": 326880,
+        "max": 2160,
+        "exp2sub": 11880,
+        "rsum": 9720,
+        "recip": 370800,
+        "exp2": 368640
+      },
+      "special_function_evaluations": {
+        "rsqrt": 480,
+        "exp2sub": 11880,
+        "recip": 370800,
+        "exp2": 368640
+      },
+      "uncounted_vector_function_elements": {},
+      "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+      "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+      "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+      "exclusions": [
+        "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+        "Vector counts are mathematical operations, excluding physical reduction padding",
+        "Special functions, comparisons and copies are not converted into FLOPs"
+      ]
+    }
+  },
+  "achieved_matrix_dot_tops": 1.136311184739155,
+  "achieved_logical_fp32_vector_gflops": 2.003273582191713,
+  "samples": [
+    {
+      "cycles": 302421.0,
+      "simulation_seconds": 0.546152416,
+      "process_seconds": 0.6090142168104649
+    },
+    {
+      "cycles": 302421.0,
+      "simulation_seconds": 0.547144676,
+      "process_seconds": 0.5993250608444214
+    },
+    {
+      "cycles": 302421.0,
+      "simulation_seconds": 0.546486108,
+      "process_seconds": 0.6110543292015791
+    }
+  ],
+  "preparation_seconds": 8.19373339600861,
+  "compile_seconds": 0.3180331066250801,
+  "host_total_seconds": 10.71336916834116,
+  "source_sha256": {
+    "/home/ubuntu/LPNDialect-hardware-command-replay/examples/opentpu/hardware_replay.py": "671c463ca652d329decf055fdcb4d7714fb1226bd6c6bb4ad806d23ec3a6c0c2",
+    "/home/ubuntu/LPNDialect-hardware-command-replay/examples/opentpu/hardware_commands.py": "1f99da9bdd52dbfe0446a6c2304c6bf964003ed901dad4ff5403a2f8e1afbc9d",
+    "/home/ubuntu/LPNDialect-hardware-command-replay/examples/opentpu/model.py": "7c7656762b7a672c1d8dba2dd0f3064895f4f6ff0d19c206039a704d714f4068",
+    "/home/ubuntu/LPNDialect-hardware-command-replay/examples/opentpu/compact.py": "8c3810f5771022f08aabfbff5d849f6104c36b04dc0c676a2effa7a52f9351d9",
+    "/home/ubuntu/LPNDialect-hardware-command-replay/examples/opentpu/components.py": "c64a8d2ef6b067da7fd277f64464ba1ef8d386083c5b53c5c4c09f2b8616824c",
+    "/home/ubuntu/LPNDialect-hardware-command-replay/examples/opentpu/shape_workload.py": "d0f1db9e2bba7f3b1b1b119e9483b7ebc7ce17823d343ac135b26e5e51b91169",
+    "/home/ubuntu/LPNDialect-hardware-command-replay/examples/opentpu/native_timing.py": "b48b2bded7b7c112f5d837572002472904bad80478315524fb1d13563c3a3989",
+    "/home/ubuntu/LPNDialect-hardware-command-replay/examples/opentpu/workload.py": "1381a9859c9da158bc3675398cfa3edc4432672998927fa3e69b6cf05fa6a2fc",
+    "/home/ubuntu/LPNDialect-hardware-command-replay/examples/opentpu/benchmark.py": "271f116924ee90bed5dbf3b7d8cda3f53bdb156a1086105ca8cf837517355943",
+    "/home/ubuntu/LPNDialect-hardware-command-replay/examples/opentpu/activation_stream.py": "83446e2b0a14629f734d3496b8f9e6b34afa6eeecd1d28f1a3996a01d9127aaa",
+    "/home/ubuntu/LPNDialect-hardware-command-replay/examples/opentpu/scale_cache_timing.py": "4903e755f51485f5e76dfb9d0dc7c1070b0fa6e0f3f191b6d8c08f8042142ca4",
+    "/home/ubuntu/LPNDialect-hardware-command-replay/examples/opentpu/vector_pool.py": "63726e1f3afe3baeccbc0d146f20b76286ae3e208193b3c517d9f1ef62b85ecb",
+    "/home/ubuntu/LPNDialect-hardware-command-replay/examples/opentpu/vector_select.py": "cb0dff593a410025a09c6fc665d79014ae30481e7a91ccdbbd98c6c516f67e5e"
+  },
+  "binary": "/home/ubuntu/lpn-runs/tpu-100x/hardware-command-control/native-cache/9d7f40138a17504f73437ac0154a2ecbcdc0c1ed621d8086750da9d0ed3c837a/timing.native",
+  "binary_sha256": "40bde418e9da4b73bbae9e4562f22940799f9725ba572b226aebb6f666f28cd5",
+  "compiler_runtime_identity": "e264d5fd1334e5bdc922267eaa764123b874c33a343dd4e7f8120f0ff56239828790498c9440876af9a36c8c6d1b21989cc75171f4a5b1f526d94037b04cc433",
+  "tables_sha256": "7848787ba957e3e53720bb86548440a8c49b720d290aac38b3adcb8e5b6cd487",
+  "tensor_dag_used": false,
+  "weights_loaded": false,
+  "numerical_arithmetic_executed": false,
+  "zero_rollbacks": true,
+  "architecture_rtl_validated_by_this_run": false,
+  "dependency_source": "Actual resolved hardware instruction memory footprints; LPN resources supply component timing"
+}

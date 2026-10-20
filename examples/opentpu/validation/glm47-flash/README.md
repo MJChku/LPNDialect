@@ -1,5 +1,12 @@
 # GLM-4.7-Flash: NVFP4 capacity and first MLA/MoE timing screen
 
+**Scope correction:** the user requires hardware commands as the LPN input.
+The historical tensor-DAG studies below do not satisfy that requirement and
+are retained as experimental evidence only. Their 1–2-second simulation time
+does not establish GLM execution on the actual openTPU LPN. No complete GLM
+hardware instruction stream exists yet. Use the actual
+[hardware command path](../../HARDWARE_COMMANDS.md) for accelerator modeling.
+
 The subsequent [v5e-scale LPN study](v5e-scale/README.md) adds shared matrix
 resources, padded systolic-array service and useful FLOP accounting. Its ten
 points are complete and audited; the timings remain architecture estimates.

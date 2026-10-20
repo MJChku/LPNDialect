@@ -1,0 +1,202 @@
+{
+  "status": "complete",
+  "source_rtl_gate": "/home/ubuntu/lpn-runs/glm47-flash/nvfp4-matrix",
+  "real_hardware_hex_only": true,
+  "records": [
+    {
+      "name": "nvfp4_scaled",
+      "rtl_cycles": 190,
+      "original_lpn_cycles": 179.0,
+      "direct_hardware_input_lpn_cycles": 179.0,
+      "same_canonical_program_sha256": "7414b58f8f15dc15de45cdaa5ea40eeab99425fdec91f623ec8bc6b19286b75d",
+      "statistics": {
+        "transitions": 19,
+        "places": 71,
+        "completion_flag_banks": 1,
+        "command_slots": 34,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          4
+        ],
+        "hardware_instructions": {
+          "dynamic_instructions": 4,
+          "opcode_counts": {
+            "LD": 1,
+            "QACT": 1,
+            "MM": 1,
+            "HALT": 1
+          },
+          "matrix_commands": 1,
+          "matrix_dot_macs": 5760,
+          "matrix_dot_operations": 11520,
+          "matrix_by_weight_format": {
+            "nvfp4": {
+              "commands": 1,
+              "dot_macs": 5760,
+              "dot_operations": 11520
+            }
+          },
+          "logical_fp32_vector_flops": 0,
+          "vector_function_elements": {},
+          "special_function_evaluations": {},
+          "uncounted_vector_function_elements": {},
+          "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+          "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+          "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+          "exclusions": [
+            "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+            "Vector counts are mathematical operations, excluding physical reduction padding",
+            "Special functions, comparisons and copies are not converted into FLOPs"
+          ]
+        }
+      },
+      "samples": [
+        {
+          "cycles": 179.0,
+          "simulation_seconds": 0.000201111,
+          "process_seconds": 0.0036731883883476257
+        },
+        {
+          "cycles": 179.0,
+          "simulation_seconds": 0.000215298,
+          "process_seconds": 0.003925727680325508
+        },
+        {
+          "cycles": 179.0,
+          "simulation_seconds": 0.000215538,
+          "process_seconds": 0.0037703141570091248
+        }
+      ]
+    },
+    {
+      "name": "nvfp4_replay_acc",
+      "rtl_cycles": 477,
+      "original_lpn_cycles": 467.0,
+      "direct_hardware_input_lpn_cycles": 467.0,
+      "same_canonical_program_sha256": "588fcfc448aa98eca7beae664b7b100953cf35d88f380a53e4a431aae4e6d9df",
+      "statistics": {
+        "transitions": 19,
+        "places": 71,
+        "completion_flag_banks": 1,
+        "command_slots": 34,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          5
+        ],
+        "hardware_instructions": {
+          "dynamic_instructions": 5,
+          "opcode_counts": {
+            "LD": 2,
+            "QACT": 1,
+            "MM": 1,
+            "HALT": 1
+          },
+          "matrix_commands": 1,
+          "matrix_dot_macs": 46080,
+          "matrix_dot_operations": 92160,
+          "matrix_by_weight_format": {
+            "nvfp4": {
+              "commands": 1,
+              "dot_macs": 46080,
+              "dot_operations": 92160
+            }
+          },
+          "logical_fp32_vector_flops": 0,
+          "vector_function_elements": {},
+          "special_function_evaluations": {},
+          "uncounted_vector_function_elements": {},
+          "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+          "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+          "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+          "exclusions": [
+            "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+            "Vector counts are mathematical operations, excluding physical reduction padding",
+            "Special functions, comparisons and copies are not converted into FLOPs"
+          ]
+        }
+      },
+      "samples": [
+        {
+          "cycles": 467.0,
+          "simulation_seconds": 0.000261526,
+          "process_seconds": 0.003947069868445396
+        },
+        {
+          "cycles": 467.0,
+          "simulation_seconds": 0.000257177,
+          "process_seconds": 0.004043431952595711
+        },
+        {
+          "cycles": 467.0,
+          "simulation_seconds": 0.000116621,
+          "process_seconds": 0.0022950880229473114
+        }
+      ]
+    },
+    {
+      "name": "nvfp4_pair",
+      "rtl_cycles": 166,
+      "original_lpn_cycles": 153.0,
+      "direct_hardware_input_lpn_cycles": 153.0,
+      "same_canonical_program_sha256": "3e8768134933bd39312f16720a665ad2a9d19a0ae967c876669efabcfee227a4",
+      "statistics": {
+        "transitions": 19,
+        "places": 71,
+        "completion_flag_banks": 1,
+        "command_slots": 34,
+        "matrix_engines_per_slice": 1,
+        "instructions_per_slice": [
+          4
+        ],
+        "hardware_instructions": {
+          "dynamic_instructions": 4,
+          "opcode_counts": {
+            "LD": 1,
+            "QACT": 1,
+            "MM": 1,
+            "HALT": 1
+          },
+          "matrix_commands": 1,
+          "matrix_dot_macs": 5376,
+          "matrix_dot_operations": 10752,
+          "matrix_by_weight_format": {
+            "nvfp4": {
+              "commands": 1,
+              "dot_macs": 5376,
+              "dot_operations": 10752
+            }
+          },
+          "logical_fp32_vector_flops": 0,
+          "vector_function_elements": {},
+          "special_function_evaluations": {},
+          "uncounted_vector_function_elements": {},
+          "input_interface": "Canonical openTPU hardware instructions, eight 32-bit words each",
+          "matrix_arithmetic": "Quantized integer dots with FP32 epilogues, not a native BF16 matrix datapath",
+          "counting_scope": "Two dot operations per MAC; includes encoded K padding and dynamic loop iterations; no model shape estimates",
+          "exclusions": [
+            "Matrix FP32 scale/accumulation epilogues and quantizer arithmetic are not counted as FLOPs",
+            "Vector counts are mathematical operations, excluding physical reduction padding",
+            "Special functions, comparisons and copies are not converted into FLOPs"
+          ]
+        }
+      },
+      "samples": [
+        {
+          "cycles": 153.0,
+          "simulation_seconds": 0.000212863,
+          "process_seconds": 0.00416937842965126
+        },
+        {
+          "cycles": 153.0,
+          "simulation_seconds": 0.000212252,
+          "process_seconds": 0.003964560106396675
+        },
+        {
+          "cycles": 153.0,
+          "simulation_seconds": 0.000103376,
+          "process_seconds": 0.0026521459221839905
+        }
+      ]
+    }
+  ]
+}

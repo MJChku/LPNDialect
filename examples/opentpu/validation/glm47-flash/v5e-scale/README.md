@@ -1,5 +1,12 @@
 # GLM-4.7-Flash on proposed v5e-scale hardware, LPN first
 
+**Historical operation-graph experiment; excluded from the supported hardware
+LPN path.** This study does not consume executable accelerator instructions.
+Its timings must not be reported as full GLM hardware-command simulation.
+The actual component LPN and hardware-command input are documented in
+[hardware command replay](../../../HARDWARE_COMMANDS.md). The retained results
+below are unchanged experimental records.
+
 The screen is complete, with ten architecture/routing points and three native
 LPN samples per point. **This is an uncalibrated hardware proposal, not completed
 RTL, a measured TPU benchmark, or numerical GLM inference.** The full input is

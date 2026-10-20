@@ -10,14 +10,21 @@ error**, **5.3560% worst kernel**. See the
 FPGA resource fit, operating clock and vendor HBM integration remain unproven.
 The 100x cycle-reduction target has not yet been achieved.
 
-The new [GLM-4.7-Flash target](validation/glm47-flash/README.md) adds a pinned
-30B-A3B MLA/MoE inventory, NVFP4 capacity accounting and upstream `generate`
-shape traces. A 1024-input/8-output tensor-DAG screen is complete with explicit
-routing sensitivity annotations. Three NVFP4 matrix RTL gates pass a fresh
-full-state/native audit with worst timing error 7.83%. Full GLM execution on
-the FeSens ISA, compressed MLA caching and wide HBM addressing remain open;
-the new tensor-level timing screen is uncalibrated and separate from the
-validated openTPU cycle results above.
+**The LPN input is hardware commands.** The supported path reads the same
+`input.json` and `prog_N.hex` as the RTL harness, resolves actual ISA control,
+and feeds the sequencer/DMA/quantizer/matrix/VPU component model. See
+[hardware command replay](HARDWARE_COMMANDS.md). A weight-free static replay
+does not require numerical tensor computation; data-dependent controls still
+need the functional frontend, and are rejected by static replay.
+
+**GLM-4.7-Flash does not yet have a complete compiled hardware program.** Its
+[inventory and NVFP4 component evidence](validation/glm47-flash/README.md)
+remain useful, but the separate tensor-DAG experiment does not meet this
+project's hardware-command requirement. Its 1–2-second graph replay and
+hardware-time estimates must not be presented as GLM execution on this LPN.
+Three actual NVFP4 matrix RTL gates pass a full-state/native audit with worst
+timing error 7.83%; those are component tests, not full GLM support. A real GLM
+compiler/backend path for MLA, routing and memory is still needed.
 
 A small [integrated DSP48E2 vendor-model gate](rtl_evolution/validation/vendor-mxu/README.md)
 passes eleven matrix/store/queue cases with identical complete outputs and
