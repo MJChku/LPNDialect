@@ -143,6 +143,7 @@ def main():
         records.append(record)
         atomic_json(a.output/'progress.json',dict(status='running',records=records))
     result=dict(status='complete',scope=__doc__,timing=asdict(timing),physical_epilogue_lanes=timing.epilogue_lanes,spec=asdict(spec),rows=R,experts=E,ffn=F,position=a.position,
+        capacity=capacity,router_reduction='batched',
         physical_layer_bytes=experts.next,config=asdict(cfg),records=records,ids=ids,
         mla_reference_relative_error=mla_error,expert_reference_relative_error=expert_error,
         all_stages_numerically_executed=True,routing_annotations_used=False,shared_physical_dram=True,
